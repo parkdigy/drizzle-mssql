@@ -373,6 +373,8 @@ await user.editByPrimaryKey(user.updateValues({ name: '수정' }), id);
 
 `insertBlocked()`, `insertAllowed()`, `updateBlocked()`, `updateAllowed()`, `updateRequired()`로 컬럼 정책을 지정할 수 있습니다. IDENTITY 컬럼은 기본적으로 등록과 수정이 금지되고 기본 키는 수정이 금지됩니다. 이러한 정책은 타입 검사와 런타임 검사에 반영됩니다. 기본 키 수정에는 `updateAllowed()`가 필요합니다. Drizzle의 SQL Server 입력 타입은 IDENTITY 컬럼을 제외하므로 `insertAllowed()`로도 IDENTITY 직접 등록을 지원하지 않습니다. 금지된 키는 값이 `undefined`여도 런타임에서 거부하며, 필수 수정 값이 누락되어도 오류가 발생합니다. `updatedAt().updateRequired()`는 생략 시 자동 시각으로 채웁니다.
 
+`updateAllowed()`를 지정한 IDENTITY 컬럼은 `MsSqlUpdateValues`, `updateValues()`, `edit()`, `editByPrimaryKey()`의 수정 입력에 포함됩니다. 이는 라이브러리의 입력 정책 허용이며, SQL Server 자체의 제약을 해제하지는 않습니다. SQL Server는 IDENTITY 값의 `UPDATE`를 허용하지 않으므로 실제 DB 실행은 실패합니다. 기본 키 값을 변경해야 한다면 IDENTITY가 아닌 일반 컬럼을 사용하세요.
+
 정책은 이 패키지의 `mssqlTable`과 `MsSqlQuery`에 적용됩니다. `mssqlTableCreator`, `mssqlSchema`, Drizzle의 원본 테이블 생성 함수와 `db.current()`의 원본 쿼리에는 적용되지 않습니다. 생성 함수를 직접 전달하지 않은 `MsSqlQuery`가 자동 시각을 필요로 하면 오류가 발생합니다. 생성 함수의 반환값은 컬럼 타입과 일치해야 합니다.
 
 ### 집계·SQL 표현식

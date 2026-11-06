@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm';
+import { placeholder, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-mssql';
 import { bigint, int, mssqlTable, nvarchar, MsSqlQuery } from '../src';
 import type { MsSqlInsertValues, MsSqlUpdateValues } from '../src';
@@ -17,6 +17,22 @@ const identityCases = mssqlTable('identity_cases', (t) => ({
   normal: t.int().notNull(),
 }));
 const noIdentity = mssqlTable('no_identity', { name: nvarchar({ length: 20 }).notNull() });
+const allowedIdentity = mssqlTable('allowed_identity', {
+  id: int().identity().primaryKey().updateAllowed(),
+  name: nvarchar({ length: 50 }).notNull(),
+});
+const requiredIdentity = mssqlTable('required_identity', (t) => ({
+  id: t.int().identity().updateRequired(),
+  longId: t.bigint({ mode: 'bigint' }).identity().updateAllowed(),
+}));
+const requiredPrimary = mssqlTable('required_primary', {
+  id: int().identity().primaryKey().updateRequired(),
+  name: nvarchar({ length: 50 }),
+});
+const createdIdentity = mssqlTable('created_identity', {
+  id: int().identity().updateAllowed().createdAt(),
+  name: nvarchar({ length: 50 }),
+});
 const raw = drizzle.mock();
 if (false) {
   const insert: MsSqlInsertValues<typeof table> = { name: 'name' };
@@ -39,8 +55,61 @@ if (false) {
   const bigintInsert: MsSqlInsertValues<typeof identityCases> = { normal: 1, longId: BigInt(1) };
   const idResult: Promise<number> = new MsSqlQuery(table, () => raw).add({ name: 'name' });
   const noIdResult: Promise<undefined> = new MsSqlQuery(noIdentity, () => raw).add({ name: 'name' });
-  void [insert, update, badInsert, missingName, badIdentityUpdate, badUpdate, badCreated, identityInsert, identityUpdate, bigintInsert, idResult, noIdResult];
+  const allowedUpdate: MsSqlUpdateValues<typeof allowedIdentity> = { id: 2 };
+  const allowedSql: MsSqlUpdateValues<typeof allowedIdentity> = { id: sql`2` };
+  const allowedPlaceholder: MsSqlUpdateValues<typeof allowedIdentity> = { id: placeholder('id') };
+  const requiredUpdate: MsSqlUpdateValues<typeof requiredIdentity> = { id: 2, longId: BigInt(3) };
+  // @ts-expect-error updateAllowed를 지정해도 IDENTITY 등록은 금지한다.
+  const allowedInsert: MsSqlInsertValues<typeof allowedIdentity> = { id: 2, name: 'name' };
+  // @ts-expect-error 허용한 IDENTITY에도 원래 값 타입을 적용한다.
+  const wrongIdentityType: MsSqlUpdateValues<typeof allowedIdentity> = { id: '2' };
+  // @ts-expect-error bigint IDENTITY에 number를 지정할 수 없다.
+  const wrongBigintType: MsSqlUpdateValues<typeof requiredIdentity> = { id: 2, longId: 3 };
+  // @ts-expect-error updateRequired의 IDENTITY는 생략할 수 없다.
+  const missingIdentity: MsSqlUpdateValues<typeof requiredIdentity> = {};
+  // @ts-expect-error 기본 키는 updateRequired만으로 수정할 수 없다.
+  const requiredPrimaryUpdate: MsSqlUpdateValues<typeof requiredPrimary> = { id: 2 };
+  // @ts-expect-error createdAt의 수정 금지는 updateAllowed보다 우선한다.
+  const createdIdentityUpdate: MsSqlUpdateValues<typeof createdIdentity> = { id: 2 };
+  // @ts-expect-error 사용자가 명시적으로 제외한 컬럼도 차단한다.
+  const excludedIdentity: MsSqlUpdateValues<typeof allowedIdentity, 'id'> = { id: 2 };
+  const explicitlyRequired: MsSqlUpdateValues<typeof allowedIdentity, never, 'id'> = { id: 2 };
+  const schema = { allowedIdentity };
+  abstract class Query<K extends keyof typeof schema> extends MsSqlQuery<(typeof schema)[K]> {
+    constructor(key: K) {
+      super(schema[key], () => raw);
+    }
+  }
+  class AllowedQuery extends Query<'allowedIdentity'> {
+    check() {
+      this.edit({ id: 2 }, this.eq({ id: 1 }));
+      this.editByPrimaryKey(this.updateValues({ id: 2 }), 1);
+    }
+  }
+  void [insert, update, badInsert, missingName, badIdentityUpdate, badUpdate, badCreated, identityInsert, identityUpdate, bigintInsert, idResult, noIdResult, allowedUpdate, allowedSql, allowedPlaceholder, requiredUpdate, allowedInsert, wrongIdentityType, wrongBigintType, missingIdentity, requiredPrimaryUpdate, createdIdentityUpdate, excludedIdentity, explicitlyRequired, AllowedQuery];
 }
+
+test('허용한 IDENTITY를 edit와 editByPrimaryKey의 SET 절에 전달한다', () => {
+  const query = new MsSqlQuery(allowedIdentity, () => raw);
+  const values = query.updateValues({ id: 2 });
+  for (const builder of [
+    query.edit(values, query.eq({ id: 1 })),
+    query.editByPrimaryKey(values, 1),
+  ]) {
+    expect(builder.toSQL()).toEqual({
+      sql: 'update [allowed_identity] set [id] = @par0 where [allowed_identity].[id] = @par1',
+      params: [2, 1],
+    });
+  }
+});
+
+test('IDENTITY의 필수·생성 시각·기본 키 정책을 유지한다', () => {
+  const required = new MsSqlQuery(requiredIdentity, () => raw);
+  expect(required.edit({ id: 2, longId: BigInt(3) }, sql`1 = 1`).toSQL().params).toEqual([2, BigInt(3)]);
+  expect(() => required.edit({} as never, sql`1 = 1`)).toThrow('id');
+  expect(() => new MsSqlQuery(requiredPrimary, () => raw).edit({ id: 2 } as never, sql`1 = 1`)).toThrow('id');
+  expect(() => new MsSqlQuery(createdIdentity, () => raw).edit({ id: 2 } as never, sql`1 = 1`)).toThrow('id');
+});
 
 test('입력 정책과 시각 자동 입력을 등록과 수정에 적용한다', async () => {
   const inserted: unknown[] = [];
