@@ -1,4 +1,5 @@
-import { ColumnBuilder, type ColumnBuilderBase } from 'drizzle-orm/column-builder';
+import type { ColumnBuilderBase, ColumnBuilderBaseConfig, ColumnBuilderExtraConfig, ColumnType } from 'drizzle-orm/column-builder';
+import { MsSqlColumnBuilder } from 'drizzle-orm/mssql-core/columns/common';
 import { mssqlTable as nativeTable, type MsSqlTable, type MsSqlTableWithColumns } from 'drizzle-orm/mssql-core';
 import type { BuildColumns, BuildExtraConfigColumns } from 'drizzle-orm/column-builder';
 import type { MsSqlColumnBuilders } from 'drizzle-orm/mssql-core/columns/all';
@@ -18,10 +19,10 @@ declare const policyType: unique symbol;
 declare const tablePolicyType: unique symbol;
 type Mark<T, P extends ColumnPolicy> = T & { readonly [policyType]: P };
 
-declare module 'drizzle-orm/column-builder' {
+declare module 'drizzle-orm/mssql-core/columns/common' {
   // Drizzle의 제네릭 선언과 동일하게 병합한다.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  interface ColumnBuilder<T, TRuntimeConfig, TExtraConfig> {
+  interface MsSqlColumnBuilder<T extends ColumnBuilderBaseConfig<ColumnType>, TRuntimeConfig extends object, TExtraConfig extends ColumnBuilderExtraConfig> {
     insertBlocked(): Mark<this, { insert: 'blocked' }>;
     insertAllowed(): Mark<this, { insert: 'allowed' }>;
     updateBlocked(): Mark<this, { update: 'blocked' }>;
@@ -42,7 +43,7 @@ for (const [method, policy] of Object.entries({
   createdAt: { timestamp: 'created' },
   updatedAt: { timestamp: 'updated' },
 } as Record<string, ColumnPolicy>)) {
-  Object.defineProperty(ColumnBuilder.prototype, method, {
+  Object.defineProperty(MsSqlColumnBuilder.prototype, method, {
     configurable: true,
     value: function (this: object) {
       policies.set(this, { ...policies.get(this), ...policy });

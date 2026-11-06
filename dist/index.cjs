@@ -1,4 +1,4 @@
-'use strict';Object.defineProperty(exports,'__esModule',{value:true});var nodeMssql=require('drizzle-orm/node-mssql'),native=require('drizzle-orm'),node_async_hooks=require('node:async_hooks'),alias=require('drizzle-orm/mssql-core/alias'),mssqlCore=require('drizzle-orm/mssql-core'),columnBuilder=require('drizzle-orm/column-builder');function _interopNamespaceDefault(e){var n=Object.create(null);if(e){Object.keys(e).forEach(function(k){if(k!=='default'){var d=Object.getOwnPropertyDescriptor(e,k);Object.defineProperty(n,k,d.get?d:{enumerable:true,get:function(){return e[k]}});}})}n.default=e;return Object.freeze(n)}var native__namespace=/*#__PURE__*/_interopNamespaceDefault(native);function createAlias(schema) {
+'use strict';Object.defineProperty(exports,'__esModule',{value:true});var nodeMssql=require('drizzle-orm/node-mssql'),native=require('drizzle-orm'),node_async_hooks=require('node:async_hooks'),alias=require('drizzle-orm/mssql-core/alias'),mssqlCore=require('drizzle-orm/mssql-core'),common=require('drizzle-orm/mssql-core/columns/common');function _interopNamespaceDefault(e){var n=Object.create(null);if(e){Object.keys(e).forEach(function(k){if(k!=='default'){var d=Object.getOwnPropertyDescriptor(e,k);Object.defineProperty(n,k,d.get?d:{enumerable:true,get:function(){return e[k]}});}})}n.default=e;return Object.freeze(n)}var native__namespace=/*#__PURE__*/_interopNamespaceDefault(native);function createAlias(schema) {
     /********************************************************************************************************************
      * getDefaultAlias
      * ******************************************************************************************************************/
@@ -203,7 +203,7 @@ for (const [method, policy] of Object.entries({
     createdAt: { timestamp: 'created' },
     updatedAt: { timestamp: 'updated' },
 })) {
-    Object.defineProperty(columnBuilder.ColumnBuilder.prototype, method, {
+    Object.defineProperty(common.MsSqlColumnBuilder.prototype, method, {
         configurable: true,
         value: function () {
             policies.set(this, Object.assign(Object.assign({}, policies.get(this)), policy));

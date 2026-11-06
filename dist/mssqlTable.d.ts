@@ -1,4 +1,4 @@
-import { type ColumnBuilderBase } from 'drizzle-orm/column-builder';
+import type { ColumnBuilderBase, ColumnBuilderBaseConfig, ColumnBuilderExtraConfig, ColumnType } from 'drizzle-orm/column-builder';
 import { type MsSqlTable, type MsSqlTableWithColumns } from 'drizzle-orm/mssql-core';
 import type { BuildColumns, BuildExtraConfigColumns } from 'drizzle-orm/column-builder';
 import type { MsSqlColumnBuilders } from 'drizzle-orm/mssql-core/columns/all';
@@ -18,8 +18,8 @@ declare const tablePolicyType: unique symbol;
 type Mark<T, P extends ColumnPolicy> = T & {
     readonly [policyType]: P;
 };
-declare module 'drizzle-orm/column-builder' {
-    interface ColumnBuilder<T, TRuntimeConfig, TExtraConfig> {
+declare module 'drizzle-orm/mssql-core/columns/common' {
+    interface MsSqlColumnBuilder<T extends ColumnBuilderBaseConfig<ColumnType>, TRuntimeConfig extends object, TExtraConfig extends ColumnBuilderExtraConfig> {
         insertBlocked(): Mark<this, {
             insert: 'blocked';
         }>;
