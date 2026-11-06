@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2017",
     "module": "ESNext",
-    "lib": ["ES2017"],
+    "lib": ["ES2022"],
     "moduleResolution": "bundler",
     "declaration": true,
     "declarationDir": "dist",

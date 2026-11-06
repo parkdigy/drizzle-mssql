@@ -1,28 +1,33 @@
 {
-  "name": "@pdg/npm-template",
-  "title": "NPM Template",
-  "description": "NPM Template",
+  "name": "@pdg/drizzle-mssql",
+  "title": "Drizzle for MSSQL",
+  "description": "Drizzle ORM MSSQL 보조 라이브러리",
   "version": "1.0.0",
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./dist/index.cjs",
   "module": "./dist/index.esm.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.esm.js",
-      "require": "./dist/index.js"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.esm.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     }
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/parkdigy/npm-template.git",
-    "baseUrl": "https://github.com/parkdigy/npm-template"
+    "url": "git+https://github.com/parkdigy/drizzle-mssql.git",
+    "baseUrl": "https://github.com/parkdigy/drizzle-mssql"
   },
   "bugs": {
-    "url": "https://github.com/parkdigy/npm-template/issues"
+    "url": "https://github.com/parkdigy/drizzle-mssql/issues"
   },
-  "homepage": "https://github.com/parkdigy/npm-template#readme",
+  "homepage": "https://github.com/parkdigy/drizzle-mssql#readme",
   "files": [
     "dist",
     "README.md"
@@ -57,6 +62,7 @@
     "@rollup/plugin-eslint": "9.2.0",
     "@rollup/plugin-node-resolve": "16.0.3",
     "@types/jest": "30.0.0",
+    "@types/mssql": "^9.1.11",
     "@types/node": "24.19.2",
     "@typescript-eslint/parser": "8.72.1",
     "eslint": "9.39.5",
@@ -76,5 +82,9 @@
   "allowScripts": {
     "@parcel/watcher": true,
     "fsevents": true
+  },
+  "peerDependencies": {
+    "drizzle-orm": "1.0.0-rc.5",
+    "mssql": "^11.0.2"
   }
 }
