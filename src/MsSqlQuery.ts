@@ -1,4 +1,4 @@
-import { SQL, isTable, is, sql, count, eq, getTableColumns, and as drizzleAnd } from 'drizzle-orm';
+import { SQL, isTable, is, sql, count, eq, getTableColumns, and as drizzleAnd, min as drizzleMin, max as drizzleMax } from 'drizzle-orm';
 import {
   MsSqlTable,
   MsSqlColumn,
@@ -77,6 +77,28 @@ export class MsSqlQuery<
     return TableColumns(table, ...(names as MsSqlColumnSelectionName<MsSqlTable>[]));
   }
 
+  /********************************************************************************************************************
+   * min / max
+   * ******************************************************************************************************************/
+  min<N extends keyof TTable['_']['columns'] & string>(name: N): ReturnType<typeof drizzleMin<TTable['_']['columns'][N]>>;
+  min<C extends MsSqlColumn>(column: C): ReturnType<typeof drizzleMin<C>>;
+  min(columnOrName: string | MsSqlColumn): SQL<unknown> {
+    return drizzleMin(this.resolveAggregateColumn(columnOrName, this.t));
+  }
+
+  max<N extends keyof TTable['_']['columns'] & string>(name: N): ReturnType<typeof drizzleMax<TTable['_']['columns'][N]>>;
+  max<C extends MsSqlColumn>(column: C): ReturnType<typeof drizzleMax<C>>;
+  max(columnOrName: string | MsSqlColumn): SQL<unknown> {
+    return drizzleMax(this.resolveAggregateColumn(columnOrName, this.t));
+  }
+
+  private resolveAggregateColumn(columnOrName: string | MsSqlColumn, table: MsSqlTable): MsSqlColumn {
+    if (typeof columnOrName !== 'string') return columnOrName;
+    const columns = getTableColumns(table);
+    if (!Object.hasOwn(columns, columnOrName)) throw new Error(`aggregate: unknown column "${columnOrName}".`);
+    return columns[columnOrName];
+  }
+
   private resolveFields(fields: unknown, table: MsSqlTable = this.t): FieldSet | undefined {
     if (Array.isArray(fields) && fields.length > 0 && fields.every((field) => typeof field === 'string')) {
       return TableColumns(table, ...(fields as MsSqlColumnSelectionName<MsSqlTable>[]));
@@ -85,6 +107,8 @@ export class MsSqlQuery<
     const query = {
       t: table,
       columns: (...names: MsSqlColumnSelectionName<MsSqlTable>[]) => TableColumns(table, ...names),
+      min: (columnOrName: string | MsSqlColumn) => drizzleMin(this.resolveAggregateColumn(columnOrName, table)),
+      max: (columnOrName: string | MsSqlColumn) => drizzleMax(this.resolveAggregateColumn(columnOrName, table)),
     };
     return normalizeFields(fields(query));
   }
@@ -797,6 +821,8 @@ type FieldsQuery<TTable extends MsSqlTable> = {
   columns<N extends MsSqlColumnSelectionName<TTable>>(
     ...names: N[] & MsSqlColumnSelectionName<TTable>[]
   ): MsSqlSelectedNamedColumnUnion<TTable, N>;
+  min: MsSqlQuery<TTable>['min'];
+  max: MsSqlQuery<TTable>['max'];
 };
 type Fields<TQuery, TSelection> = TSelection | ((query: TQuery) => TSelection);
 type NamedFields<TTable extends MsSqlTable, T extends readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[]> = {

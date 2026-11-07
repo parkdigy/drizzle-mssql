@@ -1,4 +1,4 @@
-import {drizzle}from'drizzle-orm/node-mssql';import*as native from'drizzle-orm';import {isTable,getTableColumns,sql,is,SQL,eq,and,count,defineRelations}from'drizzle-orm';export{asc,avg,avgDistinct,count,countDistinct,desc,exists,max,min,not,notExists,sum,sumDistinct}from'drizzle-orm';import {AsyncLocalStorage}from'node:async_hooks';import {alias}from'drizzle-orm/mssql-core/alias';import {MsSqlTable,mssqlTable as mssqlTable$1,getTableConfig,MsSqlColumn}from'drizzle-orm/mssql-core';export{bigint,binary,bit,char,check,customType,date,datetime,datetime2,datetimeoffset,decimal,float,foreignKey,index,int,mssqlSchema,mssqlTableCreator,mssqlView,nchar,ntext,numeric,nvarchar,primaryKey,real,smallint,text,time,tinyint,unique,uniqueIndex,varbinary,varchar}from'drizzle-orm/mssql-core';import {MsSqlColumnBuilder}from'drizzle-orm/mssql-core/columns/common';function createAlias(schema) {
+import {drizzle}from'drizzle-orm/node-mssql';import*as native from'drizzle-orm';import {isTable,getTableColumns,sql,min,max,is,SQL,eq,and,count,defineRelations}from'drizzle-orm';export{asc,avg,avgDistinct,count,countDistinct,desc,exists,max,min,not,notExists,sum,sumDistinct}from'drizzle-orm';import {AsyncLocalStorage}from'node:async_hooks';import {alias}from'drizzle-orm/mssql-core/alias';import {MsSqlTable,mssqlTable as mssqlTable$1,getTableConfig,MsSqlColumn}from'drizzle-orm/mssql-core';export{bigint,binary,bit,char,check,customType,date,datetime,datetime2,datetimeoffset,decimal,float,foreignKey,index,int,mssqlSchema,mssqlTableCreator,mssqlView,nchar,ntext,numeric,nvarchar,primaryKey,real,smallint,text,time,tinyint,unique,uniqueIndex,varbinary,varchar}from'drizzle-orm/mssql-core';import {MsSqlColumnBuilder}from'drizzle-orm/mssql-core/columns/common';function createAlias(schema) {
     /********************************************************************************************************************
      * getDefaultAlias
      * ******************************************************************************************************************/
@@ -254,6 +254,20 @@ class MsSqlQuery {
         const table = this.t;
         return TableColumns(table, ...names);
     }
+    min(columnOrName) {
+        return min(this.resolveAggregateColumn(columnOrName, this.t));
+    }
+    max(columnOrName) {
+        return max(this.resolveAggregateColumn(columnOrName, this.t));
+    }
+    resolveAggregateColumn(columnOrName, table) {
+        if (typeof columnOrName !== 'string')
+            return columnOrName;
+        const columns = getTableColumns(table);
+        if (!Object.hasOwn(columns, columnOrName))
+            throw new Error(`aggregate: unknown column "${columnOrName}".`);
+        return columns[columnOrName];
+    }
     resolveFields(fields, table = this.t) {
         if (Array.isArray(fields) && fields.length > 0 && fields.every((field) => typeof field === 'string')) {
             return TableColumns(table, ...fields);
@@ -263,6 +277,8 @@ class MsSqlQuery {
         const query = {
             t: table,
             columns: (...names) => TableColumns(table, ...names),
+            min: (columnOrName) => min(this.resolveAggregateColumn(columnOrName, table)),
+            max: (columnOrName) => max(this.resolveAggregateColumn(columnOrName, table)),
         };
         return normalizeFields(fields(query));
     }

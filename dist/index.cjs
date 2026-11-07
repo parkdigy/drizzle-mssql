@@ -254,6 +254,20 @@ class MsSqlQuery {
         const table = this.t;
         return TableColumns(table, ...names);
     }
+    min(columnOrName) {
+        return native.min(this.resolveAggregateColumn(columnOrName, this.t));
+    }
+    max(columnOrName) {
+        return native.max(this.resolveAggregateColumn(columnOrName, this.t));
+    }
+    resolveAggregateColumn(columnOrName, table) {
+        if (typeof columnOrName !== 'string')
+            return columnOrName;
+        const columns = native.getTableColumns(table);
+        if (!Object.hasOwn(columns, columnOrName))
+            throw new Error(`aggregate: unknown column "${columnOrName}".`);
+        return columns[columnOrName];
+    }
     resolveFields(fields, table = this.t) {
         if (Array.isArray(fields) && fields.length > 0 && fields.every((field) => typeof field === 'string')) {
             return TableColumns(table, ...fields);
@@ -263,6 +277,8 @@ class MsSqlQuery {
         const query = {
             t: table,
             columns: (...names) => TableColumns(table, ...names),
+            min: (columnOrName) => native.min(this.resolveAggregateColumn(columnOrName, table)),
+            max: (columnOrName) => native.max(this.resolveAggregateColumn(columnOrName, table)),
         };
         return normalizeFields(fields(query));
     }

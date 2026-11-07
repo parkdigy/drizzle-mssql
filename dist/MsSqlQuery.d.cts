@@ -1,4 +1,4 @@
-import { SQL } from 'drizzle-orm';
+import { SQL, min as drizzleMin, max as drizzleMax } from 'drizzle-orm';
 import { MsSqlTable, MsSqlColumn, type MsSqlSelectBase } from 'drizzle-orm/mssql-core';
 import type { SelectedFields } from 'drizzle-orm/operations';
 import type { GetSelectTableName } from 'drizzle-orm/query-builders/select.types';
@@ -29,6 +29,14 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, IV extends MsSqlInser
      * ******************************************************************************************************************/
     columns(): MsSqlSelectedTableColumns<TTable>;
     columns<N extends MsSqlColumnSelectionName<TTable>>(...names: N[] & MsSqlColumnSelectionName<TTable>[]): MsSqlSelectedNamedColumnUnion<TTable, N>;
+    /********************************************************************************************************************
+     * min / max
+     * ******************************************************************************************************************/
+    min<N extends keyof TTable['_']['columns'] & string>(name: N): ReturnType<typeof drizzleMin<TTable['_']['columns'][N]>>;
+    min<C extends MsSqlColumn>(column: C): ReturnType<typeof drizzleMin<C>>;
+    max<N extends keyof TTable['_']['columns'] & string>(name: N): ReturnType<typeof drizzleMax<TTable['_']['columns'][N]>>;
+    max<C extends MsSqlColumn>(column: C): ReturnType<typeof drizzleMax<C>>;
+    private resolveAggregateColumn;
     private resolveFields;
     /********************************************************************************************************************
      * select
@@ -225,6 +233,8 @@ type FieldsQuery<TTable extends MsSqlTable> = {
     readonly t: TTable;
     columns(): MsSqlSelectedTableColumns<TTable>;
     columns<N extends MsSqlColumnSelectionName<TTable>>(...names: N[] & MsSqlColumnSelectionName<TTable>[]): MsSqlSelectedNamedColumnUnion<TTable, N>;
+    min: MsSqlQuery<TTable>['min'];
+    max: MsSqlQuery<TTable>['max'];
 };
 type Fields<TQuery, TSelection> = TSelection | ((query: TQuery) => TSelection);
 type NamedFields<TTable extends MsSqlTable, T extends readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[]> = {
