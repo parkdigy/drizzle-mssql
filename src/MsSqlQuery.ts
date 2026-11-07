@@ -215,7 +215,7 @@ export class MsSqlQuery<
 
   async find<TSelection extends SelectedFields<MsSqlColumn, TTable>>(
     fields: Fields<FieldsQuery<TTable>, TSelection>,
-    where: BaseWhere<this>
+    where?: BaseWhere<this>
   ): Promise<FindResult<TTable, TSelection>>;
 
   async find<TAlias extends string>(

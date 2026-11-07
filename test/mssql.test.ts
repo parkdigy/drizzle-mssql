@@ -43,9 +43,18 @@ test('문자열 컬럼 매핑 객체의 키를 결과 별칭으로 사용한다'
   if (false) {
     const found = usersQuery.find({ id_2: 'id' });
     const foundByPrimaryKey = usersQuery.findByPrimaryKey({ id_2: 'id' }, 1);
+    const aggregates = usersQuery.find({ min_id: usersQuery.min('id'), max_name: usersQuery.max('name') });
+    const aggregatesWithCondition = usersQuery.find(
+      { min_id: usersQuery.min('id'), max_name: usersQuery.max('name') },
+      usersQuery.eq({ id: 1 })
+    );
+    const aggregatesByPrimaryKey = usersQuery.findByPrimaryKey(
+      { min_id: usersQuery.min('id'), max_name: usersQuery.max('name') },
+      1
+    );
     type FoundRow = NonNullable<Awaited<typeof found>>;
     const foundRow: FoundRow = { id_2: 1 };
-    void [foundByPrimaryKey, foundRow];
+    void [foundByPrimaryKey, aggregates, aggregatesWithCondition, aggregatesByPrimaryKey, foundRow];
   }
 });
 
