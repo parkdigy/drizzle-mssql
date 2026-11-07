@@ -29,7 +29,7 @@ type TimestampKeys<T extends MsSqlTable> = {
 }[keyof InsertValue<T>] &
   keyof InsertValue<T>;
 
-export type MsSqlInsertValues<T extends MsSqlTable, B extends keyof InsertValue<T> = never> = Omit<
+export type MsSqlAddValues<T extends MsSqlTable, B extends keyof InsertValue<T> = never> = Omit<
   InsertValue<T>,
   B | Blocked<T> | TimestampKeys<T>
 > &

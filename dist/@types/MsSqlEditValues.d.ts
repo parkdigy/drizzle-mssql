@@ -28,7 +28,7 @@ type RequiredKeys<T extends MsSqlTable> = {
         timestamp: 'updated';
     } ? never : K : never : never;
 }[keyof UpdateSource<T>] & keyof UpdateSource<T>;
-export type MsSqlUpdateValues<T extends MsSqlTable, B extends keyof UpdateSource<T> = never, R extends Exclude<keyof UpdateSource<T>, B | Blocked<T>> = never> = Omit<UpdateSource<T>, B | Blocked<T> | R | RequiredKeys<T>> & {
+export type MsSqlEditValues<T extends MsSqlTable, B extends keyof UpdateSource<T> = never, R extends Exclude<keyof UpdateSource<T>, B | Blocked<T>> = never> = Omit<UpdateSource<T>, B | Blocked<T> | R | RequiredKeys<T>> & {
     [K in Exclude<R | RequiredKeys<T>, B | Blocked<T>>]-?: Exclude<UpdateSource<T>[K], undefined>;
 };
 export {};

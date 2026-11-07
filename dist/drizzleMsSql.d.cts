@@ -18,7 +18,7 @@ export declare function drizzleMsSql<TSchema extends Record<string, MsSqlTable>>
     }) | import("drizzle-orm/mssql-core").MsSqlTransaction<import("drizzle-orm/node-mssql").NodeMsSqlQueryResultHKT, import("drizzle-orm/node-mssql").NodeMsSqlPreparedQueryHKT, native.ExtractTablesWithRelations<{}, native.ExtractTablesFromSchema<TSchema>>>) & {
         getTimestamp: () => unknown;
     };
-    query: <TTable extends TSchema[keyof TSchema]>(table: TTable) => MsSqlQuery<TTable, import("./@types/index.cjs").MsSqlInsertValues<TTable>, import("./@types/index.cjs").MsSqlUpdateValues<TTable>, ([{ [P in keyof TTable["_"]["columns"]]: TTable["_"]["columns"][P]["_"] extends {
+    query: <TTable extends TSchema[keyof TSchema]>(table: TTable) => MsSqlQuery<TTable, import("./@types/index.cjs").MsSqlAddValues<TTable>, import("./@types/index.cjs").MsSqlEditValues<TTable>, ([{ [P in keyof TTable["_"]["columns"]]: TTable["_"]["columns"][P]["_"] extends {
         generated: infer G;
     } ? undefined extends G ? never : keyof G extends never ? P : never : never; }[keyof TTable["_"]["columns"]]] extends [never] ? false : true) extends true ? TTable["_"]["columns"][{ [P in keyof TTable["_"]["columns"]]: TTable["_"]["columns"][P]["_"] extends {
         generated: infer G;

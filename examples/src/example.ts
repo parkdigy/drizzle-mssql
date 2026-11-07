@@ -90,15 +90,15 @@ export class AdminUser extends MsSqlQuery<'adminUser'> {
     });
   }
 
-  async addInsertValuesTest() {
-    const insertValues = this.insertValues({
+  async addValuesTest() {
+    const addValues = this.addValues({
       name: 'name',
       email: 'email',
       password: 'password',
       tel: 'tel',
     });
 
-    await this.add(insertValues);
+    await this.add(addValues);
   }
 
   async editTest() {
@@ -109,8 +109,8 @@ export class AdminUser extends MsSqlQuery<'adminUser'> {
     await this.editByPrimaryKey({ is_lock: true }, 1);
   }
 
-  async editUpdateValuesTest() {
-    const editValues = this.updateValues({
+  async editValuesTest() {
+    const editValues = this.editValues({
       is_lock: true,
     });
     await this.editByPrimaryKey(editValues, 1);

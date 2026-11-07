@@ -4,12 +4,12 @@ import type { SelectedFields } from 'drizzle-orm/operations';
 import type { GetSelectTableName } from 'drizzle-orm/query-builders/select.types';
 import type { MsSqlColumnSelectionName, MsSqlSelectedNamedColumnUnion, MsSqlSelectedNamedColumns, MsSqlSelectedTableColumns, MsSqlAliasTable } from './columns.cjs';
 import { type TableMutationPolicy } from './mssqlTable.cjs';
-import type { MsSqlInsertValues, MsSqlUpdateValues, MsSqlCompareValues, MsSqlColumnName, MsSqlArrayCompareValues, MsSqlRangeCompareValues, MsSqlPatternCompareValues, MsSqlNullConditionInput, MsSqlConditions } from './@types/index.cjs';
+import type { MsSqlAddValues, MsSqlEditValues, MsSqlCompareValues, MsSqlColumnName, MsSqlArrayCompareValues, MsSqlRangeCompareValues, MsSqlPatternCompareValues, MsSqlNullConditionInput, MsSqlConditions } from './@types/index.cjs';
 import type { NodeMsSqlDatabase, NodeMsSqlPreparedQueryHKT } from 'drizzle-orm/node-mssql';
 /********************************************************************************************************************
  * MsSqlQuery
  * ******************************************************************************************************************/
-export declare class MsSqlQuery<TTable extends MsSqlTable, IV extends MsSqlInsertValues<TTable> = MsSqlInsertValues<TTable>, UV extends MsSqlUpdateValues<TTable> = MsSqlUpdateValues<TTable>, AR = AddResult<TTable>> {
+export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddValues<TTable> = MsSqlAddValues<TTable>, EV extends MsSqlEditValues<TTable> = MsSqlEditValues<TTable>, AR = AddResult<TTable>> {
     private readonly current;
     private readonly getTimestamp?;
     readonly t: TTable;
@@ -110,31 +110,31 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, IV extends MsSqlInser
      * ******************************************************************************************************************/
     private executeInsert;
     /********************************************************************************************************************
-     * insertValues
+     * addValues
      * ******************************************************************************************************************/
-    insertValues(values: IV[]): IV[];
-    insertValues(values: IV): IV;
+    addValues(values: AV[]): AV[];
+    addValues(values: AV): AV;
     /********************************************************************************************************************
-     * updateValues
+     * editValues
      * ******************************************************************************************************************/
-    updateValues(values: UV): UV;
+    editValues(values: EV): EV;
     /********************************************************************************************************************
      * add
      * ******************************************************************************************************************/
-    add(value: IV[]): Promise<AR[]>;
-    add(value: IV): Promise<AR>;
+    add(value: AV[]): Promise<AR[]>;
+    add(value: AV): Promise<AR>;
     /********************************************************************************************************************
      * edit
      * ******************************************************************************************************************/
     edit(this: this & (TableMutationPolicy<TTable> extends {
         updateBlocked: true;
-    } ? never : unknown), set: UV, where: BaseWhere<this>): Omit<import("drizzle-orm/mssql-core").MsSqlUpdateBase<TTable, import("drizzle-orm/node-mssql").NodeMsSqlQueryResultHKT, NodeMsSqlPreparedQueryHKT, undefined, false, "where">, "where">;
+    } ? never : unknown), set: EV, where: BaseWhere<this>): Omit<import("drizzle-orm/mssql-core").MsSqlUpdateBase<TTable, import("drizzle-orm/node-mssql").NodeMsSqlQueryResultHKT, NodeMsSqlPreparedQueryHKT, undefined, false, "where">, "where">;
     /********************************************************************************************************************
      * editByPrimaryKey
      * ******************************************************************************************************************/
     editByPrimaryKey(this: this & (TableMutationPolicy<TTable> extends {
         updateBlocked: true;
-    } ? never : unknown), set: UV, key: PrimaryKeyInput<TTable>): Omit<import("drizzle-orm/mssql-core").MsSqlUpdateBase<TTable, import("drizzle-orm/node-mssql").NodeMsSqlQueryResultHKT, NodeMsSqlPreparedQueryHKT, undefined, false, "where">, "where">;
+    } ? never : unknown), set: EV, key: PrimaryKeyInput<TTable>): Omit<import("drizzle-orm/mssql-core").MsSqlUpdateBase<TTable, import("drizzle-orm/node-mssql").NodeMsSqlQueryResultHKT, NodeMsSqlPreparedQueryHKT, undefined, false, "where">, "where">;
     /********************************************************************************************************************
      * remove
      * ******************************************************************************************************************/

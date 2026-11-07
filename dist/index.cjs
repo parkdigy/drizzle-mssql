@@ -448,9 +448,7 @@ class MsSqlQuery {
                 values[key] === undefined) {
                 throw new Error(`update: column "${key}" is required.`);
             }
-            if (policy.timestamp &&
-                values[key] === undefined &&
-                (operation === 'insert' || policy.timestamp === 'updated')) {
+            if (policy.timestamp && values[key] === undefined && (operation === 'insert' || policy.timestamp === 'updated')) {
                 if (!generated) {
                     const getTimestamp = (_b = this.getTimestamp) !== null && _b !== void 0 ? _b : this.current.getTimestamp;
                     if (!getTimestamp)
@@ -493,13 +491,13 @@ class MsSqlQuery {
             }
         }
     }
-    insertValues(values) {
+    addValues(values) {
         return values;
     }
     /********************************************************************************************************************
-     * updateValues
+     * editValues
      * ******************************************************************************************************************/
-    updateValues(values) {
+    editValues(values) {
         return values;
     }
     add(value) {
@@ -517,7 +515,10 @@ class MsSqlQuery {
             throw new Error('edit: a SQL where condition is required.');
         }
         const tx = this.getTx();
-        return tx.update(this.t).set(this.prepareValues(set, 'update')).where(condition);
+        return tx
+            .update(this.t)
+            .set(this.prepareValues(set, 'update'))
+            .where(condition);
     }
     /********************************************************************************************************************
      * editByPrimaryKey

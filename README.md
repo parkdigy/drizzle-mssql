@@ -48,7 +48,7 @@ const user = db.query(users);
 
 ### 데이터 추가·수정·삭제
 
-`user.insertValues(...)`와 `user.updateValues(...)`는 테이블의 입력 타입을 검사하고 전달한 값을 그대로 반환합니다. 실제 정책 검사와 시각 생성은 `add`와 `edit`에서 수행합니다.
+`user.addValues(...)`와 `user.editValues(...)`는 테이블의 입력 타입을 검사하고 전달한 값을 그대로 반환합니다. 실제 정책 검사와 시각 생성은 `add`와 `edit`에서 수행합니다.
 
 IDENTITY 컬럼이 있는 테이블에서 `add`는 `OUTPUT`으로 생성된 값을 반환합니다. 여러 행을 넣으면 값의 배열을 반환하고, IDENTITY 컬럼이 없으면 단일 행에는 `undefined`, 여러 행에는 `undefined` 배열을 반환합니다. 해당 INSERT 동작에 활성 트리거가 있는 테이블에서는 SQL Server가 결과를 직접 반환하는 `OUTPUT`을 허용하지 않습니다. 생성 키의 타입은 IDENTITY 컬럼의 타입을 따릅니다.
 
@@ -382,13 +382,13 @@ const users = mssqlTable('users', {
 });
 const db = drizzleMsSql({ url: process.env.DATABASE_URL!, schema: { users }, getTimestamp: () => new Date() });
 const user = db.query(users);
-const id = await user.add(user.insertValues({ name: '사용자' }));
-await user.editByPrimaryKey(user.updateValues({ name: '수정' }), id);
+const id = await user.add(user.addValues({ name: '사용자' }));
+await user.editByPrimaryKey(user.editValues({ name: '수정' }), id);
 ```
 
 `insertBlocked()`, `insertAllowed()`, `updateBlocked()`, `updateAllowed()`, `updateRequired()`로 컬럼 정책을 지정할 수 있습니다. IDENTITY 컬럼은 기본적으로 등록과 수정이 금지되고 기본 키는 수정이 금지됩니다. 이러한 정책은 타입 검사와 런타임 검사에 반영됩니다. 기본 키 수정에는 `updateAllowed()`가 필요합니다. Drizzle의 SQL Server 입력 타입은 IDENTITY 컬럼을 제외하므로 `insertAllowed()`로도 IDENTITY 직접 등록을 지원하지 않습니다. 금지된 키는 값이 `undefined`여도 런타임에서 거부하며, 필수 수정 값이 누락되어도 오류가 발생합니다. `updatedAt().updateRequired()`는 생략 시 자동 시각으로 채웁니다.
 
-`updateAllowed()`를 지정한 IDENTITY 컬럼은 `MsSqlUpdateValues`, `updateValues()`, `edit()`, `editByPrimaryKey()`의 수정 입력에 포함됩니다. 이는 라이브러리의 입력 정책 허용이며, SQL Server 자체의 제약을 해제하지는 않습니다. SQL Server는 IDENTITY 값의 `UPDATE`를 허용하지 않으므로 실제 DB 실행은 실패합니다. 기본 키 값을 변경해야 한다면 IDENTITY가 아닌 일반 컬럼을 사용하세요.
+`updateAllowed()`를 지정한 IDENTITY 컬럼은 `MsSqlEditValues`, `editValues()`, `edit()`, `editByPrimaryKey()`의 수정 입력에 포함됩니다. 이는 라이브러리의 입력 정책 허용이며, SQL Server 자체의 제약을 해제하지는 않습니다. SQL Server는 IDENTITY 값의 `UPDATE`를 허용하지 않으므로 실제 DB 실행은 실패합니다. 기본 키 값을 변경해야 한다면 IDENTITY가 아닌 일반 컬럼을 사용하세요.
 
 정책은 이 패키지의 `mssqlTable`과 `MsSqlQuery`에 적용됩니다. `mssqlTableCreator`, `mssqlSchema`, Drizzle의 원본 테이블 생성 함수와 `db.current()`의 원본 쿼리에는 적용되지 않습니다. 생성 함수를 직접 전달하지 않은 `MsSqlQuery`가 자동 시각을 필요로 하면 오류가 발생합니다. 생성 함수의 반환값은 컬럼 타입과 일치해야 합니다.
 
@@ -417,7 +417,7 @@ const numericExpression = db.sqlNumber(db.sql`1`);
 | 바이너리 | `binary`, `varbinary` |
 | 기타 컬럼 | `bit`, `customType` |
 | 인덱스·제약조건 | `index`, `uniqueIndex`, `primaryKey`, `foreignKey`, `unique`, `check` |
-| 타입 (`import type`) | `InferColumnsDataTypes`, `MsSqlConditions`, `MsSqlInsertValues`, `MsSqlUpdateValues`, `MsSqlAliasTable`, `MsSqlSelectedColumns`, `MsSqlSelectedTableColumns`, `MsSqlColumnSelectionName`, `MsSqlSelectedNamedColumnUnion`, `MsSqlSelectedNamedColumns`, `MsSqlCompareValues`, `MsSqlColumnName`, `MsSqlArrayCompareValues`, `MsSqlRangeCompareValues`, `MsSqlPatternCompareValues`, `MsSqlNullConditionInput` |
+| 타입 (`import type`) | `InferColumnsDataTypes`, `MsSqlConditions`, `MsSqlAddValues`, `MsSqlEditValues`, `MsSqlAliasTable`, `MsSqlSelectedColumns`, `MsSqlSelectedTableColumns`, `MsSqlColumnSelectionName`, `MsSqlSelectedNamedColumnUnion`, `MsSqlSelectedNamedColumns`, `MsSqlCompareValues`, `MsSqlColumnName`, `MsSqlArrayCompareValues`, `MsSqlRangeCompareValues`, `MsSqlPatternCompareValues`, `MsSqlNullConditionInput` |
 
 `check`나 SQL 표현식 기반 기본값에 사용하는 `sql`은 `drizzle-orm`에서 가져옵니다. Drizzle의 `MsSqlTable` 등 직접 필요한 타입도 `drizzle-orm/mssql-core`에서 가져올 수 있습니다.
 

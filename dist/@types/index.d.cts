@@ -1,4 +1,4 @@
 export * from './common.cjs';
 export * from './MsSqlConditions.cjs';
-export * from './MsSqlInsertValues.cjs';
-export * from './MsSqlUpdateValues.cjs';
+export * from './MsSqlAddValues.cjs';
+export * from './MsSqlEditValues.cjs';

@@ -45,7 +45,7 @@ type RequiredKeys<T extends MsSqlTable> = {
 }[keyof UpdateSource<T>] &
   keyof UpdateSource<T>;
 
-export type MsSqlUpdateValues<
+export type MsSqlEditValues<
   T extends MsSqlTable,
   B extends keyof UpdateSource<T> = never,
   R extends Exclude<keyof UpdateSource<T>, B | Blocked<T>> = never,

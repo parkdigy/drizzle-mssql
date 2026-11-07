@@ -17,5 +17,5 @@ type TimestampKeys<T extends MsSqlTable> = {
         timestamp: string;
     } ? K : never : never;
 }[keyof InsertValue<T>] & keyof InsertValue<T>;
-export type MsSqlInsertValues<T extends MsSqlTable, B extends keyof InsertValue<T> = never> = Omit<InsertValue<T>, B | Blocked<T> | TimestampKeys<T>> & Partial<Pick<InsertValue<T>, Exclude<TimestampKeys<T>, B | Blocked<T>>>>;
+export type MsSqlAddValues<T extends MsSqlTable, B extends keyof InsertValue<T> = never> = Omit<InsertValue<T>, B | Blocked<T> | TimestampKeys<T>> & Partial<Pick<InsertValue<T>, Exclude<TimestampKeys<T>, B | Blocked<T>>>>;
 export {};
