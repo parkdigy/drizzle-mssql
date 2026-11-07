@@ -2,7 +2,7 @@
   "name": "@pdg/drizzle-mssql",
   "title": "Drizzle for MSSQL",
   "description": "Drizzle ORM MSSQL 보조 라이브러리",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.esm.js",
@@ -56,6 +56,10 @@
     "typescript",
     "javascript"
   ],
+  "peerDependencies": {
+    "drizzle-orm": "1.0.0-rc.5",
+    "mssql": "^11.0.2"
+  },
   "devDependencies": {
     "@eslint/js": "9.39.5",
     "@rollup/plugin-commonjs": "29.0.3",
@@ -82,9 +86,5 @@
   "allowScripts": {
     "@parcel/watcher": true,
     "fsevents": true
-  },
-  "peerDependencies": {
-    "drizzle-orm": "1.0.0-rc.5",
-    "mssql": "^11.0.2"
   }
 }

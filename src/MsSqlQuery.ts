@@ -103,14 +103,14 @@ export class MsSqlQuery<
     if (Array.isArray(fields) && fields.length > 0 && fields.every((field) => typeof field === 'string')) {
       return TableColumns(table, ...(fields as MsSqlColumnSelectionName<MsSqlTable>[]));
     }
-    if (typeof fields !== 'function') return normalizeFields(fields);
+    if (typeof fields !== 'function') return normalizeFields(fields, table);
     const query = {
       t: table,
       columns: (...names: MsSqlColumnSelectionName<MsSqlTable>[]) => TableColumns(table, ...names),
       min: (columnOrName: string | MsSqlColumn) => drizzleMin(this.resolveAggregateColumn(columnOrName, table)),
       max: (columnOrName: string | MsSqlColumn) => drizzleMax(this.resolveAggregateColumn(columnOrName, table)),
     };
-    return normalizeFields(fields(query));
+    return normalizeFields(fields(query), table);
   }
 
   /********************************************************************************************************************
@@ -132,6 +132,10 @@ export class MsSqlQuery<
   select<const T extends readonly FieldInput[] | readonly MsSqlColumnSelectionName<TTable>[]>(
     fields: T & readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[]
   ): SelectFrom<TTable, MergeFields<NamedFields<TTable, T>>>;
+
+  select<const TSelection extends StringColumnSelection<TTable>>(
+    fields: TSelection
+  ): SelectFrom<TTable, StringColumnSelectionFields<TTable, TSelection>>;
 
   select<TSelection extends SelectedFields<MsSqlColumn, TTable>>(
     fields?: Fields<FieldsQuery<TTable>, TSelection>
@@ -203,6 +207,11 @@ export class MsSqlQuery<
     fields: T & readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[],
     where: BaseWhere<this>
   ): Promise<FindResult<TTable, MergeFields<NamedFields<TTable, T>>>>;
+
+  async find<const TSelection extends StringColumnSelection<TTable>>(
+    fields: TSelection,
+    where?: BaseWhere<this>
+  ): Promise<FindResult<TTable, StringColumnSelectionFields<TTable, TSelection>>>;
 
   async find<TSelection extends SelectedFields<MsSqlColumn, TTable>>(
     fields: Fields<FieldsQuery<TTable>, TSelection>,
@@ -329,6 +338,11 @@ export class MsSqlQuery<
     fields: T & readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[],
     key: PrimaryKeyInput<TTable>
   ): Promise<FindResult<TTable, MergeFields<NamedFields<TTable, T>>>>;
+
+  findByPrimaryKey<const TSelection extends StringColumnSelection<TTable>>(
+    fields: TSelection,
+    key: PrimaryKeyInput<TTable>
+  ): Promise<FindResult<TTable, StringColumnSelectionFields<TTable, TSelection>>>;
 
   findByPrimaryKey<TSelection extends SelectedFields<MsSqlColumn, TTable>>(
     fields: Fields<FieldsQuery<TTable>, TSelection>,
@@ -814,6 +828,15 @@ type WhereQuery<TQuery> = Pick<
 type BaseWhere<TQuery> = SQL | undefined | ((query: WhereQuery<TQuery>) => SQL | undefined);
 
 type FieldSet = SelectedFields<MsSqlColumn, MsSqlTable>;
+type StringColumnSelection<TTable extends MsSqlTable> = Record<string, keyof TTable['_']['columns'] & string>;
+type StringColumnSelectionFields<
+  TTable extends MsSqlTable,
+  TSelection extends StringColumnSelection<TTable>,
+> = {
+  [K in keyof TSelection]: TTable['_']['columns'][TSelection[K]] extends MsSqlColumn<infer TConfig>
+    ? SQL.Aliased<TConfig['data']>
+    : never;
+};
 type FieldInput = FieldSet | false | undefined;
 type FieldsQuery<TTable extends MsSqlTable> = {
   readonly t: TTable;
@@ -846,7 +869,7 @@ type MergeFields<T extends readonly FieldInput[], Result = {}> = T extends reado
       ? { [P in keyof Result]: Result[P] }
       : never;
 
-const normalizeFields = (fields: unknown): FieldSet | undefined => {
+const normalizeFields = (fields: unknown, table?: MsSqlTable): FieldSet | undefined => {
   if (fields === undefined) return undefined;
   const groups = Array.isArray(fields) ? fields : [fields];
   const result: FieldSet = {};
@@ -858,6 +881,12 @@ const normalizeFields = (fields: unknown): FieldSet | undefined => {
     Object.assign(result, group);
   }
   for (const [name, field] of Object.entries(result)) {
+    if (typeof field === 'string') {
+      const column = table && getTableColumns(table)[field];
+      if (!column) throw new Error(`select: unknown column "${field}".`);
+      result[name] = sql`${column}`.mapWith(column).as(name);
+      continue;
+    }
     if (is(field, MsSqlColumn) && field.name !== name) {
       result[name] = sql`${field}`.mapWith(field).as(name);
     }

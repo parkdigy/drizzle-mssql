@@ -33,6 +33,22 @@ test('컬럼 선택과 조건을 MSSQL SQL로 생성한다', () => {
   expect(query.params).toEqual(['홍길동']);
 });
 
+test('문자열 컬럼 매핑 객체의 키를 결과 별칭으로 사용한다', () => {
+  const selected = usersQuery.select({ id_2: 'id', display_name: 'name' });
+  type Row = Awaited<typeof selected>[number];
+  const row: Row = { id_2: 1, display_name: 'Ada' };
+  expect(selected.toSQL().sql).toMatch(/select \[id\] as \[id_2\], \[name\] as \[display_name\] from \[users\]/i);
+  expect(row).toEqual({ id_2: 1, display_name: 'Ada' });
+  expect(() => usersQuery.select({ missing: 'missing' } as never)).toThrow('select: unknown column "missing".');
+  if (false) {
+    const found = usersQuery.find({ id_2: 'id' });
+    const foundByPrimaryKey = usersQuery.findByPrimaryKey({ id_2: 'id' }, 1);
+    type FoundRow = NonNullable<Awaited<typeof found>>;
+    const foundRow: FoundRow = { id_2: 1 };
+    void [foundByPrimaryKey, foundRow];
+  }
+});
+
 test('복합 기본 키 조건과 안전한 수정 삭제를 지원한다', () => {
   const query = new MsSqlQuery(
     memberships,

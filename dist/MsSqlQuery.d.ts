@@ -46,6 +46,7 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, IV extends MsSqlInser
     select<N extends MsSqlColumnSelectionName<TTable>>(fields: readonly N[] & readonly MsSqlColumnSelectionName<TTable>[]): SelectFrom<TTable, MsSqlSelectedNamedColumns<TTable, readonly N[]>>;
     select<const T extends readonly FieldInput[]>(fields: (query: FieldsQuery<TTable>) => T): SelectFrom<TTable, MergeFields<T>>;
     select<const T extends readonly FieldInput[] | readonly MsSqlColumnSelectionName<TTable>[]>(fields: T & readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[]): SelectFrom<TTable, MergeFields<NamedFields<TTable, T>>>;
+    select<const TSelection extends StringColumnSelection<TTable>>(fields: TSelection): SelectFrom<TTable, StringColumnSelectionFields<TTable, TSelection>>;
     select<TSelection extends SelectedFields<MsSqlColumn, TTable>>(fields?: Fields<FieldsQuery<TTable>, TSelection>): SelectFrom<TTable, TSelection>;
     select<TAlias extends string>(alias: MsSqlAliasTable<TTable, TAlias>): SelectFrom<MsSqlAliasTable<TTable, TAlias>, undefined>;
     select<TAlias extends string>(alias: MsSqlAliasTable<TTable, TAlias>, fields: readonly []): SelectFrom<MsSqlAliasTable<TTable, TAlias>, {}>;
@@ -61,6 +62,7 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, IV extends MsSqlInser
     find<N extends MsSqlColumnSelectionName<TTable>>(fields: readonly N[] & readonly MsSqlColumnSelectionName<TTable>[], where?: BaseWhere<this>): Promise<FindResult<TTable, MsSqlSelectedNamedColumns<TTable, readonly N[]>>>;
     find<const T extends readonly FieldInput[]>(fields: (query: FieldsQuery<TTable>) => T, where: BaseWhere<this>): Promise<FindResult<TTable, MergeFields<T>>>;
     find<const T extends readonly FieldInput[] | readonly MsSqlColumnSelectionName<TTable>[]>(fields: T & readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[], where: BaseWhere<this>): Promise<FindResult<TTable, MergeFields<NamedFields<TTable, T>>>>;
+    find<const TSelection extends StringColumnSelection<TTable>>(fields: TSelection, where?: BaseWhere<this>): Promise<FindResult<TTable, StringColumnSelectionFields<TTable, TSelection>>>;
     find<TSelection extends SelectedFields<MsSqlColumn, TTable>>(fields: Fields<FieldsQuery<TTable>, TSelection>, where: BaseWhere<this>): Promise<FindResult<TTable, TSelection>>;
     find<TAlias extends string>(alias: MsSqlAliasTable<TTable, TAlias>, where: BaseWhere<this>): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, undefined>>;
     find<TAlias extends string>(alias: MsSqlAliasTable<TTable, TAlias>, fields: readonly [], where?: BaseWhere<this>): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, {}>>;
@@ -76,6 +78,7 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, IV extends MsSqlInser
     findByPrimaryKey(fields: readonly [], key: PrimaryKeyInput<TTable>): Promise<FindResult<TTable, {}>>;
     findByPrimaryKey<const T extends readonly FieldInput[]>(fields: (query: FieldsQuery<TTable>) => T, key: PrimaryKeyInput<TTable>): Promise<FindResult<TTable, MergeFields<T>>>;
     findByPrimaryKey<const T extends readonly FieldInput[] | readonly MsSqlColumnSelectionName<TTable>[]>(fields: T & readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[], key: PrimaryKeyInput<TTable>): Promise<FindResult<TTable, MergeFields<NamedFields<TTable, T>>>>;
+    findByPrimaryKey<const TSelection extends StringColumnSelection<TTable>>(fields: TSelection, key: PrimaryKeyInput<TTable>): Promise<FindResult<TTable, StringColumnSelectionFields<TTable, TSelection>>>;
     findByPrimaryKey<TSelection extends SelectedFields<MsSqlColumn, TTable>>(fields: Fields<FieldsQuery<TTable>, TSelection>, key: PrimaryKeyInput<TTable>): Promise<FindResult<TTable, TSelection>>;
     /********************************************************************************************************************
      * primaryKeyCondition
@@ -228,6 +231,10 @@ type FindResult<TTable extends MsSqlTable, TSelection extends FieldSet | undefin
 type WhereQuery<TQuery> = Pick<TQuery, Extract<keyof TQuery, 't' | 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'inArray' | 'notInArray' | 'between' | 'notBetween' | 'like' | 'notLike' | 'ilike' | 'notIlike' | 'isNull' | 'isNotNull' | 'and' | 'or'>>;
 type BaseWhere<TQuery> = SQL | undefined | ((query: WhereQuery<TQuery>) => SQL | undefined);
 type FieldSet = SelectedFields<MsSqlColumn, MsSqlTable>;
+type StringColumnSelection<TTable extends MsSqlTable> = Record<string, keyof TTable['_']['columns'] & string>;
+type StringColumnSelectionFields<TTable extends MsSqlTable, TSelection extends StringColumnSelection<TTable>> = {
+    [K in keyof TSelection]: TTable['_']['columns'][TSelection[K]] extends MsSqlColumn<infer TConfig> ? SQL.Aliased<TConfig['data']> : never;
+};
 type FieldInput = FieldSet | false | undefined;
 type FieldsQuery<TTable extends MsSqlTable> = {
     readonly t: TTable;
