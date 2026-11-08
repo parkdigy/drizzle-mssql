@@ -3,16 +3,58 @@ import { count, defineRelations, is, SQL, sql, type Subquery } from 'drizzle-orm
 import type { MsSqlTable } from 'drizzle-orm/mssql-core';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import * as native from 'drizzle-orm';
-import { createAlias } from './alias';
-import { createConditions } from './conditions';
+import { createAlias, type MsSqlAliases } from './alias';
+import { createConditions, type MsSqlSchemaConditions } from './conditions';
 import { TableColumns } from './columns';
 import { MsSqlQuery } from './MsSqlQuery';
 
-export function drizzleMsSql<TSchema extends Record<string, MsSqlTable>>(options: {
+export interface DrizzleMsSqlOptions<TSchema extends Record<string, MsSqlTable>> {
   url: string;
   schema: TSchema;
   getTimestamp: () => unknown;
-}) {
+}
+
+type MsSqlConnection<TSchema extends Record<string, MsSqlTable>> = ReturnType<typeof createConnection<TSchema>>;
+
+interface MsSqlDatabaseHelpers<TSchema extends Record<string, MsSqlTable>> extends MsSqlNativeHelpers {
+  s: TSchema;
+  a: MsSqlAliases<TSchema>;
+  columns: typeof TableColumns;
+  sql: typeof sql;
+  sqlNumber(value: SQL | number): SQL<number>;
+  sqlString(value: SQL | string): SQL<string>;
+  sqlBoolean(value: SQL | boolean): SQL<boolean>;
+  current: MsSqlConnection<TSchema>['current'];
+  trans: MsSqlConnection<TSchema>['trans'];
+  paginate: MsSqlConnection<TSchema>['paginate'];
+  close: MsSqlConnection<TSchema>['close'];
+  query<TTable extends MsSqlTable>(table: TTable): MsSqlQuery<TTable>;
+}
+
+type MsSqlNativeHelpers = Pick<
+  typeof native,
+  | 'asc'
+  | 'desc'
+  | 'count'
+  | 'countDistinct'
+  | 'avg'
+  | 'avgDistinct'
+  | 'sum'
+  | 'sumDistinct'
+  | 'max'
+  | 'min'
+  | 'not'
+  | 'exists'
+  | 'notExists'
+  | 'arrayContains'
+  | 'arrayContained'
+  | 'arrayOverlaps'
+>;
+
+export type DrizzleMsSql<TSchema extends Record<string, MsSqlTable>> = MsSqlDatabaseHelpers<TSchema> &
+  MsSqlSchemaConditions<TSchema>;
+
+function createConnection<TSchema extends Record<string, MsSqlTable>>(options: DrizzleMsSqlOptions<TSchema>) {
   const raw = drizzle({ connection: options.url, relations: defineRelations(options.schema) });
   type Transaction = Parameters<Parameters<typeof raw.transaction>[0]>[0];
   const context = new AsyncLocalStorage<Transaction>();
@@ -36,14 +78,16 @@ export function drizzleMsSql<TSchema extends Record<string, MsSqlTable>>(options
     const offset = (page - 1) * limit;
     // Drizzle의 SQL Server 빌더는 offset/fetch가 호출된 빌더의 설정을 직접 변경한다.
     // 집계와 데이터 조회 모두 SQL Server 2012의 ORDER BY ... OFFSET 문법을 따라야 한다.
-    const config = (builder as unknown as {
-      config: {
-        orderBy?: unknown[];
-        fetch?: unknown;
-        setOperators: { orderBy?: unknown[]; fetch?: unknown }[];
-      };
-      orderBy(value: SQL): unknown;
-    }).config;
+    const config = (
+      builder as unknown as {
+        config: {
+          orderBy?: unknown[];
+          fetch?: unknown;
+          setOperators: { orderBy?: unknown[]; fetch?: unknown }[];
+        };
+        orderBy(value: SQL): unknown;
+      }
+    ).config;
     const tail = config.setOperators.length ? config.setOperators[config.setOperators.length - 1] : config;
     if (!tail.orderBy?.length) {
       (builder as unknown as { orderBy(value: SQL): unknown }).orderBy(sql`(select 0)`);
@@ -64,6 +108,13 @@ export function drizzleMsSql<TSchema extends Record<string, MsSqlTable>>(options
       },
     };
   };
+  return { current, trans, paginate, close: async () => (await raw.$client.$instance()).close() };
+}
+
+export function drizzleMsSql<TSchema extends Record<string, MsSqlTable>>(
+  options: DrizzleMsSqlOptions<TSchema>
+): DrizzleMsSql<TSchema> {
+  const connection = createConnection(options);
   return {
     asc: native.asc,
     desc: native.desc,
@@ -90,10 +141,7 @@ export function drizzleMsSql<TSchema extends Record<string, MsSqlTable>>(options
     sqlString: (value: SQL | string) => (is(value, SQL) ? value : sql`${value}`).mapWith(String),
     sqlBoolean: (value: SQL | boolean) =>
       (is(value, SQL) ? value : sql`${value}`).mapWith((v) => v === true || v === 1),
-    current,
-    query: <TTable extends TSchema[keyof TSchema]>(table: TTable) => new MsSqlQuery(table, current),
-    trans,
-    paginate,
-    close: async () => (await raw.$client.$instance()).close(),
+    ...connection,
+    query: <TTable extends MsSqlTable>(table: TTable): MsSqlQuery<TTable> => new MsSqlQuery(table, connection.current),
   };
 }

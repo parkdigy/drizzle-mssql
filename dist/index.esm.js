@@ -681,7 +681,7 @@ const normalizeFields = (fields, table) => {
         }
     }
     return result;
-};function drizzleMsSql(options) {
+};function createConnection(options) {
     const raw = drizzle({ connection: options.url, relations: defineRelations(options.schema) });
     const context = new AsyncLocalStorage();
     const current = Object.assign(() => { var _a; return (_a = context.getStore()) !== null && _a !== void 0 ? _a : raw; }, { getTimestamp: options.getTimestamp });
@@ -719,6 +719,9 @@ const normalizeFields = (fields, table) => {
             },
         };
     };
-    return Object.assign(Object.assign({ asc: native.asc, desc: native.desc, count: native.count, countDistinct: native.countDistinct, avg: native.avg, avgDistinct: native.avgDistinct, sum: native.sum, sumDistinct: native.sumDistinct, max: native.max, min: native.min, not: native.not, exists: native.exists, notExists: native.notExists, arrayContains: native.arrayContains, arrayContained: native.arrayContained, arrayOverlaps: native.arrayOverlaps, s: options.schema, a: createAlias(options.schema) }, createConditions(options.schema)), { columns: TableColumns, sql, sqlNumber: (value) => (is(value, SQL) ? value : sql `${value}`).mapWith(Number), sqlString: (value) => (is(value, SQL) ? value : sql `${value}`).mapWith(String), sqlBoolean: (value) => (is(value, SQL) ? value : sql `${value}`).mapWith((v) => v === true || v === 1), current, query: (table) => new MsSqlQuery(table, current), trans,
-        paginate, close: async () => (await raw.$client.$instance()).close() });
+    return { current, trans, paginate, close: async () => (await raw.$client.$instance()).close() };
+}
+function drizzleMsSql(options) {
+    const connection = createConnection(options);
+    return Object.assign(Object.assign(Object.assign(Object.assign({ asc: native.asc, desc: native.desc, count: native.count, countDistinct: native.countDistinct, avg: native.avg, avgDistinct: native.avgDistinct, sum: native.sum, sumDistinct: native.sumDistinct, max: native.max, min: native.min, not: native.not, exists: native.exists, notExists: native.notExists, arrayContains: native.arrayContains, arrayContained: native.arrayContained, arrayOverlaps: native.arrayOverlaps, s: options.schema, a: createAlias(options.schema) }, createConditions(options.schema)), { columns: TableColumns, sql, sqlNumber: (value) => (is(value, SQL) ? value : sql `${value}`).mapWith(Number), sqlString: (value) => (is(value, SQL) ? value : sql `${value}`).mapWith(String), sqlBoolean: (value) => (is(value, SQL) ? value : sql `${value}`).mapWith((v) => v === true || v === 1) }), connection), { query: (table) => new MsSqlQuery(table, connection.current) });
 }export{MsSqlQuery,TableColumns,createConditions,drizzleMsSql as default,drizzleMsSql,mssqlTable};

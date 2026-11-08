@@ -60,3 +60,5 @@ export {
   unique,
   uniqueIndex,
 } from 'drizzle-orm/mssql-core';
+
+export type { MsSqlAliases } from './alias';

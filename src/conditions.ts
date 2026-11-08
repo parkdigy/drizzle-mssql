@@ -10,7 +10,6 @@ export function createConditions<TSchema extends Record<string, MsSqlTable>>(sch
   type ValueOperators = Exclude<keyof MsSqlConditions<MsSqlTable>, 'isNull' | 'isNotNull'>;
   type SchemaKey = keyof TSchema & string;
   type TableInput = MsSqlTable | SchemaKey;
-  type InputTable<T extends TableInput> = T extends SchemaKey ? (typeof schema)[T] : Extract<T, MsSqlTable>;
 
   const resolveTable = (table: TableInput): MsSqlTable => {
     if (typeof table !== 'string') return table;
@@ -82,9 +81,8 @@ export function createConditions<TSchema extends Record<string, MsSqlTable>>(sch
   };
 
   type ObjectOperator<TOperator extends keyof MsSqlConditions<MsSqlTable>> = {
-    <T extends TableInput>(table: T, values: MsSqlConditions<InputTable<T>>[TOperator]): SQL | undefined;
-    // Keep a direct table overload for callers using generic table types.
     <T extends MsSqlTable>(table: T, values: MsSqlConditions<T>[TOperator]): SQL | undefined;
+    <K extends SchemaKey>(table: K, values: MsSqlConditions<TSchema[K]>[TOperator]): SQL | undefined;
   };
 
   // Put table/object overloads first so native SQLWrapper signatures do not swallow object-key completions.
@@ -141,8 +139,8 @@ export function createConditions<TSchema extends Record<string, MsSqlTable>>(sch
     }) as NullOperator;
 
   type GroupOperator = {
-    <T extends TableInput>(table: T, options: MsSqlConditions<InputTable<T>>): SQL | undefined;
     <T extends MsSqlTable>(table: T, options: MsSqlConditions<T>): SQL | undefined;
+    <K extends SchemaKey>(table: K, options: MsSqlConditions<TSchema[K]>): SQL | undefined;
   };
 
   const groupOperator =
@@ -196,3 +194,7 @@ export function createConditions<TSchema extends Record<string, MsSqlTable>>(sch
 
   return conditions;
 }
+
+export type MsSqlSchemaConditions<TSchema extends Record<string, MsSqlTable>> = ReturnType<
+  typeof createConditions<TSchema>
+>;
