@@ -131,7 +131,7 @@ export function TableColumns<
 export function TableColumns<T extends MsSqlTable>(table: T): MsSqlSelectedTableColumns<T>;
 export function TableColumns<T extends MsSqlTable, N extends MsSqlColumnSelectionName<T>>(
   table: T,
-  ...names: N[] & MsSqlColumnSelectionName<T>[]
+  ...names: N[]
 ): MsSqlSelectedNamedColumnUnion<T, N>;
 export function TableColumns<T extends MsSqlTable, N extends string>(
   table: T,

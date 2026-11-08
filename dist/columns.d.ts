@@ -80,7 +80,7 @@ type MsSqlMergedGroupColumns<G extends readonly MsSqlColumnGroup[], Result = {}>
  * ******************************************************************************************************************/
 export declare function TableColumns<A extends MsSqlTable, const AN extends readonly MsSqlColumnSelectionName<A>[], B extends MsSqlTable, const BN extends readonly MsSqlColumnSelectionName<B>[]>(a: readonly [A, ...AN], b: readonly [B, ...BN]): MsSqlMergedGroupColumns<readonly [readonly [A, ...AN], readonly [B, ...BN]]>;
 export declare function TableColumns<T extends MsSqlTable>(table: T): MsSqlSelectedTableColumns<T>;
-export declare function TableColumns<T extends MsSqlTable, N extends MsSqlColumnSelectionName<T>>(table: T, ...names: N[] & MsSqlColumnSelectionName<T>[]): MsSqlSelectedNamedColumnUnion<T, N>;
+export declare function TableColumns<T extends MsSqlTable, N extends MsSqlColumnSelectionName<T>>(table: T, ...names: N[]): MsSqlSelectedNamedColumnUnion<T, N>;
 export declare function TableColumns<T extends MsSqlTable, N extends string>(table: T, ...names: N[] & MsSqlColumnSelectionName<T>[]): Record<string, MsSqlColumn | SQL.Aliased>;
 export declare function TableColumns<const T extends readonly MsSqlColumn[]>(columns: T): MsSqlSelectedColumns<T>;
 export declare function TableColumns<const T extends readonly [MsSqlColumn, ...MsSqlColumn[]]>(...columns: T): MsSqlSelectedColumns<T>;

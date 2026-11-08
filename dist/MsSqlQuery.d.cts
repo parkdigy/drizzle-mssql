@@ -28,7 +28,7 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddVa
      * columns
      * ******************************************************************************************************************/
     columns(): MsSqlSelectedTableColumns<TTable>;
-    columns<N extends MsSqlColumnSelectionName<TTable>>(...names: N[] & MsSqlColumnSelectionName<TTable>[]): MsSqlSelectedNamedColumnUnion<TTable, N>;
+    columns<N extends MsSqlColumnSelectionName<TTable>>(...names: N[]): MsSqlSelectedNamedColumnUnion<TTable, N>;
     /********************************************************************************************************************
      * min / max
      * ******************************************************************************************************************/
@@ -43,41 +43,41 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddVa
      * ******************************************************************************************************************/
     select(): SelectFrom<TTable, undefined>;
     select(fields: readonly []): SelectFrom<TTable, {}>;
-    select<N extends MsSqlColumnSelectionName<TTable>>(fields: readonly N[] & readonly MsSqlColumnSelectionName<TTable>[]): SelectFrom<TTable, MsSqlSelectedNamedColumns<TTable, readonly N[]>>;
+    select<N extends MsSqlColumnSelectionName<TTable>>(fields: readonly N[]): SelectFrom<TTable, MsSqlSelectedNamedColumns<TTable, readonly N[]>>;
     select<const T extends readonly FieldInput[]>(fields: (query: FieldsQuery<TTable>) => T): SelectFrom<TTable, MergeFields<T>>;
-    select<const T extends readonly FieldInput[] | readonly MsSqlColumnSelectionName<TTable>[]>(fields: T & readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[]): SelectFrom<TTable, MergeFields<NamedFields<TTable, T>>>;
+    select<const T extends readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[]>(fields: T): SelectFrom<TTable, MergeFields<NamedFields<TTable, T>>>;
     select<const TSelection extends StringColumnSelection<TTable>>(fields: TSelection): SelectFrom<TTable, StringColumnSelectionFields<TTable, TSelection>>;
     select<TSelection extends SelectedFields<MsSqlColumn, TTable>>(fields?: Fields<FieldsQuery<TTable>, TSelection>): SelectFrom<TTable, TSelection>;
     select<TAlias extends string>(alias: MsSqlAliasTable<TTable, TAlias>): SelectFrom<MsSqlAliasTable<TTable, TAlias>, undefined>;
     select<TAlias extends string>(alias: MsSqlAliasTable<TTable, TAlias>, fields: readonly []): SelectFrom<MsSqlAliasTable<TTable, TAlias>, {}>;
-    select<TAlias extends string, N extends MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>>(alias: MsSqlAliasTable<TTable, TAlias>, fields: readonly N[] & readonly MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>[]): SelectFrom<MsSqlAliasTable<TTable, TAlias>, MsSqlSelectedNamedColumns<MsSqlAliasTable<TTable, TAlias>, readonly N[]>>;
+    select<TAlias extends string, N extends MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>>(alias: MsSqlAliasTable<TTable, TAlias>, fields: readonly N[]): SelectFrom<MsSqlAliasTable<TTable, TAlias>, MsSqlSelectedNamedColumns<MsSqlAliasTable<TTable, TAlias>, readonly N[]>>;
     select<TAlias extends string, const T extends readonly FieldInput[]>(alias: MsSqlAliasTable<TTable, TAlias>, fields: (query: FieldsQuery<MsSqlAliasTable<TTable, TAlias>>) => T): SelectFrom<MsSqlAliasTable<TTable, TAlias>, MergeFields<T>>;
-    select<TAlias extends string, const T extends readonly FieldInput[] | readonly MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>[]>(alias: MsSqlAliasTable<TTable, TAlias>, fields: T & readonly (FieldInput | MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>)[]): SelectFrom<MsSqlAliasTable<TTable, TAlias>, MergeFields<NamedFields<MsSqlAliasTable<TTable, TAlias>, T>>>;
+    select<TAlias extends string, const T extends readonly (FieldInput | MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>)[]>(alias: MsSqlAliasTable<TTable, TAlias>, fields: T): SelectFrom<MsSqlAliasTable<TTable, TAlias>, MergeFields<NamedFields<MsSqlAliasTable<TTable, TAlias>, T>>>;
     select<TAlias extends string, TSelection extends SelectedFields<MsSqlColumn, MsSqlAliasTable<TTable, TAlias>>>(alias: MsSqlAliasTable<TTable, TAlias>, fields: Fields<FieldsQuery<MsSqlAliasTable<TTable, TAlias>>, TSelection>): SelectFrom<MsSqlAliasTable<TTable, TAlias>, TSelection>;
     /********************************************************************************************************************
      * find
      * ******************************************************************************************************************/
     find(where: BaseWhere<this>): Promise<FindResult<TTable, undefined>>;
     find(fields: readonly [], where?: BaseWhere<this>): Promise<FindResult<TTable, {}>>;
-    find<N extends MsSqlColumnSelectionName<TTable>>(fields: readonly N[] & readonly MsSqlColumnSelectionName<TTable>[], where?: BaseWhere<this>): Promise<FindResult<TTable, MsSqlSelectedNamedColumns<TTable, readonly N[]>>>;
+    find<N extends MsSqlColumnSelectionName<TTable>>(fields: readonly N[], where?: BaseWhere<this>): Promise<FindResult<TTable, MsSqlSelectedNamedColumns<TTable, readonly N[]>>>;
     find<const T extends readonly FieldInput[]>(fields: (query: FieldsQuery<TTable>) => T, where: BaseWhere<this>): Promise<FindResult<TTable, MergeFields<T>>>;
-    find<const T extends readonly FieldInput[] | readonly MsSqlColumnSelectionName<TTable>[]>(fields: T & readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[], where: BaseWhere<this>): Promise<FindResult<TTable, MergeFields<NamedFields<TTable, T>>>>;
+    find<const T extends readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[]>(fields: T, where: BaseWhere<this>): Promise<FindResult<TTable, MergeFields<NamedFields<TTable, T>>>>;
     find<const TSelection extends StringColumnSelection<TTable>>(fields: TSelection, where?: BaseWhere<this>): Promise<FindResult<TTable, StringColumnSelectionFields<TTable, TSelection>>>;
     find<TSelection extends SelectedFields<MsSqlColumn, TTable>>(fields: Fields<FieldsQuery<TTable>, TSelection>, where?: BaseWhere<this>): Promise<FindResult<TTable, TSelection>>;
     find<TAlias extends string>(alias: MsSqlAliasTable<TTable, TAlias>, where: BaseWhere<this>): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, undefined>>;
     find<TAlias extends string>(alias: MsSqlAliasTable<TTable, TAlias>, fields: readonly [], where?: BaseWhere<this>): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, {}>>;
-    find<TAlias extends string, N extends MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>>(alias: MsSqlAliasTable<TTable, TAlias>, fields: readonly N[] & readonly MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>[], where?: BaseWhere<this>): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, MsSqlSelectedNamedColumns<MsSqlAliasTable<TTable, TAlias>, readonly N[]>>>;
+    find<TAlias extends string, N extends MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>>(alias: MsSqlAliasTable<TTable, TAlias>, fields: readonly N[], where?: BaseWhere<this>): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, MsSqlSelectedNamedColumns<MsSqlAliasTable<TTable, TAlias>, readonly N[]>>>;
     find<TAlias extends string, const T extends readonly FieldInput[]>(alias: MsSqlAliasTable<TTable, TAlias>, fields: (query: FieldsQuery<MsSqlAliasTable<TTable, TAlias>>) => T, where: BaseWhere<this>): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, MergeFields<T>>>;
-    find<TAlias extends string, const T extends readonly FieldInput[] | readonly MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>[]>(alias: MsSqlAliasTable<TTable, TAlias>, fields: T & readonly (FieldInput | MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>)[], where: BaseWhere<this>): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, MergeFields<NamedFields<MsSqlAliasTable<TTable, TAlias>, T>>>>;
+    find<TAlias extends string, const T extends readonly (FieldInput | MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>)[]>(alias: MsSqlAliasTable<TTable, TAlias>, fields: T, where: BaseWhere<this>): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, MergeFields<NamedFields<MsSqlAliasTable<TTable, TAlias>, T>>>>;
     find<TAlias extends string, TSelection extends SelectedFields<MsSqlColumn, MsSqlAliasTable<TTable, TAlias>>>(alias: MsSqlAliasTable<TTable, TAlias>, fields: Fields<FieldsQuery<MsSqlAliasTable<TTable, TAlias>>, TSelection>, where: BaseWhere<this>): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, TSelection>>;
     /********************************************************************************************************************
      * findByPrimaryKey
      * ******************************************************************************************************************/
-    findByPrimaryKey<N extends MsSqlColumnSelectionName<TTable>>(fields: readonly N[] & readonly MsSqlColumnSelectionName<TTable>[], key: PrimaryKeyInput<TTable>): Promise<FindResult<TTable, MsSqlSelectedNamedColumns<TTable, readonly N[]>>>;
+    findByPrimaryKey<N extends MsSqlColumnSelectionName<TTable>>(fields: readonly N[], key: PrimaryKeyInput<TTable>): Promise<FindResult<TTable, MsSqlSelectedNamedColumns<TTable, readonly N[]>>>;
     findByPrimaryKey(key: PrimaryKeyInput<TTable>): Promise<FindResult<TTable, undefined>>;
     findByPrimaryKey(fields: readonly [], key: PrimaryKeyInput<TTable>): Promise<FindResult<TTable, {}>>;
     findByPrimaryKey<const T extends readonly FieldInput[]>(fields: (query: FieldsQuery<TTable>) => T, key: PrimaryKeyInput<TTable>): Promise<FindResult<TTable, MergeFields<T>>>;
-    findByPrimaryKey<const T extends readonly FieldInput[] | readonly MsSqlColumnSelectionName<TTable>[]>(fields: T & readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[], key: PrimaryKeyInput<TTable>): Promise<FindResult<TTable, MergeFields<NamedFields<TTable, T>>>>;
+    findByPrimaryKey<const T extends readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[]>(fields: T, key: PrimaryKeyInput<TTable>): Promise<FindResult<TTable, MergeFields<NamedFields<TTable, T>>>>;
     findByPrimaryKey<const TSelection extends StringColumnSelection<TTable>>(fields: TSelection, key: PrimaryKeyInput<TTable>): Promise<FindResult<TTable, StringColumnSelectionFields<TTable, TSelection>>>;
     findByPrimaryKey<TSelection extends SelectedFields<MsSqlColumn, TTable>>(fields: Fields<FieldsQuery<TTable>, TSelection>, key: PrimaryKeyInput<TTable>): Promise<FindResult<TTable, TSelection>>;
     /********************************************************************************************************************
@@ -239,7 +239,7 @@ type FieldInput = FieldSet | false | undefined;
 type FieldsQuery<TTable extends MsSqlTable> = {
     readonly t: TTable;
     columns(): MsSqlSelectedTableColumns<TTable>;
-    columns<N extends MsSqlColumnSelectionName<TTable>>(...names: N[] & MsSqlColumnSelectionName<TTable>[]): MsSqlSelectedNamedColumnUnion<TTable, N>;
+    columns<N extends MsSqlColumnSelectionName<TTable>>(...names: N[]): MsSqlSelectedNamedColumnUnion<TTable, N>;
     min: MsSqlQuery<TTable>['min'];
     max: MsSqlQuery<TTable>['max'];
 };

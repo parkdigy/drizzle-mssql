@@ -79,9 +79,7 @@ export class MsSqlQuery<
    * columns
    * ******************************************************************************************************************/
   columns(): MsSqlSelectedTableColumns<TTable>;
-  columns<N extends MsSqlColumnSelectionName<TTable>>(
-    ...names: N[] & MsSqlColumnSelectionName<TTable>[]
-  ): MsSqlSelectedNamedColumnUnion<TTable, N>;
+  columns<N extends MsSqlColumnSelectionName<TTable>>(...names: N[]): MsSqlSelectedNamedColumnUnion<TTable, N>;
 
   columns(...names: string[]): unknown {
     const table: MsSqlTable = this.t;
@@ -139,15 +137,15 @@ export class MsSqlQuery<
   select(fields: readonly []): SelectFrom<TTable, {}>;
 
   select<N extends MsSqlColumnSelectionName<TTable>>(
-    fields: readonly N[] & readonly MsSqlColumnSelectionName<TTable>[]
+    fields: readonly N[]
   ): SelectFrom<TTable, MsSqlSelectedNamedColumns<TTable, readonly N[]>>;
 
   select<const T extends readonly FieldInput[]>(
     fields: (query: FieldsQuery<TTable>) => T
   ): SelectFrom<TTable, MergeFields<T>>;
 
-  select<const T extends readonly FieldInput[] | readonly MsSqlColumnSelectionName<TTable>[]>(
-    fields: T & readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[]
+  select<const T extends readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[]>(
+    fields: T
   ): SelectFrom<TTable, MergeFields<NamedFields<TTable, T>>>;
 
   select<const TSelection extends StringColumnSelection<TTable>>(
@@ -169,7 +167,7 @@ export class MsSqlQuery<
 
   select<TAlias extends string, N extends MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>>(
     alias: MsSqlAliasTable<TTable, TAlias>,
-    fields: readonly N[] & readonly MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>[]
+    fields: readonly N[]
   ): SelectFrom<
     MsSqlAliasTable<TTable, TAlias>,
     MsSqlSelectedNamedColumns<MsSqlAliasTable<TTable, TAlias>, readonly N[]>
@@ -182,10 +180,10 @@ export class MsSqlQuery<
 
   select<
     TAlias extends string,
-    const T extends readonly FieldInput[] | readonly MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>[],
+    const T extends readonly (FieldInput | MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>)[],
   >(
     alias: MsSqlAliasTable<TTable, TAlias>,
-    fields: T & readonly (FieldInput | MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>)[]
+    fields: T
   ): SelectFrom<MsSqlAliasTable<TTable, TAlias>, MergeFields<NamedFields<MsSqlAliasTable<TTable, TAlias>, T>>>;
 
   select<TAlias extends string, TSelection extends SelectedFields<MsSqlColumn, MsSqlAliasTable<TTable, TAlias>>>(
@@ -211,7 +209,7 @@ export class MsSqlQuery<
   async find(fields: readonly [], where?: BaseWhere<this>): Promise<FindResult<TTable, {}>>;
 
   async find<N extends MsSqlColumnSelectionName<TTable>>(
-    fields: readonly N[] & readonly MsSqlColumnSelectionName<TTable>[],
+    fields: readonly N[],
     where?: BaseWhere<this>
   ): Promise<FindResult<TTable, MsSqlSelectedNamedColumns<TTable, readonly N[]>>>;
 
@@ -220,8 +218,8 @@ export class MsSqlQuery<
     where: BaseWhere<this>
   ): Promise<FindResult<TTable, MergeFields<T>>>;
 
-  async find<const T extends readonly FieldInput[] | readonly MsSqlColumnSelectionName<TTable>[]>(
-    fields: T & readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[],
+  async find<const T extends readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[]>(
+    fields: T,
     where: BaseWhere<this>
   ): Promise<FindResult<TTable, MergeFields<NamedFields<TTable, T>>>>;
 
@@ -248,7 +246,7 @@ export class MsSqlQuery<
 
   async find<TAlias extends string, N extends MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>>(
     alias: MsSqlAliasTable<TTable, TAlias>,
-    fields: readonly N[] & readonly MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>[],
+    fields: readonly N[],
     where?: BaseWhere<this>
   ): Promise<
     FindResult<
@@ -265,10 +263,10 @@ export class MsSqlQuery<
 
   async find<
     TAlias extends string,
-    const T extends readonly FieldInput[] | readonly MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>[],
+    const T extends readonly (FieldInput | MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>)[],
   >(
     alias: MsSqlAliasTable<TTable, TAlias>,
-    fields: T & readonly (FieldInput | MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>)[],
+    fields: T,
     where: BaseWhere<this>
   ): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, MergeFields<NamedFields<MsSqlAliasTable<TTable, TAlias>, T>>>>;
 
@@ -338,7 +336,7 @@ export class MsSqlQuery<
 
   // 오버로드 해석 실패 시 TypeScript는 인자 수를 만족하는 첫 시그니처로 자동완성하므로 컬럼명 배열을 맨 앞에 둔다.
   findByPrimaryKey<N extends MsSqlColumnSelectionName<TTable>>(
-    fields: readonly N[] & readonly MsSqlColumnSelectionName<TTable>[],
+    fields: readonly N[],
     key: PrimaryKeyInput<TTable>
   ): Promise<FindResult<TTable, MsSqlSelectedNamedColumns<TTable, readonly N[]>>>;
 
@@ -351,8 +349,8 @@ export class MsSqlQuery<
     key: PrimaryKeyInput<TTable>
   ): Promise<FindResult<TTable, MergeFields<T>>>;
 
-  findByPrimaryKey<const T extends readonly FieldInput[] | readonly MsSqlColumnSelectionName<TTable>[]>(
-    fields: T & readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[],
+  findByPrimaryKey<const T extends readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[]>(
+    fields: T,
     key: PrimaryKeyInput<TTable>
   ): Promise<FindResult<TTable, MergeFields<NamedFields<TTable, T>>>>;
 
@@ -854,9 +852,7 @@ type FieldInput = FieldSet | false | undefined;
 type FieldsQuery<TTable extends MsSqlTable> = {
   readonly t: TTable;
   columns(): MsSqlSelectedTableColumns<TTable>;
-  columns<N extends MsSqlColumnSelectionName<TTable>>(
-    ...names: N[] & MsSqlColumnSelectionName<TTable>[]
-  ): MsSqlSelectedNamedColumnUnion<TTable, N>;
+  columns<N extends MsSqlColumnSelectionName<TTable>>(...names: N[]): MsSqlSelectedNamedColumnUnion<TTable, N>;
   min: MsSqlQuery<TTable>['min'];
   max: MsSqlQuery<TTable>['max'];
 };
