@@ -1,4 +1,4 @@
-import {drizzle}from'drizzle-orm/node-mssql';import*as native from'drizzle-orm';import {isTable,getTableColumns,sql,min,max,asc,desc,is,SQL,eq,and,count,Subquery,defineRelations}from'drizzle-orm';export{asc,avg,avgDistinct,count,countDistinct,desc,exists,max,min,not,notExists,sum,sumDistinct}from'drizzle-orm';import {MsSqlTable,mssqlTable as mssqlTable$1,getTableConfig,MsSqlColumn,alias as alias$1}from'drizzle-orm/mssql-core';export{bigint,binary,bit,char,check,customType,date,datetime,datetime2,datetimeoffset,decimal,float,foreignKey,index,int,mssqlSchema,mssqlTableCreator,mssqlView,nchar,ntext,numeric,nvarchar,primaryKey,real,smallint,text,time,tinyint,unique,uniqueIndex,varbinary,varchar}from'drizzle-orm/mssql-core';import {AsyncLocalStorage}from'node:async_hooks';import {alias}from'drizzle-orm/mssql-core/alias';import {MsSqlColumnBuilder}from'drizzle-orm/mssql-core/columns/common';function createAlias(schema) {
+import {drizzle}from'drizzle-orm/node-mssql';import*as native from'drizzle-orm';import {isTable,is,Subquery,sql,getTableColumns,min,max,asc,desc,SQL,eq,and,count,defineRelations}from'drizzle-orm';export{asc,avg,avgDistinct,count,countDistinct,desc,exists,max,min,not,notExists,sum,sumDistinct}from'drizzle-orm';import {MsSqlTable,mssqlTable as mssqlTable$1,getTableConfig,MsSqlColumn,alias as alias$1}from'drizzle-orm/mssql-core';export{bigint,binary,bit,char,check,customType,date,datetime,datetime2,datetimeoffset,decimal,float,foreignKey,index,int,mssqlSchema,mssqlTableCreator,mssqlView,nchar,ntext,numeric,nvarchar,primaryKey,real,smallint,text,time,tinyint,unique,uniqueIndex,varbinary,varchar}from'drizzle-orm/mssql-core';import {AsyncLocalStorage}from'node:async_hooks';import {alias}from'drizzle-orm/mssql-core/alias';import {MsSqlColumnBuilder}from'drizzle-orm/mssql-core/columns/common';function createAlias(schema) {
     /********************************************************************************************************************
      * getDefaultAlias
      * ******************************************************************************************************************/
@@ -154,7 +154,7 @@ import {drizzle}from'drizzle-orm/node-mssql';import*as native from'drizzle-orm';
     };
     return conditions;
 }function TableColumns(first, ...rest) {
-    var _a, _b;
+    var _a, _b, _c, _d;
     if (Array.isArray(first) && isTable(first[0])) {
         const result = {};
         for (const group of [first, ...rest]) {
@@ -164,6 +164,27 @@ import {drizzle}from'drizzle-orm/node-mssql';import*as native from'drizzle-orm';
             Object.assign(result, TableColumns(group[0], ...group.slice(1)));
         }
         return result;
+    }
+    if (is(first, Subquery)) {
+        const subqueryFields = first._.selectedFields;
+        if (rest.length === 0)
+            return subqueryFields;
+        const selected = {};
+        for (const selection of rest) {
+            if (typeof selection !== 'string')
+                throw new Error('columns: expected a column name.');
+            const match = /^(.+?)\s+as\s+(.+)$/i.exec(selection.trim());
+            const name = ((_a = match === null || match === void 0 ? void 0 : match[1]) !== null && _a !== void 0 ? _a : selection).trim();
+            const alias = (_b = match === null || match === void 0 ? void 0 : match[2]) === null || _b === void 0 ? void 0 : _b.trim();
+            if (!Object.hasOwn(subqueryFields, name))
+                throw new Error(`columns: unknown column "${name}".`);
+            const field = subqueryFields[name];
+            if (alias)
+                selected[alias] = sql `${field}`.as(alias);
+            else
+                selected[name] = field;
+        }
+        return selected;
     }
     if (isTable(first)) {
         const tableColumns = getTableColumns(first);
@@ -175,8 +196,8 @@ import {drizzle}from'drizzle-orm/node-mssql';import*as native from'drizzle-orm';
                 throw new Error('columns: expected a column name.');
             }
             const match = /^(.+?)\s+as\s+(.+)$/i.exec(selection.trim());
-            const name = ((_a = match === null || match === void 0 ? void 0 : match[1]) !== null && _a !== void 0 ? _a : selection).trim();
-            const alias = (_b = match === null || match === void 0 ? void 0 : match[2]) === null || _b === void 0 ? void 0 : _b.trim();
+            const name = ((_c = match === null || match === void 0 ? void 0 : match[1]) !== null && _c !== void 0 ? _c : selection).trim();
+            const alias = (_d = match === null || match === void 0 ? void 0 : match[2]) === null || _d === void 0 ? void 0 : _d.trim();
             if (!Object.hasOwn(tableColumns, name)) {
                 throw new Error(`columns: unknown column "${name}".`);
             }

@@ -1,4 +1,4 @@
-import { getTableColumns, isTable, sql, type SQL } from 'drizzle-orm';
+import { getTableColumns, is, isTable, sql, Subquery, type SQL } from 'drizzle-orm';
 import type { MsSqlColumn, MsSqlTable, MsSqlTableWithColumns } from 'drizzle-orm/mssql-core';
 import type { BuildAliasTable } from 'drizzle-orm/mssql-core/query-builders/select.types';
 
@@ -97,6 +97,8 @@ export type MsSqlSelectedNamedColumns<
  * ******************************************************************************************************************/
 type MsSqlColumnGroup = readonly [MsSqlTable, ...string[]];
 
+type MsSqlSubqueryFields<T extends Subquery> = T['_']['selectedFields'];
+
 /********************************************************************************************************************
  * MsSqlGroupColumns
  * ******************************************************************************************************************/
@@ -146,8 +148,13 @@ export function TableColumns<const G extends readonly [MsSqlColumnGroup, ...MsSq
     [I in keyof G]: readonly [G[I][0], ...MsSqlColumnSelectionName<G[I][0]>[]];
   }
 ): MsSqlMergedGroupColumns<G>;
+export function TableColumns<T extends Subquery>(subquery: T): MsSqlSubqueryFields<T>;
+export function TableColumns<T extends Subquery, N extends keyof MsSqlSubqueryFields<T> & string>(
+  subquery: T,
+  ...names: N[]
+): Pick<MsSqlSubqueryFields<T>, N>;
 export function TableColumns(
-  first: MsSqlTable | MsSqlColumn | readonly MsSqlColumn[] | MsSqlColumnGroup,
+  first: MsSqlTable | Subquery | MsSqlColumn | readonly MsSqlColumn[] | MsSqlColumnGroup,
   ...rest: (MsSqlColumn | string | MsSqlColumnGroup)[]
 ): Record<string, MsSqlColumn | SQL.Aliased> {
   if (Array.isArray(first) && isTable(first[0])) {
@@ -162,6 +169,22 @@ export function TableColumns(
       );
     }
     return result;
+  }
+  if (is(first, Subquery)) {
+    const subqueryFields = first._.selectedFields;
+    if (rest.length === 0) return subqueryFields as Record<string, MsSqlColumn | SQL.Aliased>;
+    const selected: Record<string, MsSqlColumn | SQL.Aliased> = {};
+    for (const selection of rest) {
+      if (typeof selection !== 'string') throw new Error('columns: expected a column name.');
+      const match = /^(.+?)\s+as\s+(.+)$/i.exec(selection.trim());
+      const name = (match?.[1] ?? selection).trim();
+      const alias = match?.[2]?.trim();
+      if (!Object.hasOwn(subqueryFields, name)) throw new Error(`columns: unknown column "${name}".`);
+      const field = subqueryFields[name] as MsSqlColumn | SQL.Aliased;
+      if (alias) selected[alias] = sql`${field}`.as(alias);
+      else selected[name] = field;
+    }
+    return selected;
   }
   if (isTable(first)) {
     const tableColumns = getTableColumns(first);

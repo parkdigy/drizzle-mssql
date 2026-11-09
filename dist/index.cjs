@@ -154,7 +154,7 @@
     };
     return conditions;
 }function TableColumns(first, ...rest) {
-    var _a, _b;
+    var _a, _b, _c, _d;
     if (Array.isArray(first) && native.isTable(first[0])) {
         const result = {};
         for (const group of [first, ...rest]) {
@@ -164,6 +164,27 @@
             Object.assign(result, TableColumns(group[0], ...group.slice(1)));
         }
         return result;
+    }
+    if (native.is(first, native.Subquery)) {
+        const subqueryFields = first._.selectedFields;
+        if (rest.length === 0)
+            return subqueryFields;
+        const selected = {};
+        for (const selection of rest) {
+            if (typeof selection !== 'string')
+                throw new Error('columns: expected a column name.');
+            const match = /^(.+?)\s+as\s+(.+)$/i.exec(selection.trim());
+            const name = ((_a = match === null || match === void 0 ? void 0 : match[1]) !== null && _a !== void 0 ? _a : selection).trim();
+            const alias = (_b = match === null || match === void 0 ? void 0 : match[2]) === null || _b === void 0 ? void 0 : _b.trim();
+            if (!Object.hasOwn(subqueryFields, name))
+                throw new Error(`columns: unknown column "${name}".`);
+            const field = subqueryFields[name];
+            if (alias)
+                selected[alias] = native.sql `${field}`.as(alias);
+            else
+                selected[name] = field;
+        }
+        return selected;
     }
     if (native.isTable(first)) {
         const tableColumns = native.getTableColumns(first);
@@ -175,8 +196,8 @@
                 throw new Error('columns: expected a column name.');
             }
             const match = /^(.+?)\s+as\s+(.+)$/i.exec(selection.trim());
-            const name = ((_a = match === null || match === void 0 ? void 0 : match[1]) !== null && _a !== void 0 ? _a : selection).trim();
-            const alias = (_b = match === null || match === void 0 ? void 0 : match[2]) === null || _b === void 0 ? void 0 : _b.trim();
+            const name = ((_c = match === null || match === void 0 ? void 0 : match[1]) !== null && _c !== void 0 ? _c : selection).trim();
+            const alias = (_d = match === null || match === void 0 ? void 0 : match[2]) === null || _d === void 0 ? void 0 : _d.trim();
             if (!Object.hasOwn(tableColumns, name)) {
                 throw new Error(`columns: unknown column "${name}".`);
             }

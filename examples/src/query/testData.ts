@@ -72,7 +72,9 @@ export class TestData extends MsSqlQuery<'testData'> {
     console.log(await this.select().where(this.eq('id', builder)));
 
     const j = builder.as('j');
-    console.log(await this.select().innerJoin(j, mssql.eq(j.id, this.t.id)));
+    console.log(
+      await this.select([this.columns('name'), mssql.columns(j, 'id')]).innerJoin(j, mssql.eq(j.id, this.t.id))
+    );
     console.log(await this.select().innerJoin(j, (q) => q.eq({ id: q.t.id })));
 
     const td = mssql.a.testData('td');

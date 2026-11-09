@@ -4,6 +4,7 @@ import { int, mssqlTable, nvarchar, primaryKey } from 'drizzle-orm/mssql-core';
 import { MsSqlQuery } from '../src/MsSqlQuery';
 import { createConditions } from '../src/conditions';
 import { createAlias } from '../src/alias';
+import { TableColumns } from '../src/columns';
 
 const users = mssqlTable('users', {
   id: int('id').identity().primaryKey(),
@@ -93,6 +94,18 @@ test('select 서브쿼리를 직접 조건으로 조인한다', () => {
   expect(query.params).toEqual([1]);
   expect(callbackQuery.sql).toMatch(/inner join \(select top\(@par0\) \[id\] from \[users\] order by \[users\]\.\[id\] desc\) \[latest\] on \[latest\]\.\[id\] = \[users\]\.\[id\]/i);
   expect(callbackQuery.params).toEqual([1]);
+});
+
+test('서브쿼리 별칭의 컬럼을 columns 선택자로 고른다', () => {
+  const builder = usersQuery.select(['id']).top(1).orderBy(usersQuery.desc('id'));
+  const subquery = builder.as('latest');
+  const query = usersQuery
+    .select(TableColumns(subquery, 'id'))
+    .innerJoin(subquery, drizzleEq(subquery.id, users.id))
+    .toSQL();
+
+  expect(query.sql).toMatch(/select \[latest\]\.\[id\] as \[id\] from \[users\] inner join \(select top\(@par0\) \[id\] from \[users\] order by \[users\]\.\[id\] desc\) \[latest\] on \[latest\]\.\[id\] = \[users\]\.\[id\]/i);
+  expect(query.params).toEqual([1]);
 });
 
 test('select 빌더에서 top 제한을 지정한다', () => {
