@@ -206,6 +206,8 @@ const recentIds = await user
   .where(user.notBetween({ id: [1, 10] }));
 ```
 
+`inArray`와 `notInArray`의 배열 원소에는 일반 값과 컬럼·SQL 표현식을 함께 사용할 수 있습니다. 예: `mssql.and(td, { inArray: { id: [0, td.id] } })`.
+
 범위 양 끝은 `null`이나 `undefined`가 아닌 값이어야 합니다. `inArray`와 `notInArray`의 값은 배열이어야 합니다.
 
 #### 문자열 패턴

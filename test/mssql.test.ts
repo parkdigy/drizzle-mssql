@@ -311,3 +311,45 @@ test('find에서도 집계 선택과 선택 콜백을 사용할 수 있다', asy
   expect(captured).toHaveLength(2);
   expect(captured.every((sql) => /min\(\[id\]\)/i.test(sql))).toBe(true);
 });
+
+test('배열 조건에서 일반 값과 별칭 컬럼 및 SQL 표현식을 함께 사용한다', () => {
+  const td = createAlias({ users }).users('td');
+  const conditions = createConditions({ users });
+  const grouped = db
+    .select()
+    .from(td)
+    .where(
+      conditions.and(td, {
+        inArray: { id: [0, td.id] },
+      })
+    )
+    .toSQL();
+  expect(grouped.sql).toContain('[td].[id] in (@par0, [td].[id])');
+  expect(grouped.params).toEqual([0]);
+
+  const excluded = db
+    .select()
+    .from(td)
+    .where(
+      conditions.notInArray(td, {
+        id: [0, td.id, sql`1 + 1`],
+      })
+    )
+    .toSQL();
+  expect(excluded.sql).toContain('[td].[id] not in (@par0, [td].[id], 1 + 1)');
+  expect(excluded.params).toEqual([0]);
+
+  const queryCondition = usersQuery
+    .select()
+    .where((q) => q.inArray({ id: [0, q.t.id] }))
+    .toSQL();
+  expect(queryCondition.sql).toContain('[users].[id] in (@par0, [users].[id])');
+  expect(queryCondition.params).toEqual([0]);
+
+  if (false) {
+    // @ts-expect-error 숫자 컬럼의 배열에는 문자열 값을 넣을 수 없다.
+    conditions.and(td, { inArray: { id: [0, 'wrong'] } });
+    // @ts-expect-error notInArray도 컬럼의 값 타입을 검사한다.
+    conditions.notInArray(td, { id: ['wrong'] });
+  }
+});

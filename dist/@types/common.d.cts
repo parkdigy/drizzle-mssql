@@ -5,7 +5,7 @@ export type MsSqlCompareValues<T extends MsSqlTable> = {
 };
 export type MsSqlColumnName<T extends MsSqlTable> = keyof T['_']['columns'] & string;
 export type MsSqlArrayCompareValues<T extends MsSqlTable> = {
-    [P in keyof InferSelectModel<T>]?: NonNullable<InferSelectModel<T>[P]>[];
+    [P in keyof InferSelectModel<T>]?: (NonNullable<InferSelectModel<T>[P]> | SQLWrapper)[];
 };
 export type MsSqlRangeCompareValues<T extends MsSqlTable> = {
     [P in keyof InferSelectModel<T>]?: [NonNullable<InferSelectModel<T>[P]>, NonNullable<InferSelectModel<T>[P]>];
