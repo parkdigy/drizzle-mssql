@@ -4,7 +4,7 @@ import * as native from 'drizzle-orm';
 import { type MsSqlAliases } from './alias.cjs';
 import { type MsSqlSchemaConditions } from './conditions.cjs';
 import { TableColumns } from './columns.cjs';
-import { MsSqlQuery, type SelectFrom, type SelectInput, type ResolveSelectInput } from './MsSqlQuery.cjs';
+import { MsSqlQuery, type SelectFrom, type SelectInput, type ResolveSelectInput, type SubquerySelectInput, type ResolveSubquerySelectInput } from './MsSqlQuery.cjs';
 export interface DrizzleMsSqlOptions<TSchema extends Record<string, MsSqlTable>> {
     url: string;
     schema: TSchema;
@@ -26,6 +26,7 @@ interface MsSqlDatabaseHelpers<TSchema extends Record<string, MsSqlTable>> exten
     close: MsSqlConnection<TSchema>['close'];
     select<K extends keyof TSchema & string, const TArgs extends readonly [fields?: SelectInput<TSchema[K]>]>(table: K, ...args: TArgs): SelectFrom<TSchema[K], ResolveSelectInput<TSchema[K], TArgs[0]>>;
     select<TTable extends MsSqlTable, const TArgs extends readonly [fields?: SelectInput<TTable>]>(table: TTable, ...args: TArgs): SelectFrom<TTable, ResolveSelectInput<TTable, TArgs[0]>>;
+    select<TSource extends Subquery, const TArgs extends readonly [fields?: SubquerySelectInput<TSource>]>(source: TSource, ...args: TArgs): SelectFrom<TSource, ResolveSubquerySelectInput<TSource, TArgs[0]>>;
     query<TTable extends MsSqlTable>(table: TTable): MsSqlQuery<TTable>;
 }
 type MsSqlNativeHelpers = Pick<typeof native, 'asc' | 'desc' | 'count' | 'countDistinct' | 'avg' | 'avgDistinct' | 'sum' | 'sumDistinct' | 'max' | 'min' | 'not' | 'exists' | 'notExists' | 'arrayContains' | 'arrayContained' | 'arrayOverlaps'>;

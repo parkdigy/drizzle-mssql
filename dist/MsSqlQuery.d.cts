@@ -55,6 +55,7 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddVa
      * ******************************************************************************************************************/
     select<const TArgs extends SelectArgs<TTable>>(...args: TArgs): TArgs extends readonly [infer TAlias extends MsSqlTable, ...infer TRest] ? SelectFrom<TAlias, ResolveSelectInput<TAlias, TRest[0]>> : SelectFrom<TTable, ResolveSelectInput<TTable, TArgs[0]>>;
     select<TAlias extends MsSqlAliasTable<TTable, string>, const TSelection extends FieldSet | readonly FieldInput[]>(alias: TAlias, fields: (query: FieldsQuery<TAlias>) => TSelection): SelectFrom<TAlias, ResolveSelectInput<TAlias, () => TSelection>>;
+    select<TSource extends Subquery, const TArgs extends readonly [fields?: SubquerySelectInput<TSource>]>(source: TSource, ...args: TArgs): SelectFrom<TSource, ResolveSubquerySelectInput<TSource, TArgs[0]>>;
     /********************************************************************************************************************
      * find
      * ******************************************************************************************************************/
@@ -229,32 +230,32 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddVa
 /********************************************************************************************************************
  * types
  * ******************************************************************************************************************/
-type SelectQueryBase<TTable extends MsSqlTable, TSelection extends FieldSet | undefined, TBranch extends 'from' | 'top'> = MsSqlSelectBase<GetSelectTableName<TTable>, TSelection extends undefined ? MsSqlSelectedTableColumns<TTable> : TSelection, 'partial', NodeMsSqlPreparedQueryHKT, TBranch>;
-type TableWhere<TTable extends MsSqlTable> = SQL | undefined | ((query: SelectConditionQuery<TTable>) => SQL | undefined);
+type SelectQueryBase<TTable extends MsSqlTable | Subquery, TSelection extends FieldSet | undefined, TBranch extends 'from' | 'top'> = MsSqlSelectBase<GetSelectTableName<TTable>, TSelection extends undefined ? SourceSelection<TTable> : TSelection, 'partial', NodeMsSqlPreparedQueryHKT, TBranch>;
+type TableWhere<TTable extends MsSqlTable | Subquery> = SQL | undefined | ((query: SelectConditionQuery<TTable>) => SQL | undefined);
 type OrderByValue = MsSqlColumn | SQL | SQL.Aliased;
-type SelectOrderByQuery<TTable extends MsSqlTable> = {
+type SelectOrderByQuery<TTable extends MsSqlTable | Subquery> = {
     readonly t: TTable;
-    asc(name: MsSqlColumnName<TTable>): SQL;
-    desc(name: MsSqlColumnName<TTable>): SQL;
+    asc(name: SourceColumnName<TTable>): SQL;
+    desc(name: SourceColumnName<TTable>): SQL;
 };
-type OrderByCallback<TTable extends MsSqlTable> = (query: SelectOrderByQuery<TTable>) => OrderByValue | OrderByValue[];
+type OrderByCallback<TTable extends MsSqlTable | Subquery> = (query: SelectOrderByQuery<TTable>) => OrderByValue | OrderByValue[];
 type JoinConditionValues<TJoinedTable extends Joinable> = TJoinedTable extends MsSqlTable ? MsSqlCompareValues<TJoinedTable> : TJoinedTable extends Subquery<string, infer TFields> ? {
     [K in keyof TFields]?: unknown;
 } : never;
-type JoinConditionQuery<TTable extends MsSqlTable, TJoinedTable extends Joinable> = TJoinedTable extends MsSqlTable ? Omit<SelectConditionQuery<TJoinedTable>, 't'> & {
+type JoinConditionQuery<TTable extends MsSqlTable | Subquery, TJoinedTable extends Joinable> = TJoinedTable extends MsSqlTable ? Omit<SelectConditionQuery<TJoinedTable>, 't'> & {
     readonly t: TTable;
 } : {
     readonly t: TTable;
     eq(values: JoinConditionValues<TJoinedTable>): SQL | undefined;
 };
 type Joinable = MsSqlTable | Subquery | MsSqlViewBase | SQL;
-type JoinCondition<TTable extends MsSqlTable, TSelection extends FieldSet | undefined, TBranch extends 'from' | 'top', TJoinedTable extends Joinable> = TJoinedTable extends MsSqlTable | Subquery ? SQL | undefined | ((query: JoinConditionQuery<TTable, TJoinedTable>) => SQL | undefined) : SQL | undefined | ((aliases: SelectQueryBase<TTable, TSelection, TBranch>['_']['selection']) => SQL | undefined);
-type JoinedSelect<TTable extends MsSqlTable, TSelection extends FieldSet | undefined, TBranch extends 'from' | 'top', TJoinedTable extends Joinable, TKind extends 'inner' | 'left' | 'right' | 'full' | 'cross'> = Omit<MsSqlJoin<SelectQueryBase<TTable, TSelection, TBranch>, false, TKind, TJoinedTable>, 'where' | 'orderBy' | keyof SelectJoinMethods<TTable, TSelection, TBranch>> & SelectJoinMethods<TTable, TSelection, TBranch> & {
+type JoinCondition<TTable extends MsSqlTable | Subquery, TSelection extends FieldSet | undefined, TBranch extends 'from' | 'top', TJoinedTable extends Joinable> = TJoinedTable extends MsSqlTable | Subquery ? SQL | undefined | ((query: JoinConditionQuery<TTable, TJoinedTable>) => SQL | undefined) : SQL | undefined | ((aliases: SelectQueryBase<TTable, TSelection, TBranch>['_']['selection']) => SQL | undefined);
+type JoinedSelect<TTable extends MsSqlTable | Subquery, TSelection extends FieldSet | undefined, TBranch extends 'from' | 'top', TJoinedTable extends Joinable, TKind extends 'inner' | 'left' | 'right' | 'full' | 'cross'> = Omit<MsSqlJoin<SelectQueryBase<TTable, TSelection, TBranch>, false, TKind, TJoinedTable>, 'where' | 'orderBy' | keyof SelectJoinMethods<TTable, TSelection, TBranch>> & SelectJoinMethods<TTable, TSelection, TBranch> & {
     where(condition: TableWhere<TTable>): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'where'>;
     orderBy(builder: OrderByCallback<TTable>): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'orderBy'>;
     orderBy(...columns: OrderByValue[]): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'orderBy'>;
 };
-type SelectJoinMethods<TTable extends MsSqlTable, TSelection extends FieldSet | undefined, TBranch extends 'from' | 'top'> = {
+type SelectJoinMethods<TTable extends MsSqlTable | Subquery, TSelection extends FieldSet | undefined, TBranch extends 'from' | 'top'> = {
     innerJoin<TJoinedTable extends Joinable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'inner'>;
     leftJoin<TJoinedTable extends Joinable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'left'>;
     rightJoin<TJoinedTable extends Joinable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'right'>;
@@ -262,12 +263,12 @@ type SelectJoinMethods<TTable extends MsSqlTable, TSelection extends FieldSet | 
     outerApply<TJoinedTable extends MsSqlTable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'left'>;
     crossApply<TJoinedTable extends MsSqlTable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'cross'>;
 };
-type SelectTopFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Omit<SelectQueryBase<TTable, TSelection, 'top'>, 'where' | 'orderBy' | keyof SelectJoinMethods<TTable, TSelection, 'top'>> & SelectJoinMethods<TTable, TSelection, 'top'> & {
+type SelectTopFrom<TTable extends MsSqlTable | Subquery, TSelection extends FieldSet | undefined> = Omit<SelectQueryBase<TTable, TSelection, 'top'>, 'where' | 'orderBy' | keyof SelectJoinMethods<TTable, TSelection, 'top'>> & SelectJoinMethods<TTable, TSelection, 'top'> & {
     where(condition: TableWhere<TTable>): Omit<SelectTopFrom<TTable, TSelection>, 'where'>;
     orderBy(builder: OrderByCallback<TTable>): Omit<SelectTopFrom<TTable, TSelection>, 'orderBy'>;
     orderBy(...columns: OrderByValue[]): Omit<SelectTopFrom<TTable, TSelection>, 'orderBy'>;
 };
-export type SelectFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Omit<SelectQueryBase<TTable, TSelection, 'from'>, 'where' | 'orderBy' | keyof SelectJoinMethods<TTable, TSelection, 'from'>> & SelectJoinMethods<TTable, TSelection, 'from'> & {
+export type SelectFrom<TTable extends MsSqlTable | Subquery, TSelection extends FieldSet | undefined> = Omit<SelectQueryBase<TTable, TSelection, 'from'>, 'where' | 'orderBy' | keyof SelectJoinMethods<TTable, TSelection, 'from'>> & SelectJoinMethods<TTable, TSelection, 'from'> & {
     where(condition: TableWhere<TTable>): Omit<SelectFrom<TTable, TSelection>, 'where'>;
     orderBy(builder: OrderByCallback<TTable>): Omit<SelectFrom<TTable, TSelection>, 'orderBy'>;
     orderBy(...columns: OrderByValue[]): Omit<SelectFrom<TTable, TSelection>, 'orderBy'>;
@@ -275,7 +276,8 @@ export type SelectFrom<TTable extends MsSqlTable, TSelection extends FieldSet | 
 };
 type FindResult<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Awaited<SelectFrom<TTable, TSelection>>[number] | undefined;
 type WhereQuery<TQuery> = Pick<TQuery, Extract<keyof TQuery, 't' | 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'inArray' | 'notInArray' | 'between' | 'notBetween' | 'like' | 'notLike' | 'ilike' | 'notIlike' | 'isNull' | 'isNotNull' | 'and' | 'or'>>;
-type SelectConditionQuery<TTable extends MsSqlTable> = {
+type SelectConditionQuery<TSource extends MsSqlTable | Subquery> = TSource extends MsSqlTable ? TableConditionQuery<TSource> : TSource extends Subquery ? SubqueryConditionQuery<TSource> : never;
+type TableConditionQuery<TTable extends MsSqlTable> = {
     readonly t: TTable;
     eq(values: MsSqlCompareValues<TTable>): SQL | undefined;
     ne(values: MsSqlCompareValues<TTable>): SQL | undefined;
@@ -347,4 +349,52 @@ type AutoIncrementKeys<TTable extends MsSqlTable> = {
 }[keyof TTable['_']['columns']];
 type HasAutoIncrement<TTable extends MsSqlTable> = [AutoIncrementKeys<TTable>] extends [never] ? false : true;
 type AddResult<TTable extends MsSqlTable> = HasAutoIncrement<TTable> extends true ? TTable['_']['columns'][AutoIncrementKeys<TTable>]['_']['data'] : undefined;
+type SourceSelection<T extends MsSqlTable | Subquery> = T extends MsSqlTable ? MsSqlSelectedTableColumns<T> : T extends Subquery ? T['_']['selectedFields'] : never;
+type SourceColumnName<T extends MsSqlTable | Subquery> = T extends MsSqlTable ? MsSqlColumnName<T> : keyof SourceSelection<T> & string;
+type SubqueryFieldsQuery<T extends Subquery> = {
+    readonly t: T;
+    columns(): T['_']['selectedFields'];
+    columns<N extends keyof T['_']['selectedFields'] & string>(...names: N[]): Pick<T['_']['selectedFields'], N>;
+    min<N extends keyof T['_']['selectedFields'] & string>(name: N): SQL<SubqueryFieldData<T['_']['selectedFields'][N]> | null>;
+    max<N extends keyof T['_']['selectedFields'] & string>(name: N): SQL<SubqueryFieldData<T['_']['selectedFields'][N]> | null>;
+};
+export type SubquerySelectInput<T extends Subquery> = readonly (FieldInput | (keyof T['_']['selectedFields'] & string))[] | Record<string, FieldSet[string] | (keyof T['_']['selectedFields'] & string) | SQLWrapper> | ((query: SubqueryFieldsQuery<T>) => FieldSet | readonly FieldInput[]);
+export type ResolveSubquerySelectInput<T extends Subquery, V> = Extract<ResolvedSubqueryInput<T, V>, FieldSet | undefined>;
+type ResolvedSubqueryInput<T extends Subquery, V> = V extends undefined ? undefined : V extends (...args: never[]) => infer R ? R extends readonly FieldInput[] ? MergeFields<R> : Extract<R, FieldSet> : V extends readonly unknown[] ? MergeFields<{
+    [I in keyof V]: V[I] extends keyof T['_']['selectedFields'] ? Extract<Pick<T['_']['selectedFields'], V[I]>, FieldSet> : Extract<V[I], FieldInput>;
+}> : {
+    [K in keyof V]: V[K] extends keyof T['_']['selectedFields'] ? T['_']['selectedFields'][V[K]] : V[K] extends MsSqlColumn | SQL | SQL.Aliased ? V[K] : V[K] extends SQLWrapper<infer D> ? SQL.Aliased<D> : Extract<V[K], FieldSet[string]>;
+};
+type SubqueryFieldData<F> = F extends MsSqlColumn ? F['_']['data'] | (F['_']['notNull'] extends true ? never : null) : F extends SQL<infer D> | SQL.Aliased<infer D> ? D : unknown;
+type SubqueryValues<T extends Subquery> = {
+    [K in keyof T['_']['selectedFields']]?: SubqueryFieldData<T['_']['selectedFields'][K]> | SQLWrapper;
+};
+type SubqueryArrayValues<T extends Subquery> = {
+    [K in keyof T['_']['selectedFields']]?: (NonNullable<SubqueryFieldData<T['_']['selectedFields'][K]>> | SQLWrapper)[];
+};
+type SubqueryRangeValues<T extends Subquery> = {
+    [K in keyof T['_']['selectedFields']]?: [NonNullable<SubqueryFieldData<T['_']['selectedFields'][K]>>, NonNullable<SubqueryFieldData<T['_']['selectedFields'][K]>>];
+};
+type SubqueryPatternValues<T extends Subquery> = {
+    [K in keyof T['_']['selectedFields'] as NonNullable<SubqueryFieldData<T['_']['selectedFields'][K]>> extends string ? K : never]?: string;
+};
+type SubqueryConditionQuery<T extends Subquery> = {
+    readonly t: T;
+} & {
+    [K in 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte']: (values: SubqueryValues<T>) => SQL | undefined;
+} & {
+    [K in 'inArray' | 'notInArray']: (values: SubqueryArrayValues<T>) => SQL | undefined;
+} & {
+    [K in 'between' | 'notBetween']: (values: SubqueryRangeValues<T>) => SQL | undefined;
+} & {
+    [K in 'like' | 'notLike' | 'ilike' | 'notIlike']: (values: SubqueryPatternValues<T>) => SQL | undefined;
+} & {
+    isNull(names: SourceColumnName<T> | undefined | readonly (SourceColumnName<T> | undefined)[]): SQL | undefined;
+    isNotNull(names: SourceColumnName<T> | undefined | readonly (SourceColumnName<T> | undefined)[]): SQL | undefined;
+    and(values: SubqueryConditions<T>): SQL | undefined;
+    or(values: SubqueryConditions<T>): SQL | undefined;
+};
+type SubqueryConditions<T extends Subquery> = {
+    [K in keyof Omit<SubqueryConditionQuery<T>, 't'>]?: SubqueryConditionQuery<T>[K] extends (values: infer V) => unknown ? V : never;
+};
 export {};

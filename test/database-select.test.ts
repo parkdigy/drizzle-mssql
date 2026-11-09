@@ -65,3 +65,33 @@ test('columns로 전달한 컬럼 객체의 데이터 타입과 null 허용을 �
   expect(all.toSQL()).toEqual(db.query(u).select(db.columns(u)).toSQL());
   expect(idOnly.toSQL()).toEqual(db.query(u).select(db.columns(u, 'id')).toSQL());
 });
+
+test('서브쿼리를 select의 기준으로 사용하고 선택한 컬럼만 노출한다', () => {
+  const aa = db.select('users', ['id', 'name']).where((q) => q.eq({ id: 1 })).as('aa');
+  const result = db.select(aa, (q) => q.columns('id', 'name'));
+  const idOnly = db.select(aa, ['id']);
+  const mapped = db.select(aa, { label: 'name' });
+  const all = db.select(aa);
+  expect(result.toSQL().sql).toContain('from (select');
+  expect(result.toSQL().params).toEqual([1]);
+  expect(result.where((q) => q.eq({ id: 2 })).orderBy((q) => q.desc('id')).toSQL().params).toEqual([1, 2]);
+  expect(db.select(aa, (q) => q.columns('id')).top(2).toSQL().sql).toContain('top(');
+  expect(db.select(aa, db.columns(aa, 'id')).toSQL().params).toEqual([1]);
+  expect(db.select(aa).where((q) => q.isNull('name')).toSQL().sql).toContain('[aa].[name] is null');
+  if (false) {
+    const row: { id: number; name: string | null } = {} as Awaited<typeof result>[number];
+    const idRow: { id: number } = {} as Awaited<typeof idOnly>[number];
+    const labelRow: { label: string | null } = {} as Awaited<typeof mapped>[number];
+    const allRow: { id: number; name: string | null } = {} as Awaited<typeof all>[number];
+    // @ts-expect-error 서브쿼리 조건도 컬럼의 데이터 타입을 검사한다
+    db.select(aa).where((q) => q.eq({ id: 'wrong' }));
+    const limited = db.select('users', ['id']).as('limited');
+    // @ts-expect-error 내부에서 선택하지 않은 컬럼은 참조할 수 없다
+    db.select(limited, (q) => q.columns('id', 'name'));
+    // @ts-expect-error 선택하지 않은 컬럼은 노출하지 않는다
+    ({} as Awaited<typeof idOnly>[number]).name;
+    // @ts-expect-error 숫자 타입을 유지한다
+    const wrong: Awaited<typeof idOnly>[number] = { id: 'wrong' };
+    void [row, idRow, labelRow, allRow, wrong];
+  }
+});

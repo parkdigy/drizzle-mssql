@@ -284,7 +284,7 @@ class MsSqlQuery {
     resolveAggregateColumn(columnOrName, table) {
         if (typeof columnOrName !== 'string')
             return columnOrName;
-        const columns = getTableColumns(table);
+        const columns = is(table, Subquery) ? sourceColumns(table) : getTableColumns(table);
         if (!Object.hasOwn(columns, columnOrName))
             throw new Error(`aggregate: unknown column "${columnOrName}".`);
         return columns[columnOrName];
@@ -292,7 +292,7 @@ class MsSqlQuery {
     resolveOrderColumn(name, table) {
         if (name === undefined)
             throw new Error('orderBy: column name is required.');
-        const columns = getTableColumns(table);
+        const columns = is(table, Subquery) ? sourceColumns(table) : getTableColumns(table);
         if (!Object.hasOwn(columns, name))
             throw new Error(`orderBy: unknown column "${name}".`);
         return columns[name];
@@ -315,13 +315,13 @@ class MsSqlQuery {
     }
     resolveFields(fields, table = this.t) {
         if (Array.isArray(fields) && fields.length > 0 && fields.every((field) => typeof field === 'string')) {
-            return TableColumns(table, ...fields);
+            return sourceColumns(table, fields);
         }
         if (typeof fields !== 'function')
             return normalizeFields(fields, table);
         const query = {
             t: table,
-            columns: (...names) => TableColumns(table, ...names),
+            columns: (...names) => sourceColumns(table, names),
             min: (columnOrName) => min(this.resolveAggregateColumn(columnOrName, table)),
             max: (columnOrName) => max(this.resolveAggregateColumn(columnOrName, table)),
         };
@@ -329,10 +329,10 @@ class MsSqlQuery {
     }
     select(fieldsOrAlias, fields) {
         const tx = this.getTx();
-        const isAlias = isTable(fieldsOrAlias);
+        const isAlias = isTable(fieldsOrAlias) || is(fieldsOrAlias, Subquery);
         const table = isAlias ? fieldsOrAlias : this.t;
         const selectedFields = this.resolveFields(isAlias ? fields : fieldsOrAlias, table);
-        const selectBuilder = tx.select(selectedFields !== null && selectedFields !== void 0 ? selectedFields : TableColumns(table));
+        const selectBuilder = tx.select(selectedFields !== null && selectedFields !== void 0 ? selectedFields : sourceColumns(table));
         const enhance = (query) => {
             if (typeof query !== 'object' || query === null)
                 return query;
@@ -344,6 +344,15 @@ class MsSqlQuery {
                 const conditionOperator = this.drizzle[operator];
                 if (isTable(conditionTable)) {
                     return Reflect.apply(conditionOperator, undefined, [conditionTable, input]);
+                }
+                if (operator === 'isNull' || operator === 'isNotNull') {
+                    const names = Array.isArray(input) ? input : [input];
+                    return and(...names.filter((name) => name !== undefined).map((name) => {
+                        const column = conditionTable[String(name)];
+                        if (column === undefined)
+                            throw new Error(`Condition: unknown column "${name}".`);
+                        return Reflect.apply(conditionOperator, undefined, [column]);
+                    }));
                 }
                 if (operator === 'and' || operator === 'or') {
                     if (typeof input !== 'object' || input === null || Array.isArray(input)) {
@@ -803,10 +812,15 @@ const normalizeFields = (fields, table) => {
     }
     for (const [name, field] of Object.entries(result)) {
         if (typeof field === 'string') {
-            const column = table && getTableColumns(table)[field];
+            const column = table && (is(table, Subquery) ? sourceColumns(table) : getTableColumns(table))[field];
             if (!column)
                 throw new Error(`select: unknown column "${field}".`);
-            result[name] = sql `${column}`.mapWith(column).as(name);
+            const decoder = is(column, MsSqlColumn)
+                ? column
+                : is(column, SQL.Aliased)
+                    ? column.sql.decoder
+                    : (value) => value;
+            result[name] = sql `${column}`.mapWith(decoder).as(name);
             continue;
         }
         if (is(field, SQL)) {
@@ -824,7 +838,12 @@ const normalizeFields = (fields, table) => {
         }
     }
     return result;
-};function createConnection(options) {
+};
+function sourceColumns(source, names = []) {
+    return is(source, Subquery)
+        ? TableColumns(source, ...names)
+        : TableColumns(source, ...names);
+}function createConnection(options) {
     const raw = drizzle({ connection: options.url, relations: defineRelations(options.schema) });
     const context = new AsyncLocalStorage();
     const current = Object.assign(() => { var _a; return (_a = context.getStore()) !== null && _a !== void 0 ? _a : raw; }, { getTimestamp: options.getTimestamp });
@@ -870,6 +889,10 @@ function drizzleMsSql(options) {
         const table = typeof tableOrName === 'string' ? options.schema[tableOrName] : tableOrName;
         if (!table)
             throw new Error(`select: unknown table "${tableOrName}".`);
+        if (is(table, native.Subquery)) {
+            // select의 서브쿼리 분기는 기준 테이블 대신 전달한 source를 사용한다.
+            return new MsSqlQuery(table, connection.current).select(table, fields);
+        }
         return new MsSqlQuery(table, connection.current).select(fields);
     }
     return Object.assign(Object.assign(Object.assign(Object.assign({ select: select, asc: native.asc, desc: native.desc, count: native.count, countDistinct: native.countDistinct, avg: native.avg, avgDistinct: native.avgDistinct, sum: native.sum, sumDistinct: native.sumDistinct, max: native.max, min: native.min, not: native.not, exists: native.exists, notExists: native.notExists, arrayContains: native.arrayContains, arrayContained: native.arrayContained, arrayOverlaps: native.arrayOverlaps, s: options.schema, a: createAlias(options.schema) }, createConditions(options.schema)), { columns: TableColumns, alias: alias$1,

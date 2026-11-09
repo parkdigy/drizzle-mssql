@@ -37,6 +37,8 @@ test('200개 테이블과 200개 추가 컬럼에서도 공개 API의 자동완�
     // @ts-expect-error 별칭 선택의 자동완성용 미완성 컬럼명
     query.select(a, ['id', '/*aliasNextColumn*/']);
     const j = query.select(['id', 'name']).top(1).orderBy(query.desc('id')).as('j');
+    // @ts-expect-error 서브쿼리 선택 콜백의 자동완성용 미완성 컬럼명
+    db.select(j, q => q.columns('id', '/*subquerySelect*/'));
     // @ts-expect-error 자동완성용 미완성 컬럼명
     db.columns(j, '/*subqueryFirst*/');
     // @ts-expect-error 자동완성용 미완성 컬럼명
@@ -131,6 +133,7 @@ test('200개 테이블과 200개 추가 컬럼에서도 공개 API의 자동완�
       members: ['columns', 'query', 'current', 'eq'],
       aliases: ['table0', 'table199'],
       columns: ['id', 'name'],
+      subquerySelect: ['id', 'name'],
       subqueryFirst: ['id', 'name'],
       subqueryNext: ['id', 'name'],
       subqueryThird: ['id', 'name'],

@@ -6,7 +6,14 @@ import * as native from 'drizzle-orm';
 import { createAlias, type MsSqlAliases } from './alias';
 import { createConditions, type MsSqlSchemaConditions } from './conditions';
 import { TableColumns } from './columns';
-import { MsSqlQuery, type SelectFrom, type SelectInput, type ResolveSelectInput } from './MsSqlQuery';
+import {
+  MsSqlQuery,
+  type SelectFrom,
+  type SelectInput,
+  type ResolveSelectInput,
+  type SubquerySelectInput,
+  type ResolveSubquerySelectInput,
+} from './MsSqlQuery';
 
 export interface DrizzleMsSqlOptions<TSchema extends Record<string, MsSqlTable>> {
   url: string;
@@ -37,6 +44,10 @@ interface MsSqlDatabaseHelpers<TSchema extends Record<string, MsSqlTable>> exten
     table: TTable,
     ...args: TArgs
   ): SelectFrom<TTable, ResolveSelectInput<TTable, TArgs[0]>>;
+  select<TSource extends Subquery, const TArgs extends readonly [fields?: SubquerySelectInput<TSource>]>(
+    source: TSource,
+    ...args: TArgs
+  ): SelectFrom<TSource, ResolveSubquerySelectInput<TSource, TArgs[0]>>;
   query<TTable extends MsSqlTable>(table: TTable): MsSqlQuery<TTable>;
 }
 
@@ -124,9 +135,13 @@ export function drizzleMsSql<TSchema extends Record<string, MsSqlTable>>(
   options: DrizzleMsSqlOptions<TSchema>
 ): DrizzleMsSql<TSchema> {
   const connection = createConnection(options);
-  function select(tableOrName: string | MsSqlTable, fields?: unknown): unknown {
+  function select(tableOrName: string | MsSqlTable | Subquery, fields?: unknown): unknown {
     const table = typeof tableOrName === 'string' ? options.schema[tableOrName] : tableOrName;
     if (!table) throw new Error(`select: unknown table "${tableOrName}".`);
+    if (is(table, native.Subquery)) {
+      // select의 서브쿼리 분기는 기준 테이블 대신 전달한 source를 사용한다.
+      return new MsSqlQuery(table as unknown as MsSqlTable, connection.current).select(table, fields as SubquerySelectInput<Subquery>);
+    }
     return new MsSqlQuery(table, connection.current).select(fields as SelectInput<MsSqlTable>);
   }
   return {

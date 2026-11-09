@@ -113,24 +113,24 @@ export class MsSqlQuery<
     return drizzleMax(this.resolveAggregateColumn(columnOrName, this.t));
   }
 
-  private resolveAggregateColumn(columnOrName: string | MsSqlColumn, table: MsSqlTable): MsSqlColumn {
+  private resolveAggregateColumn(columnOrName: string | MsSqlColumn, table: MsSqlTable | Subquery): MsSqlColumn {
     if (typeof columnOrName !== 'string') return columnOrName;
-    const columns = getTableColumns(table);
+    const columns = is(table, Subquery) ? sourceColumns(table) : getTableColumns(table);
     if (!Object.hasOwn(columns, columnOrName)) throw new Error(`aggregate: unknown column "${columnOrName}".`);
-    return columns[columnOrName];
+    return columns[columnOrName] as MsSqlColumn;
   }
 
-  private resolveOrderColumn(name: string | undefined, table: MsSqlTable): MsSqlColumn {
+  private resolveOrderColumn(name: string | undefined, table: MsSqlTable | Subquery): MsSqlColumn {
     if (name === undefined) throw new Error('orderBy: column name is required.');
-    const columns = getTableColumns(table);
+    const columns = is(table, Subquery) ? sourceColumns(table) : getTableColumns(table);
     if (!Object.hasOwn(columns, name)) throw new Error(`orderBy: unknown column "${name}".`);
-    return columns[name];
+    return columns[name] as MsSqlColumn;
   }
 
   private resolveConditionColumn(name: string, table: MsSqlTable): MsSqlColumn {
     const columns = getTableColumns(table);
     if (!Object.hasOwn(columns, name)) throw new Error(`Condition: unknown column "${name}".`);
-    return columns[name];
+    return columns[name] as MsSqlColumn;
   }
 
   /********************************************************************************************************************
@@ -152,14 +152,14 @@ export class MsSqlQuery<
     return drizzleDesc(this.resolveOrderColumn(columnName, table));
   }
 
-  private resolveFields(fields: unknown, table: MsSqlTable = this.t): FieldSet | undefined {
+  private resolveFields(fields: unknown, table: MsSqlTable | Subquery = this.t): FieldSet | undefined {
     if (Array.isArray(fields) && fields.length > 0 && fields.every((field) => typeof field === 'string')) {
-      return TableColumns(table, ...(fields as MsSqlColumnSelectionName<MsSqlTable>[]));
+      return sourceColumns(table, fields as string[]);
     }
     if (typeof fields !== 'function') return normalizeFields(fields, table);
     const query = {
       t: table,
-      columns: (...names: MsSqlColumnSelectionName<MsSqlTable>[]) => TableColumns(table, ...names),
+      columns: (...names: string[]) => sourceColumns(table, names),
       min: (columnOrName: string | MsSqlColumn) => drizzleMin(this.resolveAggregateColumn(columnOrName, table)),
       max: (columnOrName: string | MsSqlColumn) => drizzleMax(this.resolveAggregateColumn(columnOrName, table)),
     };
@@ -181,13 +181,18 @@ export class MsSqlQuery<
     fields: (query: FieldsQuery<TAlias>) => TSelection
   ): SelectFrom<TAlias, ResolveSelectInput<TAlias, () => TSelection>>;
 
+  select<TSource extends Subquery, const TArgs extends readonly [fields?: SubquerySelectInput<TSource>]>(
+    source: TSource,
+    ...args: TArgs
+  ): SelectFrom<TSource, ResolveSubquerySelectInput<TSource, TArgs[0]>>;
+
   select(fieldsOrAlias?: unknown, fields?: unknown): any {
     const tx = this.getTx();
 
-    const isAlias = isTable(fieldsOrAlias);
-    const table: MsSqlTable = isAlias ? (fieldsOrAlias as MsSqlTable) : this.t;
+    const isAlias = isTable(fieldsOrAlias) || is(fieldsOrAlias, Subquery);
+    const table = isAlias ? (fieldsOrAlias as MsSqlTable | Subquery) : this.t;
     const selectedFields = this.resolveFields(isAlias ? fields : fieldsOrAlias, table);
-    const selectBuilder = tx.select(selectedFields ?? TableColumns(table));
+    const selectBuilder = tx.select(selectedFields ?? sourceColumns(table));
     const enhance = (query: unknown): unknown => {
       if (typeof query !== 'object' || query === null) return query;
 
@@ -203,6 +208,15 @@ export class MsSqlQuery<
         ];
         if (isTable(conditionTable)) {
           return Reflect.apply(conditionOperator, undefined, [conditionTable, input]) as SQL | undefined;
+        }
+
+        if (operator === 'isNull' || operator === 'isNotNull') {
+          const names = Array.isArray(input) ? input : [input];
+          return drizzleAnd(...names.filter((name) => name !== undefined).map((name) => {
+            const column = (conditionTable as unknown as Record<string, unknown>)[String(name)];
+            if (column === undefined) throw new Error(`Condition: unknown column "${name}".`);
+            return Reflect.apply(conditionOperator, undefined, [column]) as SQL;
+          }));
         }
 
         if (operator === 'and' || operator === 'or') {
@@ -231,7 +245,7 @@ export class MsSqlQuery<
         });
         return drizzleAnd(...(conditions as SQL[]));
       };
-      const conditionQuery = (conditionTable: MsSqlTable | Subquery, contextTable: MsSqlTable) =>
+      const conditionQuery = (conditionTable: MsSqlTable | Subquery, contextTable: MsSqlTable | Subquery) =>
         ({
           t: contextTable,
           eq: bindCondition('eq', conditionTable),
@@ -254,7 +268,7 @@ export class MsSqlQuery<
           or: bindCondition('or', conditionTable),
         }) as unknown as SelectConditionQuery<MsSqlTable>;
       const whereQuery = conditionQuery(table, table);
-      const orderByQuery: SelectOrderByQuery<MsSqlTable> = {
+      const orderByQuery: SelectOrderByQuery<MsSqlTable | Subquery> = {
         t: table,
         asc: (name) => drizzleAsc(this.resolveOrderColumn(name, table)),
         desc: (name) => drizzleDesc(this.resolveOrderColumn(name, table)),
@@ -272,7 +286,7 @@ export class MsSqlQuery<
       if (originalOrderBy) {
         enhancements.orderBy = (...args: unknown[]) =>
           typeof args[0] === 'function'
-            ? originalOrderBy(() => (args[0] as (query: SelectOrderByQuery<MsSqlTable>) => unknown)(orderByQuery))
+            ? originalOrderBy(() => (args[0] as (query: SelectOrderByQuery<MsSqlTable | Subquery>) => unknown)(orderByQuery))
             : originalOrderBy(...args);
       }
       for (const joinMethod of ['innerJoin', 'leftJoin', 'rightJoin', 'fullJoin', 'outerApply', 'crossApply']) {
@@ -914,29 +928,29 @@ export class MsSqlQuery<
  * ******************************************************************************************************************/
 
 type SelectQueryBase<
-  TTable extends MsSqlTable,
+  TTable extends MsSqlTable | Subquery,
   TSelection extends FieldSet | undefined,
   TBranch extends 'from' | 'top',
 > = MsSqlSelectBase<
   GetSelectTableName<TTable>,
-  TSelection extends undefined ? MsSqlSelectedTableColumns<TTable> : TSelection,
+  TSelection extends undefined ? SourceSelection<TTable> : TSelection,
   'partial',
   NodeMsSqlPreparedQueryHKT,
   TBranch
 >;
 
-type TableWhere<TTable extends MsSqlTable> =
+type TableWhere<TTable extends MsSqlTable | Subquery> =
   | SQL
   | undefined
   | ((query: SelectConditionQuery<TTable>) => SQL | undefined);
 
 type OrderByValue = MsSqlColumn | SQL | SQL.Aliased;
-type SelectOrderByQuery<TTable extends MsSqlTable> = {
+type SelectOrderByQuery<TTable extends MsSqlTable | Subquery> = {
   readonly t: TTable;
-  asc(name: MsSqlColumnName<TTable>): SQL;
-  desc(name: MsSqlColumnName<TTable>): SQL;
+  asc(name: SourceColumnName<TTable>): SQL;
+  desc(name: SourceColumnName<TTable>): SQL;
 };
-type OrderByCallback<TTable extends MsSqlTable> = (
+type OrderByCallback<TTable extends MsSqlTable | Subquery> = (
   query: SelectOrderByQuery<TTable>
 ) => OrderByValue | OrderByValue[];
 
@@ -945,12 +959,12 @@ type JoinConditionValues<TJoinedTable extends Joinable> = TJoinedTable extends M
   : TJoinedTable extends Subquery<string, infer TFields>
     ? { [K in keyof TFields]?: unknown }
     : never;
-type JoinConditionQuery<TTable extends MsSqlTable, TJoinedTable extends Joinable> = TJoinedTable extends MsSqlTable
+type JoinConditionQuery<TTable extends MsSqlTable | Subquery, TJoinedTable extends Joinable> = TJoinedTable extends MsSqlTable
   ? Omit<SelectConditionQuery<TJoinedTable>, 't'> & { readonly t: TTable }
   : { readonly t: TTable; eq(values: JoinConditionValues<TJoinedTable>): SQL | undefined };
 type Joinable = MsSqlTable | Subquery | MsSqlViewBase | SQL;
 type JoinCondition<
-  TTable extends MsSqlTable,
+  TTable extends MsSqlTable | Subquery,
   TSelection extends FieldSet | undefined,
   TBranch extends 'from' | 'top',
   TJoinedTable extends Joinable,
@@ -958,7 +972,7 @@ type JoinCondition<
   ? SQL | undefined | ((query: JoinConditionQuery<TTable, TJoinedTable>) => SQL | undefined)
   : SQL | undefined | ((aliases: SelectQueryBase<TTable, TSelection, TBranch>['_']['selection']) => SQL | undefined);
 type JoinedSelect<
-  TTable extends MsSqlTable,
+  TTable extends MsSqlTable | Subquery,
   TSelection extends FieldSet | undefined,
   TBranch extends 'from' | 'top',
   TJoinedTable extends Joinable,
@@ -972,7 +986,7 @@ type JoinedSelect<
   orderBy(...columns: OrderByValue[]): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'orderBy'>;
 };
 type SelectJoinMethods<
-  TTable extends MsSqlTable,
+  TTable extends MsSqlTable | Subquery,
   TSelection extends FieldSet | undefined,
   TBranch extends 'from' | 'top',
 > = {
@@ -1002,7 +1016,7 @@ type SelectJoinMethods<
   ): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'cross'>;
 };
 
-type SelectTopFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Omit<
+type SelectTopFrom<TTable extends MsSqlTable | Subquery, TSelection extends FieldSet | undefined> = Omit<
   SelectQueryBase<TTable, TSelection, 'top'>,
   'where' | 'orderBy' | keyof SelectJoinMethods<TTable, TSelection, 'top'>
 > & SelectJoinMethods<TTable, TSelection, 'top'> & {
@@ -1011,7 +1025,7 @@ type SelectTopFrom<TTable extends MsSqlTable, TSelection extends FieldSet | unde
   orderBy(...columns: OrderByValue[]): Omit<SelectTopFrom<TTable, TSelection>, 'orderBy'>;
 };
 
-export type SelectFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Omit<
+export type SelectFrom<TTable extends MsSqlTable | Subquery, TSelection extends FieldSet | undefined> = Omit<
   SelectQueryBase<TTable, TSelection, 'from'>,
   'where' | 'orderBy' | keyof SelectJoinMethods<TTable, TSelection, 'from'>
 > & SelectJoinMethods<TTable, TSelection, 'from'> & {
@@ -1049,7 +1063,10 @@ type WhereQuery<TQuery> = Pick<
     | 'or'
   >
 >;
-type SelectConditionQuery<TTable extends MsSqlTable> = {
+type SelectConditionQuery<TSource extends MsSqlTable | Subquery> = TSource extends MsSqlTable
+  ? TableConditionQuery<TSource>
+  : TSource extends Subquery ? SubqueryConditionQuery<TSource> : never;
+type TableConditionQuery<TTable extends MsSqlTable> = {
   readonly t: TTable;
   eq(values: MsSqlCompareValues<TTable>): SQL | undefined;
   ne(values: MsSqlCompareValues<TTable>): SQL | undefined;
@@ -1140,7 +1157,7 @@ type MergeFields<T extends readonly FieldInput[], Result = {}> = T extends reado
       ? { [P in keyof Result]: Result[P] }
       : never;
 
-const normalizeFields = (fields: unknown, table?: MsSqlTable): FieldSet | undefined => {
+const normalizeFields = (fields: unknown, table?: MsSqlTable | Subquery): FieldSet | undefined => {
   if (fields === undefined) return undefined;
   const groups = Array.isArray(fields) ? fields : [fields];
   const result: FieldSet = {};
@@ -1153,9 +1170,14 @@ const normalizeFields = (fields: unknown, table?: MsSqlTable): FieldSet | undefi
   }
   for (const [name, field] of Object.entries(result)) {
     if (typeof field === 'string') {
-      const column = table && getTableColumns(table)[field];
+      const column = table && (is(table, Subquery) ? sourceColumns(table) : getTableColumns(table))[field];
       if (!column) throw new Error(`select: unknown column "${field}".`);
-      result[name] = sql`${column}`.mapWith(column).as(name);
+      const decoder = is(column, MsSqlColumn)
+        ? column
+        : is(column, SQL.Aliased)
+          ? (column.sql as unknown as { decoder: { mapFromDriverValue(value: unknown): unknown } }).decoder
+          : (value: unknown) => value;
+      result[name] = sql`${column}`.mapWith(decoder).as(name);
       continue;
     }
     if (is(field, SQL)) {
@@ -1210,3 +1232,63 @@ type HasAutoIncrement<TTable extends MsSqlTable> = [AutoIncrementKeys<TTable>] e
 
 type AddResult<TTable extends MsSqlTable> =
   HasAutoIncrement<TTable> extends true ? TTable['_']['columns'][AutoIncrementKeys<TTable>]['_']['data'] : undefined;
+
+
+function sourceColumns(source: MsSqlTable | Subquery, names: string[] = []): FieldSet {
+  return is(source, Subquery)
+    ? TableColumns(source, ...names) as FieldSet
+    : TableColumns(source, ...(names as MsSqlColumnSelectionName<MsSqlTable>[]));
+}
+
+type SourceSelection<T extends MsSqlTable | Subquery> = T extends MsSqlTable
+  ? MsSqlSelectedTableColumns<T> : T extends Subquery ? T['_']['selectedFields'] : never;
+type SourceColumnName<T extends MsSqlTable | Subquery> = T extends MsSqlTable
+  ? MsSqlColumnName<T> : keyof SourceSelection<T> & string;
+type SubqueryFieldsQuery<T extends Subquery> = {
+  readonly t: T;
+  columns(): T['_']['selectedFields'];
+  columns<N extends keyof T['_']['selectedFields'] & string>(...names: N[]): Pick<T['_']['selectedFields'], N>;
+  min<N extends keyof T['_']['selectedFields'] & string>(name: N): SQL<SubqueryFieldData<T['_']['selectedFields'][N]> | null>;
+  max<N extends keyof T['_']['selectedFields'] & string>(name: N): SQL<SubqueryFieldData<T['_']['selectedFields'][N]> | null>;
+};
+export type SubquerySelectInput<T extends Subquery> =
+  | readonly (FieldInput | (keyof T['_']['selectedFields'] & string))[]
+  | Record<string, FieldSet[string] | (keyof T['_']['selectedFields'] & string) | SQLWrapper>
+  | ((query: SubqueryFieldsQuery<T>) => FieldSet | readonly FieldInput[]);
+export type ResolveSubquerySelectInput<T extends Subquery, V> = Extract<ResolvedSubqueryInput<T, V>, FieldSet | undefined>;
+type ResolvedSubqueryInput<T extends Subquery, V> = V extends undefined ? undefined
+  : V extends (...args: never[]) => infer R ? R extends readonly FieldInput[] ? MergeFields<R> : Extract<R, FieldSet>
+  : V extends readonly unknown[] ? MergeFields<{ [I in keyof V]: V[I] extends keyof T['_']['selectedFields']
+    ? Extract<Pick<T['_']['selectedFields'], V[I]>, FieldSet> : Extract<V[I], FieldInput> }>
+  : { [K in keyof V]: V[K] extends keyof T['_']['selectedFields'] ? T['_']['selectedFields'][V[K]]
+    : V[K] extends MsSqlColumn | SQL | SQL.Aliased ? V[K]
+    : V[K] extends SQLWrapper<infer D> ? SQL.Aliased<D> : Extract<V[K], FieldSet[string]> };
+type SubqueryFieldData<F> = F extends MsSqlColumn ? F['_']['data'] | (F['_']['notNull'] extends true ? never : null)
+  : F extends SQL<infer D> | SQL.Aliased<infer D> ? D : unknown;
+type SubqueryValues<T extends Subquery> = {
+  [K in keyof T['_']['selectedFields']]?: SubqueryFieldData<T['_']['selectedFields'][K]> | SQLWrapper;
+};
+type SubqueryArrayValues<T extends Subquery> = {
+  [K in keyof T['_']['selectedFields']]?: (NonNullable<SubqueryFieldData<T['_']['selectedFields'][K]>> | SQLWrapper)[];
+};
+type SubqueryRangeValues<T extends Subquery> = {
+  [K in keyof T['_']['selectedFields']]?: [NonNullable<SubqueryFieldData<T['_']['selectedFields'][K]>>, NonNullable<SubqueryFieldData<T['_']['selectedFields'][K]>>];
+};
+type SubqueryPatternValues<T extends Subquery> = {
+  [K in keyof T['_']['selectedFields'] as NonNullable<SubqueryFieldData<T['_']['selectedFields'][K]>> extends string ? K : never]?: string;
+};
+type SubqueryConditionQuery<T extends Subquery> = {
+  readonly t: T;
+} & { [K in 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte']: (values: SubqueryValues<T>) => SQL | undefined
+} & { [K in 'inArray' | 'notInArray']: (values: SubqueryArrayValues<T>) => SQL | undefined
+} & { [K in 'between' | 'notBetween']: (values: SubqueryRangeValues<T>) => SQL | undefined
+} & { [K in 'like' | 'notLike' | 'ilike' | 'notIlike']: (values: SubqueryPatternValues<T>) => SQL | undefined
+} & {
+  isNull(names: SourceColumnName<T> | undefined | readonly (SourceColumnName<T> | undefined)[]): SQL | undefined;
+  isNotNull(names: SourceColumnName<T> | undefined | readonly (SourceColumnName<T> | undefined)[]): SQL | undefined;
+  and(values: SubqueryConditions<T>): SQL | undefined;
+  or(values: SubqueryConditions<T>): SQL | undefined;
+};
+type SubqueryConditions<T extends Subquery> = {
+  [K in keyof Omit<SubqueryConditionQuery<T>, 't'>]?: SubqueryConditionQuery<T>[K] extends (values: infer V) => unknown ? V : never;
+};

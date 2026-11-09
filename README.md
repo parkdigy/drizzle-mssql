@@ -117,6 +117,13 @@ const u = db.a.users('u');
 const aliasedRows = await db.select(u, (q) => q.columns('id', 'name as displayName'));
 ```
 
+`select`의 첫 인자로 `.as()`가 반환한 서브쿼리도 전달할 수 있습니다. 서브쿼리에서 선택한 컬럼만 외부 조회에 사용할 수 있습니다.
+
+```ts
+const aa = db.select('users', ['id', 'name']).where(q => q.eq({ id: 1 })).as('aa');
+const rows = await db.select(aa, q => q.columns('id', 'name'));
+```
+
 `min`과 `max`는 컬럼 객체 또는 스키마 속성명으로 집계 필드를 만듭니다. `select`와 `find`의 선택 객체 또는 선택 콜백에서 사용할 수 있습니다.
 
 ```ts
