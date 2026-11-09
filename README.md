@@ -109,6 +109,14 @@ const count = await user.count(user.isNotNull('email'));
 const exists = await user.exists(user.eq({ email: 'hong@example.com' }));
 ```
 
+연결 객체의 `select(table, fields?)`에서도 같은 선택 기능을 사용할 수 있습니다. 첫 인자는 등록된 스키마의 테이블명 또는 alias 테이블이며, 이후 선택 인자와 반환 빌더는 `MsSqlQuery.select`와 동일합니다.
+
+```ts
+const rows = await db.select('users', ['id', 'name']).where((q) => q.gt({ id: 0 }));
+const u = db.a.users('u');
+const aliasedRows = await db.select(u, (q) => q.columns('id', 'name as displayName'));
+```
+
 `min`과 `max`는 컬럼 객체 또는 스키마 속성명으로 집계 필드를 만듭니다. `select`와 `find`의 선택 객체 또는 선택 콜백에서 사용할 수 있습니다.
 
 ```ts

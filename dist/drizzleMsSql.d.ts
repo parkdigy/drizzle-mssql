@@ -4,7 +4,7 @@ import * as native from 'drizzle-orm';
 import { type MsSqlAliases } from './alias.js';
 import { type MsSqlSchemaConditions } from './conditions.js';
 import { TableColumns } from './columns.js';
-import { MsSqlQuery } from './MsSqlQuery.js';
+import { MsSqlQuery, type SelectFrom, type SelectInput, type ResolveSelectInput } from './MsSqlQuery.js';
 export interface DrizzleMsSqlOptions<TSchema extends Record<string, MsSqlTable>> {
     url: string;
     schema: TSchema;
@@ -24,6 +24,8 @@ interface MsSqlDatabaseHelpers<TSchema extends Record<string, MsSqlTable>> exten
     trans: MsSqlConnection<TSchema>['trans'];
     paginate: MsSqlConnection<TSchema>['paginate'];
     close: MsSqlConnection<TSchema>['close'];
+    select<K extends keyof TSchema & string, const TArgs extends readonly [fields?: SelectInput<TSchema[K]>]>(table: K, ...args: TArgs): SelectFrom<TSchema[K], ResolveSelectInput<TSchema[K], TArgs[0]>>;
+    select<TTable extends MsSqlTable, const TArgs extends readonly [fields?: SelectInput<TTable>]>(table: TTable, ...args: TArgs): SelectFrom<TTable, ResolveSelectInput<TTable, TArgs[0]>>;
     query<TTable extends MsSqlTable>(table: TTable): MsSqlQuery<TTable>;
 }
 type MsSqlNativeHelpers = Pick<typeof native, 'asc' | 'desc' | 'count' | 'countDistinct' | 'avg' | 'avgDistinct' | 'sum' | 'sumDistinct' | 'max' | 'min' | 'not' | 'exists' | 'notExists' | 'arrayContains' | 'arrayContained' | 'arrayOverlaps'>;

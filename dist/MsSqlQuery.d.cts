@@ -267,7 +267,7 @@ type SelectTopFrom<TTable extends MsSqlTable, TSelection extends FieldSet | unde
     orderBy(builder: OrderByCallback<TTable>): Omit<SelectTopFrom<TTable, TSelection>, 'orderBy'>;
     orderBy(...columns: OrderByValue[]): Omit<SelectTopFrom<TTable, TSelection>, 'orderBy'>;
 };
-type SelectFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Omit<SelectQueryBase<TTable, TSelection, 'from'>, 'where' | 'orderBy' | keyof SelectJoinMethods<TTable, TSelection, 'from'>> & SelectJoinMethods<TTable, TSelection, 'from'> & {
+export type SelectFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Omit<SelectQueryBase<TTable, TSelection, 'from'>, 'where' | 'orderBy' | keyof SelectJoinMethods<TTable, TSelection, 'from'>> & SelectJoinMethods<TTable, TSelection, 'from'> & {
     where(condition: TableWhere<TTable>): Omit<SelectFrom<TTable, TSelection>, 'where'>;
     orderBy(builder: OrderByCallback<TTable>): Omit<SelectFrom<TTable, TSelection>, 'orderBy'>;
     orderBy(...columns: OrderByValue[]): Omit<SelectFrom<TTable, TSelection>, 'orderBy'>;
@@ -300,7 +300,7 @@ type BaseWhere<TQuery> = SQL | undefined | ((query: WhereQuery<TQuery>) => SQL |
 type FieldSet = SelectedFields<MsSqlColumn, MsSqlTable>;
 type MixedSelection<TTable extends MsSqlTable> = Record<string, FieldSet[string] | MsSqlColumnName<TTable> | SQLWrapper>;
 type ResolveMixedSelection<TTable extends MsSqlTable, TSelection> = {
-    [K in keyof TSelection]: TSelection[K] extends MsSqlColumnName<TTable> ? TTable['_']['columns'][TSelection[K]] : TSelection[K] extends SQLWrapper<infer TData> ? SQL.Aliased<TData> : Extract<TSelection[K], FieldSet[string]>;
+    [K in keyof TSelection]: TSelection[K] extends MsSqlColumnName<TTable> ? TTable['_']['columns'][TSelection[K]] : TSelection[K] extends MsSqlColumn ? TSelection[K] : TSelection[K] extends SQLWrapper<infer TData> ? SQL.Aliased<TData> : Extract<TSelection[K], FieldSet[string]>;
 };
 type StringColumnSelection<TTable extends MsSqlTable> = Record<string, keyof TTable['_']['columns'] & string>;
 type StringColumnSelectionFields<TTable extends MsSqlTable, TSelection extends StringColumnSelection<TTable>> = {
@@ -315,9 +315,9 @@ type FieldsQuery<TTable extends MsSqlTable> = {
     max: MsSqlQuery<TTable>['max'];
 };
 type Fields<TQuery, TSelection> = TSelection | ((query: TQuery) => TSelection);
-type SelectInput<TTable extends MsSqlTable> = readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[] | MixedSelection<TTable> | ((query: FieldsQuery<TTable>) => FieldSet | readonly FieldInput[]);
+export type SelectInput<TTable extends MsSqlTable> = readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[] | MixedSelection<TTable> | ((query: FieldsQuery<TTable>) => FieldSet | readonly FieldInput[]);
 type SelectArgs<TTable extends MsSqlTable> = readonly [fields?: SelectInput<TTable>] | readonly [alias: MsSqlAliasTable<TTable, string>, fields?: Exclude<SelectInput<TTable>, (...args: never[]) => unknown>];
-type ResolveSelectInput<TTable extends MsSqlTable, T> = T extends undefined ? undefined : T extends (...args: never[]) => infer R ? R extends readonly FieldInput[] ? MergeFields<R> : Extract<R, FieldSet> : T extends readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[] ? MergeFields<NamedFields<TTable, T>> : T extends StringColumnSelection<TTable> ? StringColumnSelectionFields<TTable, T> : ResolveMixedSelection<TTable, T>;
+export type ResolveSelectInput<TTable extends MsSqlTable, T> = T extends undefined ? undefined : T extends (...args: never[]) => infer R ? R extends readonly FieldInput[] ? MergeFields<R> : Extract<R, FieldSet> : T extends readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[] ? MergeFields<NamedFields<TTable, T>> : T extends StringColumnSelection<TTable> ? StringColumnSelectionFields<TTable, T> : ResolveMixedSelection<TTable, T>;
 type NamedFields<TTable extends MsSqlTable, T extends readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[]> = {
     [I in keyof T]: T[I] extends MsSqlColumnSelectionName<TTable> ? MsSqlSelectedNamedColumns<TTable, readonly [T[I]]> : Extract<T[I], FieldInput>;
 };

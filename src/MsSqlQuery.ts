@@ -1011,7 +1011,7 @@ type SelectTopFrom<TTable extends MsSqlTable, TSelection extends FieldSet | unde
   orderBy(...columns: OrderByValue[]): Omit<SelectTopFrom<TTable, TSelection>, 'orderBy'>;
 };
 
-type SelectFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Omit<
+export type SelectFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Omit<
   SelectQueryBase<TTable, TSelection, 'from'>,
   'where' | 'orderBy' | keyof SelectJoinMethods<TTable, TSelection, 'from'>
 > & SelectJoinMethods<TTable, TSelection, 'from'> & {
@@ -1080,9 +1080,11 @@ type MixedSelection<TTable extends MsSqlTable> = Record<
 type ResolveMixedSelection<TTable extends MsSqlTable, TSelection> = {
   [K in keyof TSelection]: TSelection[K] extends MsSqlColumnName<TTable>
     ? TTable['_']['columns'][TSelection[K]]
-    : TSelection[K] extends SQLWrapper<infer TData>
-      ? SQL.Aliased<TData>
-    : Extract<TSelection[K], FieldSet[string]>;
+    : TSelection[K] extends MsSqlColumn
+      ? TSelection[K]
+      : TSelection[K] extends SQLWrapper<infer TData>
+        ? SQL.Aliased<TData>
+        : Extract<TSelection[K], FieldSet[string]>;
 };
 type StringColumnSelection<TTable extends MsSqlTable> = Record<string, keyof TTable['_']['columns'] & string>;
 type StringColumnSelectionFields<TTable extends MsSqlTable, TSelection extends StringColumnSelection<TTable>> = {
@@ -1099,14 +1101,14 @@ type FieldsQuery<TTable extends MsSqlTable> = {
   max: MsSqlQuery<TTable>['max'];
 };
 type Fields<TQuery, TSelection> = TSelection | ((query: TQuery) => TSelection);
-type SelectInput<TTable extends MsSqlTable> =
+export type SelectInput<TTable extends MsSqlTable> =
   | readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[]
   | MixedSelection<TTable>
   | ((query: FieldsQuery<TTable>) => FieldSet | readonly FieldInput[]);
 type SelectArgs<TTable extends MsSqlTable> =
   | readonly [fields?: SelectInput<TTable>]
   | readonly [alias: MsSqlAliasTable<TTable, string>, fields?: Exclude<SelectInput<TTable>, (...args: never[]) => unknown>];
-type ResolveSelectInput<TTable extends MsSqlTable, T> = T extends undefined
+export type ResolveSelectInput<TTable extends MsSqlTable, T> = T extends undefined
   ? undefined
   : T extends (...args: never[]) => infer R
     ? R extends readonly FieldInput[]

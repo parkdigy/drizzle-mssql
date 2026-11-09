@@ -6,7 +6,7 @@ import * as native from 'drizzle-orm';
 import { createAlias, type MsSqlAliases } from './alias';
 import { createConditions, type MsSqlSchemaConditions } from './conditions';
 import { TableColumns } from './columns';
-import { MsSqlQuery } from './MsSqlQuery';
+import { MsSqlQuery, type SelectFrom, type SelectInput, type ResolveSelectInput } from './MsSqlQuery';
 
 export interface DrizzleMsSqlOptions<TSchema extends Record<string, MsSqlTable>> {
   url: string;
@@ -29,6 +29,14 @@ interface MsSqlDatabaseHelpers<TSchema extends Record<string, MsSqlTable>> exten
   trans: MsSqlConnection<TSchema>['trans'];
   paginate: MsSqlConnection<TSchema>['paginate'];
   close: MsSqlConnection<TSchema>['close'];
+  select<K extends keyof TSchema & string, const TArgs extends readonly [fields?: SelectInput<TSchema[K]>]>(
+    table: K,
+    ...args: TArgs
+  ): SelectFrom<TSchema[K], ResolveSelectInput<TSchema[K], TArgs[0]>>;
+  select<TTable extends MsSqlTable, const TArgs extends readonly [fields?: SelectInput<TTable>]>(
+    table: TTable,
+    ...args: TArgs
+  ): SelectFrom<TTable, ResolveSelectInput<TTable, TArgs[0]>>;
   query<TTable extends MsSqlTable>(table: TTable): MsSqlQuery<TTable>;
 }
 
@@ -116,7 +124,13 @@ export function drizzleMsSql<TSchema extends Record<string, MsSqlTable>>(
   options: DrizzleMsSqlOptions<TSchema>
 ): DrizzleMsSql<TSchema> {
   const connection = createConnection(options);
+  function select(tableOrName: string | MsSqlTable, fields?: unknown): unknown {
+    const table = typeof tableOrName === 'string' ? options.schema[tableOrName] : tableOrName;
+    if (!table) throw new Error(`select: unknown table "${tableOrName}".`);
+    return new MsSqlQuery(table, connection.current).select(fields as SelectInput<MsSqlTable>);
+  }
   return {
+    select: select as MsSqlDatabaseHelpers<TSchema>['select'],
     asc: native.asc,
     desc: native.desc,
     count: native.count,

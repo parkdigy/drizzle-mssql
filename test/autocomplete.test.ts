@@ -24,6 +24,13 @@ test('200개 테이블과 200개 추가 컬럼에서도 공개 API의 자동완�
     db.query(a).columns('/*query*/');
     db.eq(a, { /*condition*/ });
     db.eq('table199', { /*namedCondition*/ });
+    const directSelected = db.select('table199', ['id', 'name']);
+    const directAlias = db.select(a, (q) => q.columns('id', 'name'));
+    const directRow: { id: number; name: string | null } = {} as Awaited<typeof directSelected>[number];
+    const directAliasRow: { id: number; name: string | null } = {} as Awaited<typeof directAlias>[number];
+    // @ts-expect-error 선택하지 않은 컬럼은 포함하지 않는다
+    ({} as Awaited<typeof directSelected>[number]).extra0;
+    void [directRow, directAliasRow];
     const query = db.query(table199);
     // @ts-expect-error 자동완성용 미완성 컬럼명
     query.select(['id', '/*nextColumn*/']);
