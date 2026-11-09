@@ -107,9 +107,11 @@ export class TestData extends MsSqlQuery<'testData'> {
     );
 
     console.log(await this.select(['id']).where((q) => q.eq({ name: 'name' })));
+    console.log(await this.select(['id']).where((q) => mssql.eq(q.t.name, 'name')));
 
     const td = mssql.a.testData('td');
     console.log(await this.select(td, ['id']).where((q) => q.eq({ name: 'name' })));
+    console.log(await this.select(td, ['id']).where((q) => mssql.eq(q.t.name, 'name')));
   }
 
   async addTest() {

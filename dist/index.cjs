@@ -319,6 +319,7 @@ class MsSqlQuery {
             const originalWhere = builder.where.bind(query);
             const bindCondition = (operator) => (input) => Reflect.apply(this.drizzle[operator], undefined, [table, input]);
             const whereQuery = {
+                t: table,
                 eq: bindCondition('eq'),
                 ne: bindCondition('ne'),
                 gt: bindCondition('gt'),

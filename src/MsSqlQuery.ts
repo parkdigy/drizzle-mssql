@@ -254,6 +254,7 @@ export class MsSqlQuery<
           [table, input]
         );
       const whereQuery = {
+        t: table,
         eq: bindCondition('eq'),
         ne: bindCondition('ne'),
         gt: bindCondition('gt'),
@@ -968,6 +969,7 @@ type WhereQuery<TQuery> = Pick<
   >
 >;
 type SelectConditionQuery<TTable extends MsSqlTable> = {
+  readonly t: TTable;
   eq(values: MsSqlCompareValues<TTable>): SQL | undefined;
   ne(values: MsSqlCompareValues<TTable>): SQL | undefined;
   gt(values: MsSqlCompareValues<TTable>): SQL | undefined;

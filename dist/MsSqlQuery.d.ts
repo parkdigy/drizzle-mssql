@@ -252,6 +252,7 @@ type SelectFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefin
 type FindResult<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Awaited<SelectFrom<TTable, TSelection>>[number] | undefined;
 type WhereQuery<TQuery> = Pick<TQuery, Extract<keyof TQuery, 't' | 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'inArray' | 'notInArray' | 'between' | 'notBetween' | 'like' | 'notLike' | 'ilike' | 'notIlike' | 'isNull' | 'isNotNull' | 'and' | 'or'>>;
 type SelectConditionQuery<TTable extends MsSqlTable> = {
+    readonly t: TTable;
     eq(values: MsSqlCompareValues<TTable>): SQL | undefined;
     ne(values: MsSqlCompareValues<TTable>): SQL | undefined;
     gt(values: MsSqlCompareValues<TTable>): SQL | undefined;

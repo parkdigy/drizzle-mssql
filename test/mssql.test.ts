@@ -49,6 +49,8 @@ test('where 콜백에는 컬럼 대신 조건 헬퍼만 제공한다', () => {
 
 test('where 콜백에서 테이블 컬럼과 조건 헬퍼를 함께 사용한다', () => {
   const alias = createAlias({ users }).users('u');
+  const tableColumn = usersQuery.select(['id']).where((q) => drizzleEq(q.t.name, 'Ada')).toSQL();
+  const aliasTableColumn = usersQuery.select(alias, ['id']).where((q) => drizzleEq(q.t.name, 'Ada')).toSQL();
   const queryCondition = usersQuery.select(['id']).where((q) => q.eq({ name: 'Ada' })).toSQL();
   const groupedCondition = usersQuery
     .select(['id'])
@@ -56,6 +58,10 @@ test('where 콜백에서 테이블 컬럼과 조건 헬퍼를 함께 사용한�
     .toSQL();
   const aliasCondition = usersQuery.select(alias, ['id']).where((q) => q.eq({ name: 'Ada' })).toSQL();
 
+  expect(tableColumn.sql).toMatch(/where \[users\]\.\[name\] = @par0/i);
+  expect(tableColumn.params).toEqual(['Ada']);
+  expect(aliasTableColumn.sql).toMatch(/where \[u\]\.\[name\] = @par0/i);
+  expect(aliasTableColumn.params).toEqual(['Ada']);
   expect(queryCondition.sql).toMatch(/where \[users\]\.\[name\] = @par0/i);
   expect(queryCondition.params).toEqual(['Ada']);
   expect(groupedCondition.sql).toMatch(/where \(\(\[users\]\.\[name\] = @par0\) and \(\[users\]\.\[id\] > @par1\)\)/i);
