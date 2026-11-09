@@ -45,7 +45,19 @@ export class TestData extends MsSqlQuery<'testData'> {
   }
 
   async selectTopTest() {
+    console.log('::::: TestData::selectTopTest() :::::');
+
     console.log(await this.select().top(2));
+  }
+
+  async subQueryTest() {
+    console.log('::::: TestData::subQueryTest() :::::');
+
+    const builder = this.select(['id']).top(1).orderBy(this.desc('id'));
+
+    console.log(await this.select({ id: 'id', sub_query_value: builder }).where(this.eq('id', 2)));
+
+    console.log(await this.select().where(this.eq('id', builder)));
   }
 
   async findTest() {

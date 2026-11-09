@@ -1,6 +1,7 @@
 import { SQL, min as drizzleMin, max as drizzleMax } from 'drizzle-orm';
 import { MsSqlTable, MsSqlColumn, type MsSqlSelectBase } from 'drizzle-orm/mssql-core';
 import type { SelectedFields } from 'drizzle-orm/operations';
+import type { SQLWrapper } from 'drizzle-orm';
 import type { GetSelectTableName } from 'drizzle-orm/query-builders/select.types';
 import type { MsSqlColumnSelectionName, MsSqlSelectedNamedColumnUnion, MsSqlSelectedNamedColumns, MsSqlSelectedTableColumns, MsSqlAliasTable } from './columns.cjs';
 import { type TableMutationPolicy } from './mssqlTable.cjs';
@@ -38,6 +39,7 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddVa
     max<C extends MsSqlColumn>(column: C): ReturnType<typeof drizzleMax<C>>;
     private resolveAggregateColumn;
     private resolveOrderColumn;
+    private resolveConditionColumn;
     /********************************************************************************************************************
      * asc / desc
      * ******************************************************************************************************************/
@@ -55,12 +57,14 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddVa
     select<const T extends readonly FieldInput[]>(fields: (query: FieldsQuery<TTable>) => T): SelectFrom<TTable, MergeFields<T>>;
     select<const T extends readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[]>(fields: T): SelectFrom<TTable, MergeFields<NamedFields<TTable, T>>>;
     select<const TSelection extends StringColumnSelection<TTable>>(fields: TSelection): SelectFrom<TTable, StringColumnSelectionFields<TTable, TSelection>>;
+    select<const TSelection extends MixedSelection<TTable>>(fields: TSelection): SelectFrom<TTable, ResolveMixedSelection<TTable, TSelection>>;
     select<TSelection extends SelectedFields<MsSqlColumn, TTable>>(fields?: Fields<FieldsQuery<TTable>, TSelection>): SelectFrom<TTable, TSelection>;
     select<TAlias extends string>(alias: MsSqlAliasTable<TTable, TAlias>): SelectFrom<MsSqlAliasTable<TTable, TAlias>, undefined>;
     select<TAlias extends string>(alias: MsSqlAliasTable<TTable, TAlias>, fields: readonly []): SelectFrom<MsSqlAliasTable<TTable, TAlias>, {}>;
     select<TAlias extends string, N extends MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>>(alias: MsSqlAliasTable<TTable, TAlias>, fields: readonly N[]): SelectFrom<MsSqlAliasTable<TTable, TAlias>, MsSqlSelectedNamedColumns<MsSqlAliasTable<TTable, TAlias>, readonly N[]>>;
     select<TAlias extends string, const T extends readonly FieldInput[]>(alias: MsSqlAliasTable<TTable, TAlias>, fields: (query: FieldsQuery<MsSqlAliasTable<TTable, TAlias>>) => T): SelectFrom<MsSqlAliasTable<TTable, TAlias>, MergeFields<T>>;
     select<TAlias extends string, const T extends readonly (FieldInput | MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>)[]>(alias: MsSqlAliasTable<TTable, TAlias>, fields: T): SelectFrom<MsSqlAliasTable<TTable, TAlias>, MergeFields<NamedFields<MsSqlAliasTable<TTable, TAlias>, T>>>;
+    select<TAlias extends string, const TSelection extends MixedSelection<MsSqlAliasTable<TTable, TAlias>>>(alias: MsSqlAliasTable<TTable, TAlias>, fields: TSelection): SelectFrom<MsSqlAliasTable<TTable, TAlias>, ResolveMixedSelection<MsSqlAliasTable<TTable, TAlias>, TSelection>>;
     select<TAlias extends string, TSelection extends SelectedFields<MsSqlColumn, MsSqlAliasTable<TTable, TAlias>>>(alias: MsSqlAliasTable<TTable, TAlias>, fields: Fields<FieldsQuery<MsSqlAliasTable<TTable, TAlias>>, TSelection>): SelectFrom<MsSqlAliasTable<TTable, TAlias>, TSelection>;
     /********************************************************************************************************************
      * find
@@ -159,6 +163,8 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddVa
     /********************************************************************************************************************
      * eq
      * ******************************************************************************************************************/
+    eq<N extends MsSqlColumnName<TTable>>(name: N, value: Required<MsSqlCompareValues<TTable>>[N]): SQL;
+    eq<TAlias extends string, N extends MsSqlColumnName<MsSqlAliasTable<TTable, TAlias>>>(table: MsSqlAliasTable<TTable, TAlias>, name: N, value: Required<MsSqlCompareValues<MsSqlAliasTable<TTable, TAlias>>>[N]): SQL;
     eq(values: MsSqlCompareValues<TTable>): SQL | undefined;
     /********************************************************************************************************************
      * ne
@@ -241,6 +247,10 @@ type FindResult<TTable extends MsSqlTable, TSelection extends FieldSet | undefin
 type WhereQuery<TQuery> = Pick<TQuery, Extract<keyof TQuery, 't' | 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'inArray' | 'notInArray' | 'between' | 'notBetween' | 'like' | 'notLike' | 'ilike' | 'notIlike' | 'isNull' | 'isNotNull' | 'and' | 'or'>>;
 type BaseWhere<TQuery> = SQL | undefined | ((query: WhereQuery<TQuery>) => SQL | undefined);
 type FieldSet = SelectedFields<MsSqlColumn, MsSqlTable>;
+type MixedSelection<TTable extends MsSqlTable> = Record<string, FieldSet[string] | MsSqlColumnName<TTable> | SQLWrapper>;
+type ResolveMixedSelection<TTable extends MsSqlTable, TSelection> = {
+    [K in keyof TSelection]: TSelection[K] extends MsSqlColumnName<TTable> ? TTable['_']['columns'][TSelection[K]] : TSelection[K] extends SQLWrapper<infer TData> ? SQL.Aliased<TData> : Extract<TSelection[K], FieldSet[string]>;
+};
 type StringColumnSelection<TTable extends MsSqlTable> = Record<string, keyof TTable['_']['columns'] & string>;
 type StringColumnSelectionFields<TTable extends MsSqlTable, TSelection extends StringColumnSelection<TTable>> = {
     [K in keyof TSelection]: TTable['_']['columns'][TSelection[K]] extends MsSqlColumn<infer TConfig> ? SQL.Aliased<TConfig['data']> : never;

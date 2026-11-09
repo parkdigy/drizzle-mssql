@@ -1,9 +1,10 @@
 import { testData } from './query';
 
-await testData.selectTest();
+// await testData.selectTest();
 // await testData.selectColumnsTest();
 // await testData.aliasSelectTest();
 // await testData.selectTopTest();
+await testData.subQueryTest();
 // await testData.findTest();
 // await testData.conditionTest();
 // await testData.selectConditionTest();

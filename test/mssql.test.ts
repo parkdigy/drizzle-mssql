@@ -43,6 +43,32 @@ test('select 빌더에서 top 제한을 지정한다', () => {
   expect(row).toEqual({ id: 1, name: 'Ada' });
 });
 
+test('eq에서 컬럼명 또는 별칭 컬럼과 서브쿼리 빌더를 비교한다', () => {
+  const builder = usersQuery.select(['id']).top(1).orderBy(usersQuery.desc('id'));
+  const alias = createAlias({ users }).users('u');
+  const condition = db.select().from(users).where(usersQuery.eq('id', builder)).toSQL();
+  const aliasCondition = db.select().from(alias).where(usersQuery.eq(alias, 'id', builder)).toSQL();
+
+  expect(condition.sql).toMatch(/where \[users\]\.\[id\] = \(select top\(@par0\) \[id\] from \[users\] order by \[users\]\.\[id\] desc\)/i);
+  expect(condition.params).toEqual([1]);
+  expect(aliasCondition.sql).toMatch(/where \[u\]\.\[id\] = \(select top\(@par0\) \[id\] from \[users\] order by \[users\]\.\[id\] desc\)/i);
+  expect(aliasCondition.params).toEqual([1]);
+});
+
+test('서브쿼리 SQL 표현식과 일반 컬럼을 함께 선택한다', () => {
+  const builder = usersQuery.select(['id']).top(1).orderBy(usersQuery.desc('id'));
+  const statement = usersQuery.select({ id: 'id', test: builder });
+  type Row = Awaited<typeof statement>[number];
+  const row: Row = { id: 1, test: 1 };
+  const selected = statement.toSQL();
+
+  expect(selected.sql).toMatch(/select .*\[id\] as \[id\].*\(select top\(@par0\) \[id\] from \[users\] order by \[users\]\.\[id\] desc\) as \[test\] from \[users\]/i);
+  expect(selected.params).toEqual([1]);
+  expect(row).toEqual({ id: 1, test: 1 });
+  const rawSqlSelection = usersQuery.select({ id: 'id', test: sql`(${builder})` }).toSQL();
+  expect(rawSqlSelection.sql).toMatch(/as \[test\] from \[users\]/i);
+});
+
 test('컬럼명과 별칭 테이블로 오름차순과 내림차순을 지정한다', () => {
   const alias = createAlias({ users }).users('u');
   const descending = usersQuery.select().orderBy(usersQuery.desc('id')).toSQL();

@@ -276,6 +276,12 @@ class MsSqlQuery {
             throw new Error(`orderBy: unknown column "${name}".`);
         return columns[name];
     }
+    resolveConditionColumn(name, table) {
+        const columns = native.getTableColumns(table);
+        if (!Object.hasOwn(columns, name))
+            throw new Error(`Condition: unknown column "${name}".`);
+        return columns[name];
+    }
     asc(tableOrName, name) {
         const table = typeof tableOrName === 'string' ? this.t : tableOrName;
         const columnName = typeof tableOrName === 'string' ? tableOrName : name;
@@ -573,11 +579,14 @@ class MsSqlQuery {
             throw new Error(`${method}: ${operation} is blocked for table "${mssqlCore.getTableConfig(this.t).name}".`);
         }
     }
-    /********************************************************************************************************************
-     * eq
-     * ******************************************************************************************************************/
-    eq(values) {
-        return this.drizzle.eq(this.t, values);
+    eq(tableOrValues, nameOrValue, value) {
+        if (typeof tableOrValues === 'string') {
+            return native.eq(this.resolveConditionColumn(tableOrValues, this.t), nameOrValue);
+        }
+        if (native.isTable(tableOrValues)) {
+            return native.eq(this.resolveConditionColumn(nameOrValue, tableOrValues), value);
+        }
+        return this.drizzle.eq(this.t, tableOrValues);
     }
     /********************************************************************************************************************
      * ne
@@ -697,8 +706,18 @@ const normalizeFields = (fields, table) => {
             result[name] = native.sql `${column}`.mapWith(column).as(name);
             continue;
         }
+        if (native.is(field, native.SQL)) {
+            result[name] = field.as(name);
+            continue;
+        }
+        if (native.is(field, native.SQL.Aliased))
+            continue;
         if (native.is(field, mssqlCore.MsSqlColumn) && field.name !== name) {
             result[name] = native.sql `${field}`.mapWith(field).as(name);
+            continue;
+        }
+        if (typeof field === 'object' && field !== null && 'getSQL' in field && typeof field.getSQL === 'function') {
+            result[name] = native.sql `${field}`.as(name);
         }
     }
     return result;
