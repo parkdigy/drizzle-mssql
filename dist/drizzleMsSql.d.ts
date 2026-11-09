@@ -1,5 +1,5 @@
 import { SQL, sql, type Subquery } from 'drizzle-orm';
-import type { MsSqlTable } from 'drizzle-orm/mssql-core';
+import { alias, type MsSqlTable } from 'drizzle-orm/mssql-core';
 import * as native from 'drizzle-orm';
 import { type MsSqlAliases } from './alias.js';
 import { type MsSqlSchemaConditions } from './conditions.js';
@@ -15,6 +15,7 @@ interface MsSqlDatabaseHelpers<TSchema extends Record<string, MsSqlTable>> exten
     s: TSchema;
     a: MsSqlAliases<TSchema>;
     columns: typeof TableColumns;
+    alias: typeof alias;
     sql: typeof sql;
     sqlNumber(value: SQL | number): SQL<number>;
     sqlString(value: SQL | string): SQL<string>;

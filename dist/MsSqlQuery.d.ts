@@ -1,8 +1,10 @@
-import { SQL, min as drizzleMin, max as drizzleMax } from 'drizzle-orm';
+import { SQL, Subquery, min as drizzleMin, max as drizzleMax } from 'drizzle-orm';
 import { MsSqlTable, MsSqlColumn, type MsSqlSelectBase } from 'drizzle-orm/mssql-core';
 import type { SelectedFields } from 'drizzle-orm/operations';
 import type { SQLWrapper } from 'drizzle-orm';
 import type { GetSelectTableName } from 'drizzle-orm/query-builders/select.types';
+import type { MsSqlJoin } from 'drizzle-orm/mssql-core/query-builders/select.types';
+import type { MsSqlViewBase } from 'drizzle-orm/mssql-core/view-base';
 import type { MsSqlColumnSelectionName, MsSqlSelectedNamedColumnUnion, MsSqlSelectedNamedColumns, MsSqlSelectedTableColumns, MsSqlAliasTable } from './columns.js';
 import { type TableMutationPolicy } from './mssqlTable.js';
 import type { MsSqlAddValues, MsSqlEditValues, MsSqlCompareValues, MsSqlColumnName, MsSqlArrayCompareValues, MsSqlRangeCompareValues, MsSqlPatternCompareValues, MsSqlNullConditionInput, MsSqlConditions } from './@types/index.js';
@@ -249,12 +251,31 @@ type SelectOrderByQuery<TTable extends MsSqlTable> = {
     desc(name: MsSqlColumnName<TTable>): SQL;
 };
 type OrderByCallback<TTable extends MsSqlTable> = (query: SelectOrderByQuery<TTable>) => OrderByValue | OrderByValue[];
-type SelectTopFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Omit<SelectQueryBase<TTable, TSelection, 'top'>, 'where' | 'orderBy'> & {
+type JoinConditionValues<TJoinedTable extends Joinable> = TJoinedTable extends MsSqlTable ? MsSqlCompareValues<TJoinedTable> : TJoinedTable extends Subquery<string, infer TFields> ? {
+    [K in keyof TFields]?: unknown;
+} : never;
+type JoinConditionQuery<TTable extends MsSqlTable, TJoinedTable extends Joinable> = TJoinedTable extends MsSqlTable ? Omit<SelectConditionQuery<TJoinedTable>, 't'> & {
+    readonly t: TTable;
+} : {
+    readonly t: TTable;
+    eq(values: JoinConditionValues<TJoinedTable>): SQL | undefined;
+};
+type Joinable = MsSqlTable | Subquery | MsSqlViewBase | SQL;
+type JoinCondition<TTable extends MsSqlTable, TSelection extends FieldSet | undefined, TBranch extends 'from' | 'top', TJoinedTable extends Joinable> = TJoinedTable extends MsSqlTable | Subquery ? SQL | undefined | ((query: JoinConditionQuery<TTable, TJoinedTable>) => SQL | undefined) : SQL | undefined | ((aliases: SelectQueryBase<TTable, TSelection, TBranch>['_']['selection']) => SQL | undefined);
+type SelectJoinMethods<TTable extends MsSqlTable, TSelection extends FieldSet | undefined, TBranch extends 'from' | 'top'> = {
+    innerJoin<TJoinedTable extends Joinable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): MsSqlJoin<SelectQueryBase<TTable, TSelection, TBranch>, false, 'inner', TJoinedTable>;
+    leftJoin<TJoinedTable extends Joinable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): MsSqlJoin<SelectQueryBase<TTable, TSelection, TBranch>, false, 'left', TJoinedTable>;
+    rightJoin<TJoinedTable extends Joinable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): MsSqlJoin<SelectQueryBase<TTable, TSelection, TBranch>, false, 'right', TJoinedTable>;
+    fullJoin<TJoinedTable extends Joinable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): MsSqlJoin<SelectQueryBase<TTable, TSelection, TBranch>, false, 'full', TJoinedTable>;
+    outerApply<TJoinedTable extends MsSqlTable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): MsSqlJoin<SelectQueryBase<TTable, TSelection, TBranch>, false, 'left', TJoinedTable>;
+    crossApply<TJoinedTable extends MsSqlTable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): MsSqlJoin<SelectQueryBase<TTable, TSelection, TBranch>, false, 'cross', TJoinedTable>;
+};
+type SelectTopFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Omit<SelectQueryBase<TTable, TSelection, 'top'>, 'where' | 'orderBy' | keyof SelectJoinMethods<TTable, TSelection, 'top'>> & SelectJoinMethods<TTable, TSelection, 'top'> & {
     where(condition: TableWhere<TTable>): Omit<SelectTopFrom<TTable, TSelection>, 'where'>;
     orderBy(builder: OrderByCallback<TTable>): Omit<SelectTopFrom<TTable, TSelection>, 'orderBy'>;
     orderBy(...columns: OrderByValue[]): Omit<SelectTopFrom<TTable, TSelection>, 'orderBy'>;
 };
-type SelectFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Omit<SelectQueryBase<TTable, TSelection, 'from'>, 'where' | 'orderBy'> & {
+type SelectFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Omit<SelectQueryBase<TTable, TSelection, 'from'>, 'where' | 'orderBy' | keyof SelectJoinMethods<TTable, TSelection, 'from'>> & SelectJoinMethods<TTable, TSelection, 'from'> & {
     where(condition: TableWhere<TTable>): Omit<SelectFrom<TTable, TSelection>, 'where'>;
     orderBy(builder: OrderByCallback<TTable>): Omit<SelectFrom<TTable, TSelection>, 'orderBy'>;
     orderBy(...columns: OrderByValue[]): Omit<SelectFrom<TTable, TSelection>, 'orderBy'>;

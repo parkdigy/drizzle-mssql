@@ -1,6 +1,6 @@
 import { drizzle } from 'drizzle-orm/node-mssql';
 import { count, defineRelations, is, SQL, sql, type Subquery } from 'drizzle-orm';
-import type { MsSqlTable } from 'drizzle-orm/mssql-core';
+import { alias, type MsSqlTable } from 'drizzle-orm/mssql-core';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import * as native from 'drizzle-orm';
 import { createAlias, type MsSqlAliases } from './alias';
@@ -20,6 +20,7 @@ interface MsSqlDatabaseHelpers<TSchema extends Record<string, MsSqlTable>> exten
   s: TSchema;
   a: MsSqlAliases<TSchema>;
   columns: typeof TableColumns;
+  alias: typeof alias;
   sql: typeof sql;
   sqlNumber(value: SQL | number): SQL<number>;
   sqlString(value: SQL | string): SQL<string>;
@@ -136,6 +137,7 @@ export function drizzleMsSql<TSchema extends Record<string, MsSqlTable>>(
     a: createAlias(options.schema),
     ...createConditions(options.schema),
     columns: TableColumns,
+    alias,
     sql,
     sqlNumber: (value: SQL | number) => (is(value, SQL) ? value : sql`${value}`).mapWith(Number),
     sqlString: (value: SQL | string) => (is(value, SQL) ? value : sql`${value}`).mapWith(String),

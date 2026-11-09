@@ -70,6 +70,31 @@ test('where 콜백에서 테이블 컬럼과 조건 헬퍼를 함께 사용한�
   expect(aliasCondition.params).toEqual(['Ada']);
 });
 
+test('join 콜백은 조인 컬럼 조건 헬퍼와 기준 테이블 q.t를 제공한다', () => {
+  const baseAlias = createAlias({ users }).users('base');
+  const joinAlias = createAlias({ users }).users('joined');
+  const query = usersQuery.select().innerJoin(joinAlias, (q) => q.eq({ id: q.t.id })).toSQL();
+  const aliasQuery = usersQuery
+    .select(baseAlias)
+    .innerJoin(joinAlias, (q) => q.eq({ id: q.t.id }))
+    .toSQL();
+
+  expect(query.sql).toMatch(/inner join \[users\] \[joined\] on \[joined\]\.\[id\] = \[users\]\.\[id\]/i);
+  expect(aliasQuery.sql).toMatch(/inner join \[users\] \[joined\] on \[joined\]\.\[id\] = \[base\]\.\[id\]/i);
+});
+
+test('select 서브쿼리를 직접 조건으로 조인한다', () => {
+  const builder = usersQuery.select(['id']).top(1).orderBy(usersQuery.desc('id'));
+  const subquery = builder.as('latest');
+  const query = usersQuery.select().innerJoin(subquery, drizzleEq(subquery.id, users.id)).toSQL();
+  const callbackQuery = usersQuery.select().innerJoin(subquery, (q) => q.eq({ id: q.t.id })).toSQL();
+
+  expect(query.sql).toMatch(/inner join \(select top\(@par0\) \[id\] from \[users\] order by \[users\]\.\[id\] desc\) \[latest\] on \[latest\]\.\[id\] = \[users\]\.\[id\]/i);
+  expect(query.params).toEqual([1]);
+  expect(callbackQuery.sql).toMatch(/inner join \(select top\(@par0\) \[id\] from \[users\] order by \[users\]\.\[id\] desc\) \[latest\] on \[latest\]\.\[id\] = \[users\]\.\[id\]/i);
+  expect(callbackQuery.params).toEqual([1]);
+});
+
 test('select 빌더에서 top 제한을 지정한다', () => {
   const query = usersQuery.select(['id', 'name']).top(1);
   type Row = Awaited<typeof query>[number];

@@ -6,6 +6,7 @@ import {
   count,
   eq,
   getTableColumns,
+  Subquery,
   and as drizzleAnd,
   asc as drizzleAsc,
   desc as drizzleDesc,
@@ -22,6 +23,8 @@ import {
 import type { SelectedFields } from 'drizzle-orm/operations';
 import type { SQLWrapper } from 'drizzle-orm';
 import type { GetSelectTableName } from 'drizzle-orm/query-builders/select.types';
+import type { MsSqlJoin } from 'drizzle-orm/mssql-core/query-builders/select.types';
+import type { MsSqlViewBase } from 'drizzle-orm/mssql-core/view-base';
 import type {
   MsSqlColumnSelectionName,
   MsSqlSelectedNamedColumnUnion,
@@ -249,33 +252,65 @@ export class MsSqlQuery<
       const originalWhere = builder.where.bind(query);
       const orderBy = (query as { orderBy?: (...args: unknown[]) => unknown }).orderBy;
       const originalOrderBy = typeof orderBy === 'function' ? orderBy.bind(query) : undefined;
-      const bindCondition = (operator: string) => (input: unknown) =>
-        Reflect.apply(
-          (this.drizzle as unknown as Record<string, (...args: unknown[]) => unknown>)[operator],
-          undefined,
-          [table, input]
-        );
-      const whereQuery = {
-        t: table,
-        eq: bindCondition('eq'),
-        ne: bindCondition('ne'),
-        gt: bindCondition('gt'),
-        gte: bindCondition('gte'),
-        lt: bindCondition('lt'),
-        lte: bindCondition('lte'),
-        inArray: bindCondition('inArray'),
-        notInArray: bindCondition('notInArray'),
-        between: bindCondition('between'),
-        notBetween: bindCondition('notBetween'),
-        like: bindCondition('like'),
-        notLike: bindCondition('notLike'),
-        ilike: bindCondition('ilike'),
-        notIlike: bindCondition('notIlike'),
-        isNull: bindCondition('isNull'),
-        isNotNull: bindCondition('isNotNull'),
-        and: bindCondition('and'),
-        or: bindCondition('or'),
-      } as unknown as SelectConditionQuery<MsSqlTable>;
+      const bindCondition =
+        (operator: string, conditionTable: MsSqlTable | Subquery = table) =>
+        (input: unknown): SQL | undefined => {
+        const conditionOperator = (this.drizzle as unknown as Record<string, (...args: unknown[]) => unknown>)[
+          operator
+        ];
+        if (isTable(conditionTable)) {
+          return Reflect.apply(conditionOperator, undefined, [conditionTable, input]) as SQL | undefined;
+        }
+
+        if (operator === 'and' || operator === 'or') {
+          if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+            throw new Error(`${operator}: expected a condition object.`);
+          }
+          const conditions: (SQL | undefined)[] = Object.entries(input).map(([nestedOperator, values]) =>
+            bindCondition(nestedOperator, conditionTable)(values)
+          );
+          return Reflect.apply(conditionOperator, undefined, conditions as SQL[]) as SQL | undefined;
+        }
+
+        if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+          throw new Error(`${operator}: expected a column/value object.`);
+        }
+        const conditions = Object.entries(input).map(([name, value]) => {
+          const column = (conditionTable as unknown as Record<string, unknown>)[name];
+          if (column === undefined) throw new Error(`Condition: unknown column "${name}".`);
+          if (operator === 'between' || operator === 'notBetween') {
+            if (!Array.isArray(value) || value.length !== 2) {
+              throw new Error(`${operator}: expected two bounds.`);
+            }
+            return Reflect.apply(conditionOperator, undefined, [column, value[0], value[1]]);
+          }
+          return Reflect.apply(conditionOperator, undefined, [column, value]);
+        });
+        return drizzleAnd(...(conditions as SQL[]));
+      };
+      const conditionQuery = (conditionTable: MsSqlTable | Subquery, contextTable: MsSqlTable) =>
+        ({
+          t: contextTable,
+          eq: bindCondition('eq', conditionTable),
+          ne: bindCondition('ne', conditionTable),
+          gt: bindCondition('gt', conditionTable),
+          gte: bindCondition('gte', conditionTable),
+          lt: bindCondition('lt', conditionTable),
+          lte: bindCondition('lte', conditionTable),
+          inArray: bindCondition('inArray', conditionTable),
+          notInArray: bindCondition('notInArray', conditionTable),
+          between: bindCondition('between', conditionTable),
+          notBetween: bindCondition('notBetween', conditionTable),
+          like: bindCondition('like', conditionTable),
+          notLike: bindCondition('notLike', conditionTable),
+          ilike: bindCondition('ilike', conditionTable),
+          notIlike: bindCondition('notIlike', conditionTable),
+          isNull: bindCondition('isNull', conditionTable),
+          isNotNull: bindCondition('isNotNull', conditionTable),
+          and: bindCondition('and', conditionTable),
+          or: bindCondition('or', conditionTable),
+        }) as unknown as SelectConditionQuery<MsSqlTable>;
+      const whereQuery = conditionQuery(table, table);
       const orderByQuery: SelectOrderByQuery<MsSqlTable> = {
         t: table,
         asc: (name) => drizzleAsc(this.resolveOrderColumn(name, table)),
@@ -296,6 +331,17 @@ export class MsSqlQuery<
           typeof args[0] === 'function'
             ? originalOrderBy(() => (args[0] as (query: SelectOrderByQuery<MsSqlTable>) => unknown)(orderByQuery))
             : originalOrderBy(...args);
+      }
+      for (const joinMethod of ['innerJoin', 'leftJoin', 'rightJoin', 'fullJoin', 'outerApply', 'crossApply']) {
+        const join = (query as Record<string, unknown>)[joinMethod];
+        if (typeof join !== 'function') continue;
+        enhancements[joinMethod] = (joinedTable: unknown, on: unknown) => {
+          if (typeof on !== 'function' || (!isTable(joinedTable) && !is(joinedTable, Subquery))) {
+            return Reflect.apply(join, query, [joinedTable, on]);
+          }
+          const joinQuery = conditionQuery(joinedTable, table) as JoinConditionQuery<MsSqlTable, Joinable>;
+          return Reflect.apply(join, query, [joinedTable, () => (on as (query: unknown) => unknown)(joinQuery)]);
+        };
       }
       return Object.assign(query, enhancements);
     };
@@ -949,10 +995,58 @@ type OrderByCallback<TTable extends MsSqlTable> = (
   query: SelectOrderByQuery<TTable>
 ) => OrderByValue | OrderByValue[];
 
+type JoinConditionValues<TJoinedTable extends Joinable> = TJoinedTable extends MsSqlTable
+  ? MsSqlCompareValues<TJoinedTable>
+  : TJoinedTable extends Subquery<string, infer TFields>
+    ? { [K in keyof TFields]?: unknown }
+    : never;
+type JoinConditionQuery<TTable extends MsSqlTable, TJoinedTable extends Joinable> = TJoinedTable extends MsSqlTable
+  ? Omit<SelectConditionQuery<TJoinedTable>, 't'> & { readonly t: TTable }
+  : { readonly t: TTable; eq(values: JoinConditionValues<TJoinedTable>): SQL | undefined };
+type Joinable = MsSqlTable | Subquery | MsSqlViewBase | SQL;
+type JoinCondition<
+  TTable extends MsSqlTable,
+  TSelection extends FieldSet | undefined,
+  TBranch extends 'from' | 'top',
+  TJoinedTable extends Joinable,
+> = TJoinedTable extends MsSqlTable | Subquery
+  ? SQL | undefined | ((query: JoinConditionQuery<TTable, TJoinedTable>) => SQL | undefined)
+  : SQL | undefined | ((aliases: SelectQueryBase<TTable, TSelection, TBranch>['_']['selection']) => SQL | undefined);
+type SelectJoinMethods<
+  TTable extends MsSqlTable,
+  TSelection extends FieldSet | undefined,
+  TBranch extends 'from' | 'top',
+> = {
+  innerJoin<TJoinedTable extends Joinable>(
+    table: TJoinedTable,
+    on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>
+  ): MsSqlJoin<SelectQueryBase<TTable, TSelection, TBranch>, false, 'inner', TJoinedTable>;
+  leftJoin<TJoinedTable extends Joinable>(
+    table: TJoinedTable,
+    on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>
+  ): MsSqlJoin<SelectQueryBase<TTable, TSelection, TBranch>, false, 'left', TJoinedTable>;
+  rightJoin<TJoinedTable extends Joinable>(
+    table: TJoinedTable,
+    on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>
+  ): MsSqlJoin<SelectQueryBase<TTable, TSelection, TBranch>, false, 'right', TJoinedTable>;
+  fullJoin<TJoinedTable extends Joinable>(
+    table: TJoinedTable,
+    on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>
+  ): MsSqlJoin<SelectQueryBase<TTable, TSelection, TBranch>, false, 'full', TJoinedTable>;
+  outerApply<TJoinedTable extends MsSqlTable>(
+    table: TJoinedTable,
+    on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>
+  ): MsSqlJoin<SelectQueryBase<TTable, TSelection, TBranch>, false, 'left', TJoinedTable>;
+  crossApply<TJoinedTable extends MsSqlTable>(
+    table: TJoinedTable,
+    on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>
+  ): MsSqlJoin<SelectQueryBase<TTable, TSelection, TBranch>, false, 'cross', TJoinedTable>;
+};
+
 type SelectTopFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Omit<
   SelectQueryBase<TTable, TSelection, 'top'>,
-  'where' | 'orderBy'
-> & {
+  'where' | 'orderBy' | keyof SelectJoinMethods<TTable, TSelection, 'top'>
+> & SelectJoinMethods<TTable, TSelection, 'top'> & {
   where(condition: TableWhere<TTable>): Omit<SelectTopFrom<TTable, TSelection>, 'where'>;
   orderBy(builder: OrderByCallback<TTable>): Omit<SelectTopFrom<TTable, TSelection>, 'orderBy'>;
   orderBy(...columns: OrderByValue[]): Omit<SelectTopFrom<TTable, TSelection>, 'orderBy'>;
@@ -960,8 +1054,8 @@ type SelectTopFrom<TTable extends MsSqlTable, TSelection extends FieldSet | unde
 
 type SelectFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Omit<
   SelectQueryBase<TTable, TSelection, 'from'>,
-  'where' | 'orderBy'
-> & {
+  'where' | 'orderBy' | keyof SelectJoinMethods<TTable, TSelection, 'from'>
+> & SelectJoinMethods<TTable, TSelection, 'from'> & {
   where(condition: TableWhere<TTable>): Omit<SelectFrom<TTable, TSelection>, 'where'>;
   orderBy(builder: OrderByCallback<TTable>): Omit<SelectFrom<TTable, TSelection>, 'orderBy'>;
   orderBy(...columns: OrderByValue[]): Omit<SelectFrom<TTable, TSelection>, 'orderBy'>;

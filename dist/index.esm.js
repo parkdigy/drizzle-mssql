@@ -1,4 +1,4 @@
-import {drizzle}from'drizzle-orm/node-mssql';import*as native from'drizzle-orm';import {isTable,getTableColumns,sql,min,max,asc,desc,is,SQL,eq,and,count,defineRelations}from'drizzle-orm';export{asc,avg,avgDistinct,count,countDistinct,desc,exists,max,min,not,notExists,sum,sumDistinct}from'drizzle-orm';import {AsyncLocalStorage}from'node:async_hooks';import {alias}from'drizzle-orm/mssql-core/alias';import {MsSqlTable,mssqlTable as mssqlTable$1,getTableConfig,MsSqlColumn}from'drizzle-orm/mssql-core';export{bigint,binary,bit,char,check,customType,date,datetime,datetime2,datetimeoffset,decimal,float,foreignKey,index,int,mssqlSchema,mssqlTableCreator,mssqlView,nchar,ntext,numeric,nvarchar,primaryKey,real,smallint,text,time,tinyint,unique,uniqueIndex,varbinary,varchar}from'drizzle-orm/mssql-core';import {MsSqlColumnBuilder}from'drizzle-orm/mssql-core/columns/common';function createAlias(schema) {
+import {drizzle}from'drizzle-orm/node-mssql';import*as native from'drizzle-orm';import {isTable,getTableColumns,sql,min,max,asc,desc,is,SQL,eq,and,count,Subquery,defineRelations}from'drizzle-orm';export{asc,avg,avgDistinct,count,countDistinct,desc,exists,max,min,not,notExists,sum,sumDistinct}from'drizzle-orm';import {MsSqlTable,mssqlTable as mssqlTable$1,getTableConfig,MsSqlColumn,alias as alias$1}from'drizzle-orm/mssql-core';export{bigint,binary,bit,char,check,customType,date,datetime,datetime2,datetimeoffset,decimal,float,foreignKey,index,int,mssqlSchema,mssqlTableCreator,mssqlView,nchar,ntext,numeric,nvarchar,primaryKey,real,smallint,text,time,tinyint,unique,uniqueIndex,varbinary,varchar}from'drizzle-orm/mssql-core';import {AsyncLocalStorage}from'node:async_hooks';import {alias}from'drizzle-orm/mssql-core/alias';import {MsSqlColumnBuilder}from'drizzle-orm/mssql-core/columns/common';function createAlias(schema) {
     /********************************************************************************************************************
      * getDefaultAlias
      * ******************************************************************************************************************/
@@ -319,28 +319,57 @@ class MsSqlQuery {
             const originalWhere = builder.where.bind(query);
             const orderBy = query.orderBy;
             const originalOrderBy = typeof orderBy === 'function' ? orderBy.bind(query) : undefined;
-            const bindCondition = (operator) => (input) => Reflect.apply(this.drizzle[operator], undefined, [table, input]);
-            const whereQuery = {
-                t: table,
-                eq: bindCondition('eq'),
-                ne: bindCondition('ne'),
-                gt: bindCondition('gt'),
-                gte: bindCondition('gte'),
-                lt: bindCondition('lt'),
-                lte: bindCondition('lte'),
-                inArray: bindCondition('inArray'),
-                notInArray: bindCondition('notInArray'),
-                between: bindCondition('between'),
-                notBetween: bindCondition('notBetween'),
-                like: bindCondition('like'),
-                notLike: bindCondition('notLike'),
-                ilike: bindCondition('ilike'),
-                notIlike: bindCondition('notIlike'),
-                isNull: bindCondition('isNull'),
-                isNotNull: bindCondition('isNotNull'),
-                and: bindCondition('and'),
-                or: bindCondition('or'),
+            const bindCondition = (operator, conditionTable = table) => (input) => {
+                const conditionOperator = this.drizzle[operator];
+                if (isTable(conditionTable)) {
+                    return Reflect.apply(conditionOperator, undefined, [conditionTable, input]);
+                }
+                if (operator === 'and' || operator === 'or') {
+                    if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+                        throw new Error(`${operator}: expected a condition object.`);
+                    }
+                    const conditions = Object.entries(input).map(([nestedOperator, values]) => bindCondition(nestedOperator, conditionTable)(values));
+                    return Reflect.apply(conditionOperator, undefined, conditions);
+                }
+                if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+                    throw new Error(`${operator}: expected a column/value object.`);
+                }
+                const conditions = Object.entries(input).map(([name, value]) => {
+                    const column = conditionTable[name];
+                    if (column === undefined)
+                        throw new Error(`Condition: unknown column "${name}".`);
+                    if (operator === 'between' || operator === 'notBetween') {
+                        if (!Array.isArray(value) || value.length !== 2) {
+                            throw new Error(`${operator}: expected two bounds.`);
+                        }
+                        return Reflect.apply(conditionOperator, undefined, [column, value[0], value[1]]);
+                    }
+                    return Reflect.apply(conditionOperator, undefined, [column, value]);
+                });
+                return and(...conditions);
             };
+            const conditionQuery = (conditionTable, contextTable) => ({
+                t: contextTable,
+                eq: bindCondition('eq', conditionTable),
+                ne: bindCondition('ne', conditionTable),
+                gt: bindCondition('gt', conditionTable),
+                gte: bindCondition('gte', conditionTable),
+                lt: bindCondition('lt', conditionTable),
+                lte: bindCondition('lte', conditionTable),
+                inArray: bindCondition('inArray', conditionTable),
+                notInArray: bindCondition('notInArray', conditionTable),
+                between: bindCondition('between', conditionTable),
+                notBetween: bindCondition('notBetween', conditionTable),
+                like: bindCondition('like', conditionTable),
+                notLike: bindCondition('notLike', conditionTable),
+                ilike: bindCondition('ilike', conditionTable),
+                notIlike: bindCondition('notIlike', conditionTable),
+                isNull: bindCondition('isNull', conditionTable),
+                isNotNull: bindCondition('isNotNull', conditionTable),
+                and: bindCondition('and', conditionTable),
+                or: bindCondition('or', conditionTable),
+            });
+            const whereQuery = conditionQuery(table, table);
             const orderByQuery = {
                 t: table,
                 asc: (name) => asc(this.resolveOrderColumn(name, table)),
@@ -356,6 +385,18 @@ class MsSqlQuery {
                 enhancements.orderBy = (...args) => typeof args[0] === 'function'
                     ? originalOrderBy(() => args[0](orderByQuery))
                     : originalOrderBy(...args);
+            }
+            for (const joinMethod of ['innerJoin', 'leftJoin', 'rightJoin', 'fullJoin', 'outerApply', 'crossApply']) {
+                const join = query[joinMethod];
+                if (typeof join !== 'function')
+                    continue;
+                enhancements[joinMethod] = (joinedTable, on) => {
+                    if (typeof on !== 'function' || (!isTable(joinedTable) && !is(joinedTable, Subquery))) {
+                        return Reflect.apply(join, query, [joinedTable, on]);
+                    }
+                    const joinQuery = conditionQuery(joinedTable, table);
+                    return Reflect.apply(join, query, [joinedTable, () => on(joinQuery)]);
+                };
             }
             return Object.assign(query, enhancements);
         };
@@ -804,5 +845,6 @@ const normalizeFields = (fields, table) => {
 }
 function drizzleMsSql(options) {
     const connection = createConnection(options);
-    return Object.assign(Object.assign(Object.assign(Object.assign({ asc: native.asc, desc: native.desc, count: native.count, countDistinct: native.countDistinct, avg: native.avg, avgDistinct: native.avgDistinct, sum: native.sum, sumDistinct: native.sumDistinct, max: native.max, min: native.min, not: native.not, exists: native.exists, notExists: native.notExists, arrayContains: native.arrayContains, arrayContained: native.arrayContained, arrayOverlaps: native.arrayOverlaps, s: options.schema, a: createAlias(options.schema) }, createConditions(options.schema)), { columns: TableColumns, sql, sqlNumber: (value) => (is(value, SQL) ? value : sql `${value}`).mapWith(Number), sqlString: (value) => (is(value, SQL) ? value : sql `${value}`).mapWith(String), sqlBoolean: (value) => (is(value, SQL) ? value : sql `${value}`).mapWith((v) => v === true || v === 1) }), connection), { query: (table) => new MsSqlQuery(table, connection.current) });
+    return Object.assign(Object.assign(Object.assign(Object.assign({ asc: native.asc, desc: native.desc, count: native.count, countDistinct: native.countDistinct, avg: native.avg, avgDistinct: native.avgDistinct, sum: native.sum, sumDistinct: native.sumDistinct, max: native.max, min: native.min, not: native.not, exists: native.exists, notExists: native.notExists, arrayContains: native.arrayContains, arrayContained: native.arrayContained, arrayOverlaps: native.arrayOverlaps, s: options.schema, a: createAlias(options.schema) }, createConditions(options.schema)), { columns: TableColumns, alias: alias$1,
+        sql, sqlNumber: (value) => (is(value, SQL) ? value : sql `${value}`).mapWith(Number), sqlString: (value) => (is(value, SQL) ? value : sql `${value}`).mapWith(String), sqlBoolean: (value) => (is(value, SQL) ? value : sql `${value}`).mapWith((v) => v === true || v === 1) }), connection), { query: (table) => new MsSqlQuery(table, connection.current) });
 }export{MsSqlQuery,TableColumns,createConditions,drizzleMsSql as default,drizzleMsSql,mssqlTable};
