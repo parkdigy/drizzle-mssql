@@ -242,16 +242,24 @@ export class MsSqlQuery<
     const table: MsSqlTable = isAlias ? (fieldsOrAlias as MsSqlTable) : this.t;
     const selectedFields = this.resolveFields(isAlias ? fields : fieldsOrAlias, table);
     const selectBuilder = tx.select(selectedFields ?? TableColumns(table));
-    const query = selectBuilder.from(table);
+    const enhance = (query: unknown): unknown => {
+      if (typeof query !== 'object' || query === null) return query;
 
-    if (typeof query !== 'object' || query === null) {
-      return query;
-    }
+      const builder = query as { where: (condition: unknown) => unknown };
+      const originalWhere = builder.where.bind(query);
+      return Object.assign(query, {
+        where: (condition: unknown) =>
+          originalWhere(
+            typeof condition === 'function'
+              ? () => (condition as (columns: MsSqlSelectedTableColumns<MsSqlTable>) => unknown)(TableColumns(table))
+              : condition
+          ),
+        top: (count: number) =>
+          typeof selectBuilder.top === 'function' ? enhance(selectBuilder.top(count).from(table)) : query,
+      });
+    };
 
-    return Object.assign(query, {
-      top: (count: number) =>
-        typeof selectBuilder.top === 'function' ? selectBuilder.top(count).from(table) : query,
-    });
+    return enhance(selectBuilder.from(table));
   }
 
   /********************************************************************************************************************
@@ -873,22 +881,36 @@ export class MsSqlQuery<
  * types
  * ******************************************************************************************************************/
 
-type SelectFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = MsSqlSelectBase<
+type SelectQueryBase<
+  TTable extends MsSqlTable,
+  TSelection extends FieldSet | undefined,
+  TBranch extends 'from' | 'top',
+> = MsSqlSelectBase<
   GetSelectTableName<TTable>,
   TSelection extends undefined ? MsSqlSelectedTableColumns<TTable> : TSelection,
   'partial',
   NodeMsSqlPreparedQueryHKT,
-  'from'
+  TBranch
+>;
+
+type TableWhere<TTable extends MsSqlTable> =
+  | SQL
+  | undefined
+  | ((aliases: MsSqlSelectedTableColumns<TTable>) => SQL | undefined);
+
+type SelectTopFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Omit<
+  SelectQueryBase<TTable, TSelection, 'top'>,
+  'where'
 > & {
-  top: (
-    count: number
-  ) => MsSqlSelectBase<
-    GetSelectTableName<TTable>,
-    TSelection extends undefined ? MsSqlSelectedTableColumns<TTable> : TSelection,
-    'partial',
-    NodeMsSqlPreparedQueryHKT,
-    'top'
-  >;
+  where(condition: TableWhere<TTable>): Omit<SelectQueryBase<TTable, TSelection, 'top'>, 'where'>;
+};
+
+type SelectFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Omit<
+  SelectQueryBase<TTable, TSelection, 'from'>,
+  'where'
+> & {
+  where(condition: TableWhere<TTable>): Omit<SelectQueryBase<TTable, TSelection, 'from'>, 'where'>;
+  top(count: number): SelectTopFrom<TTable, TSelection>;
 };
 
 type FindResult<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> =

@@ -312,13 +312,19 @@ class MsSqlQuery {
         const table = isAlias ? fieldsOrAlias : this.t;
         const selectedFields = this.resolveFields(isAlias ? fields : fieldsOrAlias, table);
         const selectBuilder = tx.select(selectedFields !== null && selectedFields !== void 0 ? selectedFields : TableColumns(table));
-        const query = selectBuilder.from(table);
-        if (typeof query !== 'object' || query === null) {
-            return query;
-        }
-        return Object.assign(query, {
-            top: (count) => typeof selectBuilder.top === 'function' ? selectBuilder.top(count).from(table) : query,
-        });
+        const enhance = (query) => {
+            if (typeof query !== 'object' || query === null)
+                return query;
+            const builder = query;
+            const originalWhere = builder.where.bind(query);
+            return Object.assign(query, {
+                where: (condition) => originalWhere(typeof condition === 'function'
+                    ? () => condition(TableColumns(table))
+                    : condition),
+                top: (count) => typeof selectBuilder.top === 'function' ? enhance(selectBuilder.top(count).from(table)) : query,
+            });
+        };
+        return enhance(selectBuilder.from(table));
     }
     async find(aliasOrFieldsOrWhere, fieldsOrWhere, where) {
         const hasAlias = native.isTable(aliasOrFieldsOrWhere);

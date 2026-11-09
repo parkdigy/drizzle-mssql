@@ -240,8 +240,14 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddVa
 /********************************************************************************************************************
  * types
  * ******************************************************************************************************************/
-type SelectFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = MsSqlSelectBase<GetSelectTableName<TTable>, TSelection extends undefined ? MsSqlSelectedTableColumns<TTable> : TSelection, 'partial', NodeMsSqlPreparedQueryHKT, 'from'> & {
-    top: (count: number) => MsSqlSelectBase<GetSelectTableName<TTable>, TSelection extends undefined ? MsSqlSelectedTableColumns<TTable> : TSelection, 'partial', NodeMsSqlPreparedQueryHKT, 'top'>;
+type SelectQueryBase<TTable extends MsSqlTable, TSelection extends FieldSet | undefined, TBranch extends 'from' | 'top'> = MsSqlSelectBase<GetSelectTableName<TTable>, TSelection extends undefined ? MsSqlSelectedTableColumns<TTable> : TSelection, 'partial', NodeMsSqlPreparedQueryHKT, TBranch>;
+type TableWhere<TTable extends MsSqlTable> = SQL | undefined | ((aliases: MsSqlSelectedTableColumns<TTable>) => SQL | undefined);
+type SelectTopFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Omit<SelectQueryBase<TTable, TSelection, 'top'>, 'where'> & {
+    where(condition: TableWhere<TTable>): Omit<SelectQueryBase<TTable, TSelection, 'top'>, 'where'>;
+};
+type SelectFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Omit<SelectQueryBase<TTable, TSelection, 'from'>, 'where'> & {
+    where(condition: TableWhere<TTable>): Omit<SelectQueryBase<TTable, TSelection, 'from'>, 'where'>;
+    top(count: number): SelectTopFrom<TTable, TSelection>;
 };
 type FindResult<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Awaited<SelectFrom<TTable, TSelection>>[number] | undefined;
 type WhereQuery<TQuery> = Pick<TQuery, Extract<keyof TQuery, 't' | 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'inArray' | 'notInArray' | 'between' | 'notBetween' | 'like' | 'notLike' | 'ilike' | 'notIlike' | 'isNull' | 'isNotNull' | 'and' | 'or'>>;

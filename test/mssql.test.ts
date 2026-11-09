@@ -1,5 +1,5 @@
 import { drizzle } from 'drizzle-orm/node-mssql';
-import { sql } from 'drizzle-orm';
+import { eq as drizzleEq, sql } from 'drizzle-orm';
 import { int, mssqlTable, nvarchar, primaryKey } from 'drizzle-orm/mssql-core';
 import { MsSqlQuery } from '../src/MsSqlQuery';
 import { createConditions } from '../src/conditions';
@@ -31,6 +31,17 @@ test('컬럼 선택과 조건을 MSSQL SQL로 생성한다', () => {
     .toSQL();
   expect(query.sql).toMatch(/select .* from \[users\] where \[users\]\.\[name\] = @par0/i);
   expect(query.params).toEqual(['홍길동']);
+});
+
+test('where 콜백은 select 필드와 관계없이 전체 테이블 컬럼을 참조한다', () => {
+  const alias = createAlias({ users }).users('u');
+  const selectedColumn = usersQuery.select(['id']).where((q) => drizzleEq(q.name, 'Ada')).toSQL();
+  const selectedAliasColumn = usersQuery.select(alias, ['id']).where((q) => drizzleEq(q.name, 'Ada')).toSQL();
+
+  expect(selectedColumn.sql).toMatch(/select \[id\] from \[users\] where \[users\]\.\[name\] = @par0/i);
+  expect(selectedColumn.params).toEqual(['Ada']);
+  expect(selectedAliasColumn.sql).toMatch(/select \[id\] from \[users\] \[u\] where \[u\]\.\[name\] = @par0/i);
+  expect(selectedAliasColumn.params).toEqual(['Ada']);
 });
 
 test('select 빌더에서 top 제한을 지정한다', () => {
