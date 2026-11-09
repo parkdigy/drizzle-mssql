@@ -317,6 +317,8 @@ class MsSqlQuery {
                 return query;
             const builder = query;
             const originalWhere = builder.where.bind(query);
+            const orderBy = query.orderBy;
+            const originalOrderBy = typeof orderBy === 'function' ? orderBy.bind(query) : undefined;
             const bindCondition = (operator) => (input) => Reflect.apply(this.drizzle[operator], undefined, [table, input]);
             const whereQuery = {
                 t: table,
@@ -339,12 +341,23 @@ class MsSqlQuery {
                 and: bindCondition('and'),
                 or: bindCondition('or'),
             };
-            return Object.assign(query, {
+            const orderByQuery = {
+                t: table,
+                asc: (name) => asc(this.resolveOrderColumn(name, table)),
+                desc: (name) => desc(this.resolveOrderColumn(name, table)),
+            };
+            const enhancements = {
                 where: (condition) => originalWhere(typeof condition === 'function'
                     ? () => condition(whereQuery)
                     : condition),
                 top: (count) => typeof selectBuilder.top === 'function' ? enhance(selectBuilder.top(count).from(table)) : query,
-            });
+            };
+            if (originalOrderBy) {
+                enhancements.orderBy = (...args) => typeof args[0] === 'function'
+                    ? originalOrderBy(() => args[0](orderByQuery))
+                    : originalOrderBy(...args);
+            }
+            return Object.assign(query, enhancements);
         };
         return enhance(selectBuilder.from(table));
     }

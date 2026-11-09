@@ -242,11 +242,22 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddVa
  * ******************************************************************************************************************/
 type SelectQueryBase<TTable extends MsSqlTable, TSelection extends FieldSet | undefined, TBranch extends 'from' | 'top'> = MsSqlSelectBase<GetSelectTableName<TTable>, TSelection extends undefined ? MsSqlSelectedTableColumns<TTable> : TSelection, 'partial', NodeMsSqlPreparedQueryHKT, TBranch>;
 type TableWhere<TTable extends MsSqlTable> = SQL | undefined | ((query: SelectConditionQuery<TTable>) => SQL | undefined);
-type SelectTopFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Omit<SelectQueryBase<TTable, TSelection, 'top'>, 'where'> & {
-    where(condition: TableWhere<TTable>): Omit<SelectQueryBase<TTable, TSelection, 'top'>, 'where'>;
+type OrderByValue = MsSqlColumn | SQL | SQL.Aliased;
+type SelectOrderByQuery<TTable extends MsSqlTable> = {
+    readonly t: TTable;
+    asc(name: MsSqlColumnName<TTable>): SQL;
+    desc(name: MsSqlColumnName<TTable>): SQL;
 };
-type SelectFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Omit<SelectQueryBase<TTable, TSelection, 'from'>, 'where'> & {
-    where(condition: TableWhere<TTable>): Omit<SelectQueryBase<TTable, TSelection, 'from'>, 'where'>;
+type OrderByCallback<TTable extends MsSqlTable> = (query: SelectOrderByQuery<TTable>) => OrderByValue | OrderByValue[];
+type SelectTopFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Omit<SelectQueryBase<TTable, TSelection, 'top'>, 'where' | 'orderBy'> & {
+    where(condition: TableWhere<TTable>): Omit<SelectTopFrom<TTable, TSelection>, 'where'>;
+    orderBy(builder: OrderByCallback<TTable>): Omit<SelectTopFrom<TTable, TSelection>, 'orderBy'>;
+    orderBy(...columns: OrderByValue[]): Omit<SelectTopFrom<TTable, TSelection>, 'orderBy'>;
+};
+type SelectFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Omit<SelectQueryBase<TTable, TSelection, 'from'>, 'where' | 'orderBy'> & {
+    where(condition: TableWhere<TTable>): Omit<SelectFrom<TTable, TSelection>, 'where'>;
+    orderBy(builder: OrderByCallback<TTable>): Omit<SelectFrom<TTable, TSelection>, 'orderBy'>;
+    orderBy(...columns: OrderByValue[]): Omit<SelectFrom<TTable, TSelection>, 'orderBy'>;
     top(count: number): SelectTopFrom<TTable, TSelection>;
 };
 type FindResult<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Awaited<SelectFrom<TTable, TSelection>>[number] | undefined;

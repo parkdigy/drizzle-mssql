@@ -18,6 +18,12 @@ export class TestData extends MsSqlQuery<'testData'> {
     console.log(await this.select().orderBy(this.desc('id')));
 
     console.log(await this.select().orderBy(this.asc('id')));
+
+    console.log(await this.select(['id']).orderBy((q) => q.desc('id')));
+
+    console.log(await this.select(['id']).orderBy((q) => q.asc('id')));
+
+    console.log(await this.select(['id']).orderBy((q) => mssql.desc(q.t.id)));
   }
 
   async selectColumnsTest() {
@@ -42,6 +48,10 @@ export class TestData extends MsSqlQuery<'testData'> {
     console.log(await this.select(td).orderBy(this.desc(td, 'id')));
 
     console.log(await this.select(td).orderBy(this.asc(td, 'id')));
+
+    console.log(await this.select(td, ['id']).orderBy((q) => q.desc('id')));
+
+    console.log(await this.select(td, ['id']).orderBy((q) => mssql.asc(q.t.id)));
   }
 
   async selectTopTest() {

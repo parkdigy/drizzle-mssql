@@ -247,6 +247,8 @@ export class MsSqlQuery<
 
       const builder = query as { where: (condition: unknown) => unknown };
       const originalWhere = builder.where.bind(query);
+      const orderBy = (query as { orderBy?: (...args: unknown[]) => unknown }).orderBy;
+      const originalOrderBy = typeof orderBy === 'function' ? orderBy.bind(query) : undefined;
       const bindCondition = (operator: string) => (input: unknown) =>
         Reflect.apply(
           (this.drizzle as unknown as Record<string, (...args: unknown[]) => unknown>)[operator],
@@ -274,7 +276,12 @@ export class MsSqlQuery<
         and: bindCondition('and'),
         or: bindCondition('or'),
       } as unknown as SelectConditionQuery<MsSqlTable>;
-      return Object.assign(query, {
+      const orderByQuery: SelectOrderByQuery<MsSqlTable> = {
+        t: table,
+        asc: (name) => drizzleAsc(this.resolveOrderColumn(name, table)),
+        desc: (name) => drizzleDesc(this.resolveOrderColumn(name, table)),
+      };
+      const enhancements: Record<string, unknown> = {
         where: (condition: unknown) =>
           originalWhere(
             typeof condition === 'function'
@@ -283,7 +290,14 @@ export class MsSqlQuery<
           ),
         top: (count: number) =>
           typeof selectBuilder.top === 'function' ? enhance(selectBuilder.top(count).from(table)) : query,
-      });
+      };
+      if (originalOrderBy) {
+        enhancements.orderBy = (...args: unknown[]) =>
+          typeof args[0] === 'function'
+            ? originalOrderBy(() => (args[0] as (query: SelectOrderByQuery<MsSqlTable>) => unknown)(orderByQuery))
+            : originalOrderBy(...args);
+      }
+      return Object.assign(query, enhancements);
     };
 
     return enhance(selectBuilder.from(table));
@@ -925,18 +939,32 @@ type TableWhere<TTable extends MsSqlTable> =
   | undefined
   | ((query: SelectConditionQuery<TTable>) => SQL | undefined);
 
+type OrderByValue = MsSqlColumn | SQL | SQL.Aliased;
+type SelectOrderByQuery<TTable extends MsSqlTable> = {
+  readonly t: TTable;
+  asc(name: MsSqlColumnName<TTable>): SQL;
+  desc(name: MsSqlColumnName<TTable>): SQL;
+};
+type OrderByCallback<TTable extends MsSqlTable> = (
+  query: SelectOrderByQuery<TTable>
+) => OrderByValue | OrderByValue[];
+
 type SelectTopFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Omit<
   SelectQueryBase<TTable, TSelection, 'top'>,
-  'where'
+  'where' | 'orderBy'
 > & {
-  where(condition: TableWhere<TTable>): Omit<SelectQueryBase<TTable, TSelection, 'top'>, 'where'>;
+  where(condition: TableWhere<TTable>): Omit<SelectTopFrom<TTable, TSelection>, 'where'>;
+  orderBy(builder: OrderByCallback<TTable>): Omit<SelectTopFrom<TTable, TSelection>, 'orderBy'>;
+  orderBy(...columns: OrderByValue[]): Omit<SelectTopFrom<TTable, TSelection>, 'orderBy'>;
 };
 
 type SelectFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Omit<
   SelectQueryBase<TTable, TSelection, 'from'>,
-  'where'
+  'where' | 'orderBy'
 > & {
-  where(condition: TableWhere<TTable>): Omit<SelectQueryBase<TTable, TSelection, 'from'>, 'where'>;
+  where(condition: TableWhere<TTable>): Omit<SelectFrom<TTable, TSelection>, 'where'>;
+  orderBy(builder: OrderByCallback<TTable>): Omit<SelectFrom<TTable, TSelection>, 'orderBy'>;
+  orderBy(...columns: OrderByValue[]): Omit<SelectFrom<TTable, TSelection>, 'orderBy'>;
   top(count: number): SelectTopFrom<TTable, TSelection>;
 };
 

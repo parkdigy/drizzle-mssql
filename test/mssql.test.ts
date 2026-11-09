@@ -1,5 +1,5 @@
 import { drizzle } from 'drizzle-orm/node-mssql';
-import { eq as drizzleEq, sql } from 'drizzle-orm';
+import { asc as drizzleAsc, eq as drizzleEq, sql } from 'drizzle-orm';
 import { int, mssqlTable, nvarchar, primaryKey } from 'drizzle-orm/mssql-core';
 import { MsSqlQuery } from '../src/MsSqlQuery';
 import { createConditions } from '../src/conditions';
@@ -110,11 +110,17 @@ test('컬럼명과 별칭 테이블로 오름차순과 내림차순을 지정한
   const alias = createAlias({ users }).users('u');
   const descending = usersQuery.select().orderBy(usersQuery.desc('id')).toSQL();
   const ascending = usersQuery.select().orderBy(usersQuery.asc('id')).toSQL();
+  const callbackDescending = usersQuery.select(['id']).orderBy((q) => q.desc('id')).toSQL();
+  const callbackAscending = usersQuery.select(['id']).orderBy((q) => q.asc('id')).toSQL();
+  const callbackColumn = usersQuery.select(['id']).orderBy((q) => drizzleAsc(q.t.id)).toSQL();
   const aliasDescending = usersQuery.select(alias).orderBy(usersQuery.desc(alias, 'id')).toSQL();
   const aliasAscending = usersQuery.select(alias).orderBy(usersQuery.asc(alias, 'id')).toSQL();
 
   expect(descending.sql).toMatch(/order by \[users\]\.\[id\] desc/i);
   expect(ascending.sql).toMatch(/order by \[users\]\.\[id\] asc/i);
+  expect(callbackDescending.sql).toMatch(/order by \[users\]\.\[id\] desc/i);
+  expect(callbackAscending.sql).toMatch(/order by \[users\]\.\[id\] asc/i);
+  expect(callbackColumn.sql).toMatch(/order by \[users\]\.\[id\] asc/i);
   expect(aliasDescending.sql).toMatch(/order by \[u\]\.\[id\] desc/i);
   expect(aliasAscending.sql).toMatch(/order by \[u\]\.\[id\] asc/i);
   expect(() => usersQuery.desc('missing' as never)).toThrow('orderBy: unknown column "missing".');
