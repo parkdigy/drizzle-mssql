@@ -49,6 +49,25 @@ test('200개 테이블과 200개 추가 컬럼에서도 공개 API의 자동완�
     const selectedId = query.select(['id']);
     const merged = query.select([query.columns('id'), { label: table199.name }]);
     const aliased = query.select(a, ['id', 'name as displayName']);
+    const callbackSelected = query.select(a, (q) => {
+      const aliasTable: typeof a = q.t;
+      void aliasTable;
+      return q.columns('id', 'name');
+    });
+    const baseCallbackSelected = query.select((q) => q.columns('id', 'name'));
+    const arrayCallbackSelected = query.select(a, (q) => [q.columns('id'), { name: q.t.name }] as const);
+    const baseCallbackRow: {id: number; name: string | null} = {} as Awaited<typeof baseCallbackSelected>[number];
+    const arrayCallbackRow: Awaited<typeof arrayCallbackSelected>[number] = { id: 1, name: 'Ada' };
+    void [baseCallbackRow, arrayCallbackRow];
+    type CallbackRow = Awaited<typeof callbackSelected>[number];
+    const callbackRow: CallbackRow = { id: 1, name: null };
+    const validBaseCallbackRow: Awaited<typeof baseCallbackSelected>[number] = { id: 1, name: 'Ada' };
+    void validBaseCallbackRow;
+    // @ts-expect-error 선택하지 않은 컬럼은 결과에 포함하지 않는다
+    ({} as CallbackRow).extra0;
+    // @ts-expect-error id는 숫자여야 한다
+    const invalidCallbackRow: CallbackRow = { id: 'wrong', name: null };
+    void [callbackRow, invalidCallbackRow];
     const found = query.find({ renamed: 'id' });
     const foundByKey = query.findByPrimaryKey({ renamed: 'id' }, {});
     type Row = Awaited<typeof selected>[number];

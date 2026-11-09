@@ -176,6 +176,11 @@ export class MsSqlQuery<
     ? SelectFrom<TAlias, ResolveSelectInput<TAlias, TRest[0]>>
     : SelectFrom<TTable, ResolveSelectInput<TTable, TArgs[0]>>;
 
+  select<TAlias extends MsSqlAliasTable<TTable, string>, const TSelection extends FieldSet | readonly FieldInput[]>(
+    alias: TAlias,
+    fields: (query: FieldsQuery<TAlias>) => TSelection
+  ): SelectFrom<TAlias, ResolveSelectInput<TAlias, () => TSelection>>;
+
   select(fieldsOrAlias?: unknown, fields?: unknown): any {
     const tx = this.getTx();
 
@@ -1100,10 +1105,10 @@ type SelectInput<TTable extends MsSqlTable> =
   | ((query: FieldsQuery<TTable>) => FieldSet | readonly FieldInput[]);
 type SelectArgs<TTable extends MsSqlTable> =
   | readonly [fields?: SelectInput<TTable>]
-  | readonly [alias: MsSqlAliasTable<TTable, string>, fields?: SelectInput<TTable>];
+  | readonly [alias: MsSqlAliasTable<TTable, string>, fields?: Exclude<SelectInput<TTable>, (...args: never[]) => unknown>];
 type ResolveSelectInput<TTable extends MsSqlTable, T> = T extends undefined
   ? undefined
-  : T extends (query: FieldsQuery<TTable>) => infer R
+  : T extends (...args: never[]) => infer R
     ? R extends readonly FieldInput[]
       ? MergeFields<R>
       : Extract<R, FieldSet>
