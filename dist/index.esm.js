@@ -1,4 +1,4 @@
-import {drizzle}from'drizzle-orm/node-mssql';import*as native from'drizzle-orm';import {isTable,getTableColumns,sql,min,max,is,SQL,eq,and,count,defineRelations}from'drizzle-orm';export{asc,avg,avgDistinct,count,countDistinct,desc,exists,max,min,not,notExists,sum,sumDistinct}from'drizzle-orm';import {AsyncLocalStorage}from'node:async_hooks';import {alias}from'drizzle-orm/mssql-core/alias';import {MsSqlTable,mssqlTable as mssqlTable$1,getTableConfig,MsSqlColumn}from'drizzle-orm/mssql-core';export{bigint,binary,bit,char,check,customType,date,datetime,datetime2,datetimeoffset,decimal,float,foreignKey,index,int,mssqlSchema,mssqlTableCreator,mssqlView,nchar,ntext,numeric,nvarchar,primaryKey,real,smallint,text,time,tinyint,unique,uniqueIndex,varbinary,varchar}from'drizzle-orm/mssql-core';import {MsSqlColumnBuilder}from'drizzle-orm/mssql-core/columns/common';function createAlias(schema) {
+import {drizzle}from'drizzle-orm/node-mssql';import*as native from'drizzle-orm';import {isTable,getTableColumns,sql,min,max,asc,desc,is,SQL,eq,and,count,defineRelations}from'drizzle-orm';export{asc,avg,avgDistinct,count,countDistinct,desc,exists,max,min,not,notExists,sum,sumDistinct}from'drizzle-orm';import {AsyncLocalStorage}from'node:async_hooks';import {alias}from'drizzle-orm/mssql-core/alias';import {MsSqlTable,mssqlTable as mssqlTable$1,getTableConfig,MsSqlColumn}from'drizzle-orm/mssql-core';export{bigint,binary,bit,char,check,customType,date,datetime,datetime2,datetimeoffset,decimal,float,foreignKey,index,int,mssqlSchema,mssqlTableCreator,mssqlView,nchar,ntext,numeric,nvarchar,primaryKey,real,smallint,text,time,tinyint,unique,uniqueIndex,varbinary,varchar}from'drizzle-orm/mssql-core';import {MsSqlColumnBuilder}from'drizzle-orm/mssql-core/columns/common';function createAlias(schema) {
     /********************************************************************************************************************
      * getDefaultAlias
      * ******************************************************************************************************************/
@@ -268,6 +268,24 @@ class MsSqlQuery {
             throw new Error(`aggregate: unknown column "${columnOrName}".`);
         return columns[columnOrName];
     }
+    resolveOrderColumn(name, table) {
+        if (name === undefined)
+            throw new Error('orderBy: column name is required.');
+        const columns = getTableColumns(table);
+        if (!Object.hasOwn(columns, name))
+            throw new Error(`orderBy: unknown column "${name}".`);
+        return columns[name];
+    }
+    asc(tableOrName, name) {
+        const table = typeof tableOrName === 'string' ? this.t : tableOrName;
+        const columnName = typeof tableOrName === 'string' ? tableOrName : name;
+        return asc(this.resolveOrderColumn(columnName, table));
+    }
+    desc(tableOrName, name) {
+        const table = typeof tableOrName === 'string' ? this.t : tableOrName;
+        const columnName = typeof tableOrName === 'string' ? tableOrName : name;
+        return desc(this.resolveOrderColumn(columnName, table));
+    }
     resolveFields(fields, table = this.t) {
         if (Array.isArray(fields) && fields.length > 0 && fields.every((field) => typeof field === 'string')) {
             return TableColumns(table, ...fields);
@@ -287,7 +305,14 @@ class MsSqlQuery {
         const isAlias = isTable(fieldsOrAlias);
         const table = isAlias ? fieldsOrAlias : this.t;
         const selectedFields = this.resolveFields(isAlias ? fields : fieldsOrAlias, table);
-        return tx.select(selectedFields !== null && selectedFields !== void 0 ? selectedFields : TableColumns(table)).from(table);
+        const selectBuilder = tx.select(selectedFields !== null && selectedFields !== void 0 ? selectedFields : TableColumns(table));
+        const query = selectBuilder.from(table);
+        if (typeof query !== 'object' || query === null) {
+            return query;
+        }
+        return Object.assign(query, {
+            top: (count) => typeof selectBuilder.top === 'function' ? selectBuilder.top(count).from(table) : query,
+        });
     }
     async find(aliasOrFieldsOrWhere, fieldsOrWhere, where) {
         const hasAlias = isTable(aliasOrFieldsOrWhere);
@@ -319,11 +344,7 @@ class MsSqlQuery {
                 ? this.select()
                 : this.select(selectedFields);
         })();
-        const [result] = await builder
-            .where(condition)
-            .orderBy(sql `(select 0)`)
-            .offset(0)
-            .fetch(1);
+        const [result] = await builder.top(1).where(condition);
         return result;
     }
     async findByPrimaryKey(fieldsOrKey, key) {

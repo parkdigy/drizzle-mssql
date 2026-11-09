@@ -7,6 +7,8 @@ import {
   eq,
   getTableColumns,
   and as drizzleAnd,
+  asc as drizzleAsc,
+  desc as drizzleDesc,
   min as drizzleMin,
   max as drizzleMax,
 } from 'drizzle-orm';
@@ -114,6 +116,32 @@ export class MsSqlQuery<
     return columns[columnOrName];
   }
 
+  private resolveOrderColumn(name: string | undefined, table: MsSqlTable): MsSqlColumn {
+    if (name === undefined) throw new Error('orderBy: column name is required.');
+    const columns = getTableColumns(table);
+    if (!Object.hasOwn(columns, name)) throw new Error(`orderBy: unknown column "${name}".`);
+    return columns[name];
+  }
+
+  /********************************************************************************************************************
+   * asc / desc
+   * ******************************************************************************************************************/
+  asc(name: MsSqlColumnName<TTable>): SQL;
+  asc<TAlias extends string>(table: MsSqlAliasTable<TTable, TAlias>, name: MsSqlColumnName<MsSqlAliasTable<TTable, TAlias>>): SQL;
+  asc(tableOrName: MsSqlTable | string, name?: string): SQL {
+    const table = typeof tableOrName === 'string' ? this.t : tableOrName;
+    const columnName = typeof tableOrName === 'string' ? tableOrName : name;
+    return drizzleAsc(this.resolveOrderColumn(columnName, table));
+  }
+
+  desc(name: MsSqlColumnName<TTable>): SQL;
+  desc<TAlias extends string>(table: MsSqlAliasTable<TTable, TAlias>, name: MsSqlColumnName<MsSqlAliasTable<TTable, TAlias>>): SQL;
+  desc(tableOrName: MsSqlTable | string, name?: string): SQL {
+    const table = typeof tableOrName === 'string' ? this.t : tableOrName;
+    const columnName = typeof tableOrName === 'string' ? tableOrName : name;
+    return drizzleDesc(this.resolveOrderColumn(columnName, table));
+  }
+
   private resolveFields(fields: unknown, table: MsSqlTable = this.t): FieldSet | undefined {
     if (Array.isArray(fields) && fields.length > 0 && fields.every((field) => typeof field === 'string')) {
       return TableColumns(table, ...(fields as MsSqlColumnSelectionName<MsSqlTable>[]));
@@ -197,7 +225,17 @@ export class MsSqlQuery<
     const isAlias = isTable(fieldsOrAlias);
     const table: MsSqlTable = isAlias ? (fieldsOrAlias as MsSqlTable) : this.t;
     const selectedFields = this.resolveFields(isAlias ? fields : fieldsOrAlias, table);
-    return tx.select(selectedFields ?? TableColumns(table)).from(table);
+    const selectBuilder = tx.select(selectedFields ?? TableColumns(table));
+    const query = selectBuilder.from(table);
+
+    if (typeof query !== 'object' || query === null) {
+      return query;
+    }
+
+    return Object.assign(query, {
+      top: (count: number) =>
+        typeof selectBuilder.top === 'function' ? selectBuilder.top(count).from(table) : query,
+    });
   }
 
   /********************************************************************************************************************
@@ -322,11 +360,7 @@ export class MsSqlQuery<
         : this.select(selectedFields as SelectedFields<MsSqlColumn, TTable>);
     })();
 
-    const [result] = await builder
-      .where(condition)
-      .orderBy(sql`(select 0)`)
-      .offset(0)
-      .fetch(1);
+    const [result] = await builder.top(1).where(condition);
     return result;
   }
 
@@ -809,7 +843,17 @@ type SelectFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefin
   'partial',
   NodeMsSqlPreparedQueryHKT,
   'from'
->;
+> & {
+  top: (
+    count: number
+  ) => MsSqlSelectBase<
+    GetSelectTableName<TTable>,
+    TSelection extends undefined ? MsSqlSelectedTableColumns<TTable> : TSelection,
+    'partial',
+    NodeMsSqlPreparedQueryHKT,
+    'top'
+  >;
+};
 
 type FindResult<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> =
   Awaited<SelectFrom<TTable, TSelection>>[number] | undefined;

@@ -37,6 +37,14 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddVa
     max<N extends keyof TTable['_']['columns'] & string>(name: N): ReturnType<typeof drizzleMax<TTable['_']['columns'][N]>>;
     max<C extends MsSqlColumn>(column: C): ReturnType<typeof drizzleMax<C>>;
     private resolveAggregateColumn;
+    private resolveOrderColumn;
+    /********************************************************************************************************************
+     * asc / desc
+     * ******************************************************************************************************************/
+    asc(name: MsSqlColumnName<TTable>): SQL;
+    asc<TAlias extends string>(table: MsSqlAliasTable<TTable, TAlias>, name: MsSqlColumnName<MsSqlAliasTable<TTable, TAlias>>): SQL;
+    desc(name: MsSqlColumnName<TTable>): SQL;
+    desc<TAlias extends string>(table: MsSqlAliasTable<TTable, TAlias>, name: MsSqlColumnName<MsSqlAliasTable<TTable, TAlias>>): SQL;
     private resolveFields;
     /********************************************************************************************************************
      * select
@@ -226,7 +234,9 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddVa
 /********************************************************************************************************************
  * types
  * ******************************************************************************************************************/
-type SelectFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = MsSqlSelectBase<GetSelectTableName<TTable>, TSelection extends undefined ? MsSqlSelectedTableColumns<TTable> : TSelection, 'partial', NodeMsSqlPreparedQueryHKT, 'from'>;
+type SelectFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = MsSqlSelectBase<GetSelectTableName<TTable>, TSelection extends undefined ? MsSqlSelectedTableColumns<TTable> : TSelection, 'partial', NodeMsSqlPreparedQueryHKT, 'from'> & {
+    top: (count: number) => MsSqlSelectBase<GetSelectTableName<TTable>, TSelection extends undefined ? MsSqlSelectedTableColumns<TTable> : TSelection, 'partial', NodeMsSqlPreparedQueryHKT, 'top'>;
+};
 type FindResult<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Awaited<SelectFrom<TTable, TSelection>>[number] | undefined;
 type WhereQuery<TQuery> = Pick<TQuery, Extract<keyof TQuery, 't' | 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'inArray' | 'notInArray' | 'between' | 'notBetween' | 'like' | 'notLike' | 'ilike' | 'notIlike' | 'isNull' | 'isNotNull' | 'and' | 'or'>>;
 type BaseWhere<TQuery> = SQL | undefined | ((query: WhereQuery<TQuery>) => SQL | undefined);

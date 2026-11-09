@@ -33,6 +33,41 @@ test('컬럼 선택과 조건을 MSSQL SQL로 생성한다', () => {
   expect(query.params).toEqual(['홍길동']);
 });
 
+test('select 빌더에서 top 제한을 지정한다', () => {
+  const query = usersQuery.select(['id', 'name']).top(1);
+  type Row = Awaited<typeof query>[number];
+  const row: Row = { id: 1, name: 'Ada' };
+
+  expect(query.toSQL().sql).toMatch(/^select top\(@par0\) \[id\], \[name\] from \[users\]/i);
+  expect(query.toSQL().params).toEqual([1]);
+  expect(row).toEqual({ id: 1, name: 'Ada' });
+});
+
+test('컬럼명과 별칭 테이블로 오름차순과 내림차순을 지정한다', () => {
+  const alias = createAlias({ users }).users('u');
+  const descending = usersQuery.select().orderBy(usersQuery.desc('id')).toSQL();
+  const ascending = usersQuery.select().orderBy(usersQuery.asc('id')).toSQL();
+  const aliasDescending = usersQuery.select(alias).orderBy(usersQuery.desc(alias, 'id')).toSQL();
+  const aliasAscending = usersQuery.select(alias).orderBy(usersQuery.asc(alias, 'id')).toSQL();
+
+  expect(descending.sql).toMatch(/order by \[users\]\.\[id\] desc/i);
+  expect(ascending.sql).toMatch(/order by \[users\]\.\[id\] asc/i);
+  expect(aliasDescending.sql).toMatch(/order by \[u\]\.\[id\] desc/i);
+  expect(aliasAscending.sql).toMatch(/order by \[u\]\.\[id\] asc/i);
+  expect(() => usersQuery.desc('missing' as never)).toThrow('orderBy: unknown column "missing".');
+});
+
+test('select 빌더를 조건과 선택 필드의 서브쿼리로 사용한다', () => {
+  const builder = usersQuery.select({ id: usersQuery.min('id').as('id') }).where(usersQuery.gt({ id: 2 }));
+  const condition = db.select().from(users).where(usersQuery.eq({ id: builder })).toSQL();
+  const selected = usersQuery.select({ sub_query_value: sql`(${builder})`.as('sub_query_value') }).toSQL();
+
+  expect(condition.sql).toMatch(/where \[users\]\.\[id\] = \(select min\(\[id\]\) as \[id\] from \[users\] where \[users\]\.\[id\] > @par0\)/i);
+  expect(condition.params).toEqual([2]);
+  expect(selected.sql).toMatch(/select \(\(select min\(\[id\]\) as \[id\] from \[users\] where \[users\]\.\[id\] > @par0\)\) as \[sub_query_value\] from \[users\]/i);
+  expect(selected.params).toEqual([2]);
+});
+
 test('문자열 컬럼 매핑 객체의 키를 결과 별칭으로 사용한다', () => {
   const selected = usersQuery.select({ id_2: 'id', display_name: 'name' });
   type Row = Awaited<typeof selected>[number];
@@ -135,7 +170,7 @@ test('find에서도 집계 선택과 선택 콜백을 사용할 수 있다', asy
     select: (fields: Parameters<typeof db.select>[0]) => ({
       from: (table: typeof users) => {
         captured.push(db.select(fields).from(table).toSQL().sql);
-        return { where: () => ({ orderBy: () => ({ offset: () => ({ fetch: async () => [{ minId: 1 }] }) }) }) };
+        return { where: async () => [{ minId: 1 }] };
       },
     }),
   } as unknown as typeof db;
