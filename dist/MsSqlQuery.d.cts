@@ -230,7 +230,10 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddVa
 /********************************************************************************************************************
  * types
  * ******************************************************************************************************************/
-type SelectQueryBase<TTable extends MsSqlTable | Subquery, TSelection extends FieldSet | undefined, TBranch extends 'from' | 'top'> = MsSqlSelectBase<GetSelectTableName<TTable>, TSelection extends undefined ? SourceSelection<TTable> : TSelection, 'partial', NodeMsSqlPreparedQueryHKT, TBranch>;
+type AliasedSelection<T extends FieldSet> = {
+    [K in keyof T]: T[K] extends SQL<infer D> ? SQL.Aliased<D> : T[K];
+};
+type SelectQueryBase<TTable extends MsSqlTable | Subquery, TSelection extends FieldSet | undefined, TBranch extends 'from' | 'top'> = MsSqlSelectBase<GetSelectTableName<TTable>, TSelection extends undefined ? SourceSelection<TTable> : AliasedSelection<NonNullable<TSelection>>, 'partial', NodeMsSqlPreparedQueryHKT, TBranch>;
 type TableWhere<TTable extends MsSqlTable | Subquery> = SQL | undefined | ((query: SelectConditionQuery<TTable>) => SQL | undefined);
 type OrderByValue = MsSqlColumn | SQL | SQL.Aliased;
 type SelectOrderByQuery<TTable extends MsSqlTable | Subquery> = {

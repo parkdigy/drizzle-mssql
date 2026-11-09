@@ -95,3 +95,28 @@ test('서브쿼리를 select의 기준으로 사용하고 선택한 컬럼만 �
     void [row, idRow, labelRow, allRow, wrong];
   }
 });
+
+test('SQL 표현식 필드의 자동 별칭과 데이터 타입을 서브쿼리 조건에도 유지한다', () => {
+  const aa = db.query(users)
+    .select((q) => ({ id: q.t.id, test: db.sql<number>`0`, label: db.sql<string>`'label'` }))
+    .where((q) => q.eq({ id: 1 })).as('aa');
+  const selected = db.select(aa, db.columns(aa, 'id', 'test'));
+  const result = selected.where((q) => q.eq({ test: 0 }));
+  const arrayAlias = db.query(users).select((q) => [q.columns('id'), { test: db.sql<number>`0` }] as const).as('array_alias');
+  const explicitAlias = db.select('users', { test: db.sql<number>`0`.as('test') }).as('explicit_alias');
+  const directAlias = db.select('users', { test: db.sql<number>`0` }).as('direct_alias');
+  expect(result.toSQL().sql).toContain('[aa].[test] = @par1');
+  expect(result.toSQL().params).toEqual([1, 0]);
+  expect(db.select(arrayAlias).where((q) => q.inArray({ test: [0, 1] })).toSQL().params).toEqual([0, 1]);
+  expect(db.select(explicitAlias).where((q) => q.eq({ test: 0 })).toSQL().params).toEqual([0]);
+  expect(db.select(directAlias).where((q) => q.between({ test: [0, 1] })).toSQL().params).toEqual([0, 1]);
+  if (false) {
+    const row: { id: number; test: number } = {} as Awaited<typeof selected>[number];
+    db.select(aa).where((q) => q.like({ label: 'a%' }));
+    // @ts-expect-error 숫자 SQL 필드의 문자열 조건은 허용하지 않는다
+    db.select(aa).where((q) => q.eq({ test: 'wrong' }));
+    // @ts-expect-error 숫자 SQL 필드의 문자열 결과는 허용하지 않는다
+    const wrong: Awaited<typeof selected>[number] = { id: 1, test: 'wrong' };
+    void [row, wrong];
+  }
+});

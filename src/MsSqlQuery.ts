@@ -927,13 +927,19 @@ export class MsSqlQuery<
  * types
  * ******************************************************************************************************************/
 
+// normalizeFields는 이름이 붙은 SQL 표현식을 런타임에 .as(name)으로 변환한다.
+// 빌더 타입도 이 변환을 반영해야 .as() 서브쿼리에서 해당 필드를 참조할 수 있다.
+type AliasedSelection<T extends FieldSet> = {
+  [K in keyof T]: T[K] extends SQL<infer D> ? SQL.Aliased<D> : T[K];
+};
+
 type SelectQueryBase<
   TTable extends MsSqlTable | Subquery,
   TSelection extends FieldSet | undefined,
   TBranch extends 'from' | 'top',
 > = MsSqlSelectBase<
   GetSelectTableName<TTable>,
-  TSelection extends undefined ? SourceSelection<TTable> : TSelection,
+  TSelection extends undefined ? SourceSelection<TTable> : AliasedSelection<NonNullable<TSelection>>,
   'partial',
   NodeMsSqlPreparedQueryHKT,
   TBranch
