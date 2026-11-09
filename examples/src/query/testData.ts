@@ -106,7 +106,10 @@ export class TestData extends MsSqlQuery<'testData'> {
       )
     );
 
-    console.log(await this.select(['id']).where((t) => mssql.eq(t.name, 'name')));
+    console.log(await this.select(['id']).where((q) => q.eq({ name: 'name' })));
+
+    const td = mssql.a.testData('td');
+    console.log(await this.select(td, ['id']).where((q) => q.eq({ name: 'name' })));
   }
 
   async addTest() {

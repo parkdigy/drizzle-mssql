@@ -241,7 +241,7 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddVa
  * types
  * ******************************************************************************************************************/
 type SelectQueryBase<TTable extends MsSqlTable, TSelection extends FieldSet | undefined, TBranch extends 'from' | 'top'> = MsSqlSelectBase<GetSelectTableName<TTable>, TSelection extends undefined ? MsSqlSelectedTableColumns<TTable> : TSelection, 'partial', NodeMsSqlPreparedQueryHKT, TBranch>;
-type TableWhere<TTable extends MsSqlTable> = SQL | undefined | ((aliases: MsSqlSelectedTableColumns<TTable>) => SQL | undefined);
+type TableWhere<TTable extends MsSqlTable> = SQL | undefined | ((query: SelectConditionQuery<TTable>) => SQL | undefined);
 type SelectTopFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Omit<SelectQueryBase<TTable, TSelection, 'top'>, 'where'> & {
     where(condition: TableWhere<TTable>): Omit<SelectQueryBase<TTable, TSelection, 'top'>, 'where'>;
 };
@@ -251,6 +251,26 @@ type SelectFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefin
 };
 type FindResult<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Awaited<SelectFrom<TTable, TSelection>>[number] | undefined;
 type WhereQuery<TQuery> = Pick<TQuery, Extract<keyof TQuery, 't' | 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'inArray' | 'notInArray' | 'between' | 'notBetween' | 'like' | 'notLike' | 'ilike' | 'notIlike' | 'isNull' | 'isNotNull' | 'and' | 'or'>>;
+type SelectConditionQuery<TTable extends MsSqlTable> = {
+    eq(values: MsSqlCompareValues<TTable>): SQL | undefined;
+    ne(values: MsSqlCompareValues<TTable>): SQL | undefined;
+    gt(values: MsSqlCompareValues<TTable>): SQL | undefined;
+    gte(values: MsSqlCompareValues<TTable>): SQL | undefined;
+    lt(values: MsSqlCompareValues<TTable>): SQL | undefined;
+    lte(values: MsSqlCompareValues<TTable>): SQL | undefined;
+    inArray(values: MsSqlArrayCompareValues<TTable>): SQL | undefined;
+    notInArray(values: MsSqlArrayCompareValues<TTable>): SQL | undefined;
+    between(values: MsSqlRangeCompareValues<TTable>): SQL | undefined;
+    notBetween(values: MsSqlRangeCompareValues<TTable>): SQL | undefined;
+    like(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
+    notLike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
+    ilike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
+    notIlike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
+    isNull(names: MsSqlNullConditionInput<TTable>): SQL | undefined;
+    isNotNull(names: MsSqlNullConditionInput<TTable>): SQL | undefined;
+    and(options: MsSqlConditions<TTable>): SQL | undefined;
+    or(options: MsSqlConditions<TTable>): SQL | undefined;
+};
 type BaseWhere<TQuery> = SQL | undefined | ((query: WhereQuery<TQuery>) => SQL | undefined);
 type FieldSet = SelectedFields<MsSqlColumn, MsSqlTable>;
 type MixedSelection<TTable extends MsSqlTable> = Record<string, FieldSet[string] | MsSqlColumnName<TTable> | SQLWrapper>;

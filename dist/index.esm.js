@@ -317,9 +317,30 @@ class MsSqlQuery {
                 return query;
             const builder = query;
             const originalWhere = builder.where.bind(query);
+            const bindCondition = (operator) => (input) => Reflect.apply(this.drizzle[operator], undefined, [table, input]);
+            const whereQuery = {
+                eq: bindCondition('eq'),
+                ne: bindCondition('ne'),
+                gt: bindCondition('gt'),
+                gte: bindCondition('gte'),
+                lt: bindCondition('lt'),
+                lte: bindCondition('lte'),
+                inArray: bindCondition('inArray'),
+                notInArray: bindCondition('notInArray'),
+                between: bindCondition('between'),
+                notBetween: bindCondition('notBetween'),
+                like: bindCondition('like'),
+                notLike: bindCondition('notLike'),
+                ilike: bindCondition('ilike'),
+                notIlike: bindCondition('notIlike'),
+                isNull: bindCondition('isNull'),
+                isNotNull: bindCondition('isNotNull'),
+                and: bindCondition('and'),
+                or: bindCondition('or'),
+            };
             return Object.assign(query, {
                 where: (condition) => originalWhere(typeof condition === 'function'
-                    ? () => condition(TableColumns(table))
+                    ? () => condition(whereQuery)
                     : condition),
                 top: (count) => typeof selectBuilder.top === 'function' ? enhance(selectBuilder.top(count).from(table)) : query,
             });

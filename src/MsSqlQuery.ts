@@ -247,11 +247,37 @@ export class MsSqlQuery<
 
       const builder = query as { where: (condition: unknown) => unknown };
       const originalWhere = builder.where.bind(query);
+      const bindCondition = (operator: string) => (input: unknown) =>
+        Reflect.apply(
+          (this.drizzle as unknown as Record<string, (...args: unknown[]) => unknown>)[operator],
+          undefined,
+          [table, input]
+        );
+      const whereQuery = {
+        eq: bindCondition('eq'),
+        ne: bindCondition('ne'),
+        gt: bindCondition('gt'),
+        gte: bindCondition('gte'),
+        lt: bindCondition('lt'),
+        lte: bindCondition('lte'),
+        inArray: bindCondition('inArray'),
+        notInArray: bindCondition('notInArray'),
+        between: bindCondition('between'),
+        notBetween: bindCondition('notBetween'),
+        like: bindCondition('like'),
+        notLike: bindCondition('notLike'),
+        ilike: bindCondition('ilike'),
+        notIlike: bindCondition('notIlike'),
+        isNull: bindCondition('isNull'),
+        isNotNull: bindCondition('isNotNull'),
+        and: bindCondition('and'),
+        or: bindCondition('or'),
+      } as unknown as SelectConditionQuery<MsSqlTable>;
       return Object.assign(query, {
         where: (condition: unknown) =>
           originalWhere(
             typeof condition === 'function'
-              ? () => (condition as (columns: MsSqlSelectedTableColumns<MsSqlTable>) => unknown)(TableColumns(table))
+              ? () => (condition as (query: SelectConditionQuery<MsSqlTable>) => unknown)(whereQuery)
               : condition
           ),
         top: (count: number) =>
@@ -896,7 +922,7 @@ type SelectQueryBase<
 type TableWhere<TTable extends MsSqlTable> =
   | SQL
   | undefined
-  | ((aliases: MsSqlSelectedTableColumns<TTable>) => SQL | undefined);
+  | ((query: SelectConditionQuery<TTable>) => SQL | undefined);
 
 type SelectTopFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Omit<
   SelectQueryBase<TTable, TSelection, 'top'>,
@@ -941,6 +967,26 @@ type WhereQuery<TQuery> = Pick<
     | 'or'
   >
 >;
+type SelectConditionQuery<TTable extends MsSqlTable> = {
+  eq(values: MsSqlCompareValues<TTable>): SQL | undefined;
+  ne(values: MsSqlCompareValues<TTable>): SQL | undefined;
+  gt(values: MsSqlCompareValues<TTable>): SQL | undefined;
+  gte(values: MsSqlCompareValues<TTable>): SQL | undefined;
+  lt(values: MsSqlCompareValues<TTable>): SQL | undefined;
+  lte(values: MsSqlCompareValues<TTable>): SQL | undefined;
+  inArray(values: MsSqlArrayCompareValues<TTable>): SQL | undefined;
+  notInArray(values: MsSqlArrayCompareValues<TTable>): SQL | undefined;
+  between(values: MsSqlRangeCompareValues<TTable>): SQL | undefined;
+  notBetween(values: MsSqlRangeCompareValues<TTable>): SQL | undefined;
+  like(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
+  notLike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
+  ilike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
+  notIlike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
+  isNull(names: MsSqlNullConditionInput<TTable>): SQL | undefined;
+  isNotNull(names: MsSqlNullConditionInput<TTable>): SQL | undefined;
+  and(options: MsSqlConditions<TTable>): SQL | undefined;
+  or(options: MsSqlConditions<TTable>): SQL | undefined;
+};
 type BaseWhere<TQuery> = SQL | undefined | ((query: WhereQuery<TQuery>) => SQL | undefined);
 
 type FieldSet = SelectedFields<MsSqlColumn, MsSqlTable>;

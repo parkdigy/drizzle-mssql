@@ -33,15 +33,35 @@ test('컬럼 선택과 조건을 MSSQL SQL로 생성한다', () => {
   expect(query.params).toEqual(['홍길동']);
 });
 
-test('where 콜백은 select 필드와 관계없이 전체 테이블 컬럼을 참조한다', () => {
+test('where 콜백에는 컬럼 대신 조건 헬퍼만 제공한다', () => {
   const alias = createAlias({ users }).users('u');
-  const selectedColumn = usersQuery.select(['id']).where((q) => drizzleEq(q.name, 'Ada')).toSQL();
-  const selectedAliasColumn = usersQuery.select(alias, ['id']).where((q) => drizzleEq(q.name, 'Ada')).toSQL();
+  if (false) {
+    usersQuery.select(['id']).where((q) => {
+      // @ts-expect-error where 콜백은 테이블 컬럼을 노출하지 않는다.
+      return drizzleEq(q.name, 'Ada');
+    });
+    usersQuery.select(alias, ['id']).where((q) => {
+      // @ts-expect-error 별칭 테이블 컬럼도 조건 헬퍼로만 참조한다.
+      return drizzleEq(q.name, 'Ada');
+    });
+  }
+});
 
-  expect(selectedColumn.sql).toMatch(/select \[id\] from \[users\] where \[users\]\.\[name\] = @par0/i);
-  expect(selectedColumn.params).toEqual(['Ada']);
-  expect(selectedAliasColumn.sql).toMatch(/select \[id\] from \[users\] \[u\] where \[u\]\.\[name\] = @par0/i);
-  expect(selectedAliasColumn.params).toEqual(['Ada']);
+test('where 콜백에서 테이블 컬럼과 조건 헬퍼를 함께 사용한다', () => {
+  const alias = createAlias({ users }).users('u');
+  const queryCondition = usersQuery.select(['id']).where((q) => q.eq({ name: 'Ada' })).toSQL();
+  const groupedCondition = usersQuery
+    .select(['id'])
+    .where((q) => q.and({ eq: { name: 'Ada' }, gt: { id: 1 } }))
+    .toSQL();
+  const aliasCondition = usersQuery.select(alias, ['id']).where((q) => q.eq({ name: 'Ada' })).toSQL();
+
+  expect(queryCondition.sql).toMatch(/where \[users\]\.\[name\] = @par0/i);
+  expect(queryCondition.params).toEqual(['Ada']);
+  expect(groupedCondition.sql).toMatch(/where \(\(\[users\]\.\[name\] = @par0\) and \(\[users\]\.\[id\] > @par1\)\)/i);
+  expect(groupedCondition.params).toEqual(['Ada', 1]);
+  expect(aliasCondition.sql).toMatch(/where \[u\]\.\[name\] = @par0/i);
+  expect(aliasCondition.params).toEqual(['Ada']);
 });
 
 test('select 빌더에서 top 제한을 지정한다', () => {
