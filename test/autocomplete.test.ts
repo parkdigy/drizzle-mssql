@@ -25,18 +25,27 @@ test('200개 테이블과 200개 추가 컬럼에서도 공개 API의 자동완�
     db.eq(a, { /*condition*/ });
     db.eq('table199', { /*namedCondition*/ });
     const query = db.query(table199);
+    // @ts-expect-error 자동완성용 미완성 컬럼명
+    query.select(['id', '/*nextColumn*/']);
+    // @ts-expect-error 별칭 선택의 자동완성용 미완성 컬럼명
+    query.select(a, ['id', '/*aliasNextColumn*/']);
     const selected = query.select({ renamed: 'id' });
+    const selectedId = query.select(['id']);
     const merged = query.select([query.columns('id'), { label: table199.name }]);
     const aliased = query.select(a, ['id', 'name as displayName']);
     const found = query.find({ renamed: 'id' });
     const foundByKey = query.findByPrimaryKey({ renamed: 'id' }, {});
     type Row = Awaited<typeof selected>[number];
     const row: Row = { renamed: 1 };
+    type IdOnlyRow = Awaited<typeof selectedId>[number];
+    const idOnlyRow: IdOnlyRow = { id: 1 };
+    // @ts-expect-error 컬럼 이름 배열도 선택한 컬럼만 결과에 포함한다
+    const invalidIdOnlyRow: IdOnlyRow = { id: 1, name: 'Ada' };
     // @ts-expect-error 선택 결과는 숫자 타입을 유지한다
     const invalidRow: Row = { renamed: 'wrong' };
     // @ts-expect-error 존재하지 않는 컬럼은 허용하지 않는다
     query.select(['missing']);
-    void [merged, aliased, found, foundByKey, row, invalidRow];
+    void [merged, aliased, found, foundByKey, row, invalidRow, idOnlyRow, invalidIdOnlyRow];
     const fields = db.columns(a, 'id', 'name as displayName');
     db.current().select(fields).from(a).then(rows => {
       const row: {id: number; displayName: string | null} = rows[0];
@@ -80,6 +89,8 @@ test('200개 테이블과 200개 추가 컬럼에서도 공개 API의 자동완�
       members: ['columns', 'query', 'current', 'eq'],
       aliases: ['table0', 'table199'],
       columns: ['id', 'name'],
+      nextColumn: ['id', 'name', 'extra0', 'extra199'],
+      aliasNextColumn: ['id', 'name', 'extra0', 'extra199'],
       query: ['id', 'name'],
       condition: ['id', 'name'],
       namedCondition: ['id', 'name'],

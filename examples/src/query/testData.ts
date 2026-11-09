@@ -6,6 +6,9 @@ export class TestData extends MsSqlQuery<'testData'> {
     super('testData');
   }
 
+  /********************************************************************************************************************
+   * selectTest
+   * ******************************************************************************************************************/
   async selectTest() {
     console.log('::::: TestData::selectTest() :::::');
 
@@ -14,6 +17,17 @@ export class TestData extends MsSqlQuery<'testData'> {
     console.log(await this.select({ id_2: 'id', name_2: 'name', email_2: 'email' }));
 
     console.log(await this.select({ min_id: this.min('id'), max_id: this.max('id') }));
+
+    console.log(await this.select((q) => q.columns('id', 'name')));
+
+    console.log(
+      await this.select((q) => [
+        q.columns('id', 'name'),
+        {
+          email: q.t.email,
+        },
+      ])
+    );
 
     console.log(await this.select().orderBy(this.desc('id')));
 
@@ -28,6 +42,9 @@ export class TestData extends MsSqlQuery<'testData'> {
     console.log(await this.select(['id']).orderBy((q) => mssql.desc(q.t.id)));
   }
 
+  /********************************************************************************************************************
+   * selectColumnsTest
+   * ******************************************************************************************************************/
   async selectColumnsTest() {
     console.log('::::: TestData::selectColumnsTest() :::::');
 
@@ -36,6 +53,9 @@ export class TestData extends MsSqlQuery<'testData'> {
     console.log(await this.select({ min_id: this.min('id'), max_id: this.max('id') }));
   }
 
+  /********************************************************************************************************************
+   * aliasSelectTest
+   * ******************************************************************************************************************/
   async aliasSelectTest() {
     console.log('::::: TestData::aliasSelectTest() :::::');
 
@@ -56,12 +76,18 @@ export class TestData extends MsSqlQuery<'testData'> {
     console.log(await this.select(td, ['id']).orderBy((q) => mssql.asc(q.t.id)));
   }
 
+  /********************************************************************************************************************
+   * selectTopTest
+   * ******************************************************************************************************************/
   async selectTopTest() {
     console.log('::::: TestData::selectTopTest() :::::');
 
     console.log(await this.select().top(2));
   }
 
+  /********************************************************************************************************************
+   * subQueryTest
+   * ******************************************************************************************************************/
   async subQueryTest() {
     console.log('::::: TestData::subQueryTest() :::::');
 
@@ -94,6 +120,9 @@ export class TestData extends MsSqlQuery<'testData'> {
     console.log(await this.select().innerJoin(td, (q) => q.eq({ id: q.t.id })));
   }
 
+  /********************************************************************************************************************
+   * findTest
+   * ******************************************************************************************************************/
   async findTest() {
     console.log('::::: TestData::findTest() :::::');
 
@@ -114,6 +143,9 @@ export class TestData extends MsSqlQuery<'testData'> {
     console.log(await this.findByPrimaryKey({ min_id: this.min('id'), max_id: this.max('id') }, 2));
   }
 
+  /********************************************************************************************************************
+   * conditionTest
+   * ******************************************************************************************************************/
   async conditionTest() {
     console.log('::::: TestData::conditionTest() :::::');
 
@@ -126,6 +158,9 @@ export class TestData extends MsSqlQuery<'testData'> {
     });
   }
 
+  /********************************************************************************************************************
+   * selectConditionTest
+   * ******************************************************************************************************************/
   async selectConditionTest() {
     console.log('::::: TestData::selectConditionTest() :::::');
 
@@ -148,6 +183,9 @@ export class TestData extends MsSqlQuery<'testData'> {
     console.log(await this.select(td, ['id']).where((q) => mssql.eq(q.t.name, 'name')));
   }
 
+  /********************************************************************************************************************
+   * addTest
+   * ******************************************************************************************************************/
   async addTest() {
     console.log('::::: TestData::addTest() :::::');
 
@@ -160,6 +198,9 @@ export class TestData extends MsSqlQuery<'testData'> {
     );
   }
 
+  /********************************************************************************************************************
+   * addValuesTest
+   * ******************************************************************************************************************/
   async addValuesTest() {
     console.log('::::: TestData::addValuesTest() :::::');
 
@@ -171,18 +212,27 @@ export class TestData extends MsSqlQuery<'testData'> {
     console.log(await this.add(addValues));
   }
 
+  /********************************************************************************************************************
+   * editTest
+   * ******************************************************************************************************************/
   async editTest() {
     console.log('::::: TestData::editTest() :::::');
 
     console.log(await this.edit({ is_lock: true }, this.eq({ id: 1 })));
   }
 
+  /********************************************************************************************************************
+   * editByPrimaryKeyTest
+   * ******************************************************************************************************************/
   async editByPrimaryKeyTest() {
     console.log('::::: TestData::editByPrimaryKeyTest() :::::');
 
     console.log(await this.editByPrimaryKey({ is_lock: true }, 1));
   }
 
+  /********************************************************************************************************************
+   * editValuesTest
+   * ******************************************************************************************************************/
   async editValuesTest() {
     console.log('::::: TestData::editValuesTest() :::::');
 
@@ -192,18 +242,27 @@ export class TestData extends MsSqlQuery<'testData'> {
     console.log(await this.editByPrimaryKey(editValues, 1));
   }
 
+  /********************************************************************************************************************
+   * removeTest
+   * ******************************************************************************************************************/
   async removeTest() {
     console.log('::::: TestData::removeTest() :::::');
 
     console.log(await this.remove(this.eq({ id: 1 })));
   }
 
+  /********************************************************************************************************************
+   * removeByPrimaryKeyTest
+   * ******************************************************************************************************************/
   async removeByPrimaryKeyTest() {
     console.log('::::: TestData::removeByPrimaryKeyTest() :::::');
 
     console.log(await this.removeByPrimaryKey(1));
   }
 
+  /********************************************************************************************************************
+   * paginateTest
+   * ******************************************************************************************************************/
   async paginateTest() {
     console.log('::::: TestData::paginateTest() :::::');
 

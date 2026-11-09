@@ -53,21 +53,7 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddVa
     /********************************************************************************************************************
      * select
      * ******************************************************************************************************************/
-    select(): SelectFrom<TTable, undefined>;
-    select(fields: readonly []): SelectFrom<TTable, {}>;
-    select<N extends MsSqlColumnSelectionName<TTable>>(fields: readonly N[]): SelectFrom<TTable, MsSqlSelectedNamedColumns<TTable, readonly N[]>>;
-    select<const T extends readonly FieldInput[]>(fields: (query: FieldsQuery<TTable>) => T): SelectFrom<TTable, MergeFields<T>>;
-    select<const T extends readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[]>(fields: T): SelectFrom<TTable, MergeFields<NamedFields<TTable, T>>>;
-    select<const TSelection extends StringColumnSelection<TTable>>(fields: TSelection): SelectFrom<TTable, StringColumnSelectionFields<TTable, TSelection>>;
-    select<const TSelection extends MixedSelection<TTable>>(fields: TSelection): SelectFrom<TTable, ResolveMixedSelection<TTable, TSelection>>;
-    select<TSelection extends SelectedFields<MsSqlColumn, TTable>>(fields?: Fields<FieldsQuery<TTable>, TSelection>): SelectFrom<TTable, TSelection>;
-    select<TAlias extends string>(alias: MsSqlAliasTable<TTable, TAlias>): SelectFrom<MsSqlAliasTable<TTable, TAlias>, undefined>;
-    select<TAlias extends string>(alias: MsSqlAliasTable<TTable, TAlias>, fields: readonly []): SelectFrom<MsSqlAliasTable<TTable, TAlias>, {}>;
-    select<TAlias extends string, N extends MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>>(alias: MsSqlAliasTable<TTable, TAlias>, fields: readonly N[]): SelectFrom<MsSqlAliasTable<TTable, TAlias>, MsSqlSelectedNamedColumns<MsSqlAliasTable<TTable, TAlias>, readonly N[]>>;
-    select<TAlias extends string, const T extends readonly FieldInput[]>(alias: MsSqlAliasTable<TTable, TAlias>, fields: (query: FieldsQuery<MsSqlAliasTable<TTable, TAlias>>) => T): SelectFrom<MsSqlAliasTable<TTable, TAlias>, MergeFields<T>>;
-    select<TAlias extends string, const T extends readonly (FieldInput | MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>)[]>(alias: MsSqlAliasTable<TTable, TAlias>, fields: T): SelectFrom<MsSqlAliasTable<TTable, TAlias>, MergeFields<NamedFields<MsSqlAliasTable<TTable, TAlias>, T>>>;
-    select<TAlias extends string, const TSelection extends MixedSelection<MsSqlAliasTable<TTable, TAlias>>>(alias: MsSqlAliasTable<TTable, TAlias>, fields: TSelection): SelectFrom<MsSqlAliasTable<TTable, TAlias>, ResolveMixedSelection<MsSqlAliasTable<TTable, TAlias>, TSelection>>;
-    select<TAlias extends string, TSelection extends SelectedFields<MsSqlColumn, MsSqlAliasTable<TTable, TAlias>>>(alias: MsSqlAliasTable<TTable, TAlias>, fields: Fields<FieldsQuery<MsSqlAliasTable<TTable, TAlias>>, TSelection>): SelectFrom<MsSqlAliasTable<TTable, TAlias>, TSelection>;
+    select<const TArgs extends SelectArgs<TTable>>(...args: TArgs): TArgs extends readonly [infer TAlias extends MsSqlTable, ...infer TRest] ? SelectFrom<TAlias, ResolveSelectInput<TAlias, TRest[0]>> : SelectFrom<TTable, ResolveSelectInput<TTable, TArgs[0]>>;
     /********************************************************************************************************************
      * find
      * ******************************************************************************************************************/
@@ -328,6 +314,9 @@ type FieldsQuery<TTable extends MsSqlTable> = {
     max: MsSqlQuery<TTable>['max'];
 };
 type Fields<TQuery, TSelection> = TSelection | ((query: TQuery) => TSelection);
+type SelectInput<TTable extends MsSqlTable> = readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[] | MixedSelection<TTable> | ((query: FieldsQuery<TTable>) => FieldSet | readonly FieldInput[]);
+type SelectArgs<TTable extends MsSqlTable> = readonly [fields?: SelectInput<TTable>] | readonly [alias: MsSqlAliasTable<TTable, string>, fields?: SelectInput<TTable>];
+type ResolveSelectInput<TTable extends MsSqlTable, T> = T extends undefined ? undefined : T extends (query: FieldsQuery<TTable>) => infer R ? R extends readonly FieldInput[] ? MergeFields<R> : Extract<R, FieldSet> : T extends readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[] ? MergeFields<NamedFields<TTable, T>> : T extends StringColumnSelection<TTable> ? StringColumnSelectionFields<TTable, T> : ResolveMixedSelection<TTable, T>;
 type NamedFields<TTable extends MsSqlTable, T extends readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[]> = {
     [I in keyof T]: T[I] extends MsSqlColumnSelectionName<TTable> ? MsSqlSelectedNamedColumns<TTable, readonly [T[I]]> : Extract<T[I], FieldInput>;
 };
