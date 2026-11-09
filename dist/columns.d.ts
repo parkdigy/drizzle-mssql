@@ -89,5 +89,5 @@ export declare function TableColumns<const G extends readonly [MsSqlColumnGroup,
     [I in keyof G]: readonly [G[I][0], ...MsSqlColumnSelectionName<G[I][0]>[]];
 }): MsSqlMergedGroupColumns<G>;
 export declare function TableColumns<T extends Subquery>(subquery: T): MsSqlSubqueryFields<T>;
-export declare function TableColumns<T extends Subquery, N extends keyof MsSqlSubqueryFields<T> & string>(subquery: T, ...names: N[]): Pick<MsSqlSubqueryFields<T>, N>;
+export declare function TableColumns<T extends Subquery, N extends keyof MsSqlSubqueryFields<T> & string>(subquery: T, ...names: (N | NoInfer<keyof MsSqlSubqueryFields<T> & string>)[]): Pick<MsSqlSubqueryFields<T>, N>;
 export {};

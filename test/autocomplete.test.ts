@@ -29,6 +29,22 @@ test('200개 테이블과 200개 추가 컬럼에서도 공개 API의 자동완�
     query.select(['id', '/*nextColumn*/']);
     // @ts-expect-error 별칭 선택의 자동완성용 미완성 컬럼명
     query.select(a, ['id', '/*aliasNextColumn*/']);
+    const j = query.select(['id', 'name']).top(1).orderBy(query.desc('id')).as('j');
+    // @ts-expect-error 자동완성용 미완성 컬럼명
+    db.columns(j, '/*subqueryFirst*/');
+    // @ts-expect-error 자동완성용 미완성 컬럼명
+    db.columns(j, 'id', '/*subqueryNext*/');
+    // @ts-expect-error 자동완성용 미완성 컬럼명
+    db.columns(j, 'id', 'name', '/*subqueryThird*/');
+    const subqueryFields = db.columns(j, 'id');
+    const subqueryBoth = db.columns(j, 'id', 'name');
+    const subqueryId: typeof j.id = subqueryFields.id;
+    const subqueryName: typeof j.name = subqueryBoth.name;
+    // @ts-expect-error 선택하지 않은 컬럼은 결과에 포함하지 않는다
+    subqueryFields.name;
+    // @ts-expect-error 서브쿼리에서 선택하지 않은 컬럼은 허용하지 않는다
+    db.columns(j, 'extra0');
+    void [subqueryId, subqueryName];
     const selected = query.select({ renamed: 'id' });
     const selectedId = query.select(['id']);
     const merged = query.select([query.columns('id'), { label: table199.name }]);
@@ -89,6 +105,9 @@ test('200개 테이블과 200개 추가 컬럼에서도 공개 API의 자동완�
       members: ['columns', 'query', 'current', 'eq'],
       aliases: ['table0', 'table199'],
       columns: ['id', 'name'],
+      subqueryFirst: ['id', 'name'],
+      subqueryNext: ['id', 'name'],
+      subqueryThird: ['id', 'name'],
       nextColumn: ['id', 'name', 'extra0', 'extra199'],
       aliasNextColumn: ['id', 'name', 'extra0', 'extra199'],
       query: ['id', 'name'],

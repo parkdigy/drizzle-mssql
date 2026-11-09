@@ -151,7 +151,8 @@ export function TableColumns<const G extends readonly [MsSqlColumnGroup, ...MsSq
 export function TableColumns<T extends Subquery>(subquery: T): MsSqlSubqueryFields<T>;
 export function TableColumns<T extends Subquery, N extends keyof MsSqlSubqueryFields<T> & string>(
   subquery: T,
-  ...names: N[]
+  // 이미 선택한 N으로 후보를 좁히지 않고, 반환 타입에는 지정한 이름만 추론한다.
+  ...names: (N | NoInfer<keyof MsSqlSubqueryFields<T> & string>)[]
 ): Pick<MsSqlSubqueryFields<T>, N>;
 export function TableColumns(
   first: MsSqlTable | Subquery | MsSqlColumn | readonly MsSqlColumn[] | MsSqlColumnGroup,
