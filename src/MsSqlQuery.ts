@@ -337,10 +337,12 @@ export class MsSqlQuery<
         if (typeof join !== 'function') continue;
         enhancements[joinMethod] = (joinedTable: unknown, on: unknown) => {
           if (typeof on !== 'function' || (!isTable(joinedTable) && !is(joinedTable, Subquery))) {
-            return Reflect.apply(join, query, [joinedTable, on]);
+            return enhance(Reflect.apply(join, query, [joinedTable, on]));
           }
           const joinQuery = conditionQuery(joinedTable, table) as JoinConditionQuery<MsSqlTable, Joinable>;
-          return Reflect.apply(join, query, [joinedTable, () => (on as (query: unknown) => unknown)(joinQuery)]);
+          return enhance(
+            Reflect.apply(join, query, [joinedTable, () => (on as (query: unknown) => unknown)(joinQuery)])
+          );
         };
       }
       return Object.assign(query, enhancements);
@@ -1012,6 +1014,20 @@ type JoinCondition<
 > = TJoinedTable extends MsSqlTable | Subquery
   ? SQL | undefined | ((query: JoinConditionQuery<TTable, TJoinedTable>) => SQL | undefined)
   : SQL | undefined | ((aliases: SelectQueryBase<TTable, TSelection, TBranch>['_']['selection']) => SQL | undefined);
+type JoinedSelect<
+  TTable extends MsSqlTable,
+  TSelection extends FieldSet | undefined,
+  TBranch extends 'from' | 'top',
+  TJoinedTable extends Joinable,
+  TKind extends 'inner' | 'left' | 'right' | 'full' | 'cross',
+> = Omit<
+  MsSqlJoin<SelectQueryBase<TTable, TSelection, TBranch>, false, TKind, TJoinedTable>,
+  'where' | 'orderBy' | keyof SelectJoinMethods<TTable, TSelection, TBranch>
+> & SelectJoinMethods<TTable, TSelection, TBranch> & {
+  where(condition: TableWhere<TTable>): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'where'>;
+  orderBy(builder: OrderByCallback<TTable>): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'orderBy'>;
+  orderBy(...columns: OrderByValue[]): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'orderBy'>;
+};
 type SelectJoinMethods<
   TTable extends MsSqlTable,
   TSelection extends FieldSet | undefined,
@@ -1020,27 +1036,27 @@ type SelectJoinMethods<
   innerJoin<TJoinedTable extends Joinable>(
     table: TJoinedTable,
     on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>
-  ): MsSqlJoin<SelectQueryBase<TTable, TSelection, TBranch>, false, 'inner', TJoinedTable>;
+  ): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'inner'>;
   leftJoin<TJoinedTable extends Joinable>(
     table: TJoinedTable,
     on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>
-  ): MsSqlJoin<SelectQueryBase<TTable, TSelection, TBranch>, false, 'left', TJoinedTable>;
+  ): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'left'>;
   rightJoin<TJoinedTable extends Joinable>(
     table: TJoinedTable,
     on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>
-  ): MsSqlJoin<SelectQueryBase<TTable, TSelection, TBranch>, false, 'right', TJoinedTable>;
+  ): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'right'>;
   fullJoin<TJoinedTable extends Joinable>(
     table: TJoinedTable,
     on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>
-  ): MsSqlJoin<SelectQueryBase<TTable, TSelection, TBranch>, false, 'full', TJoinedTable>;
+  ): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'full'>;
   outerApply<TJoinedTable extends MsSqlTable>(
     table: TJoinedTable,
     on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>
-  ): MsSqlJoin<SelectQueryBase<TTable, TSelection, TBranch>, false, 'left', TJoinedTable>;
+  ): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'left'>;
   crossApply<TJoinedTable extends MsSqlTable>(
     table: TJoinedTable,
     on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>
-  ): MsSqlJoin<SelectQueryBase<TTable, TSelection, TBranch>, false, 'cross', TJoinedTable>;
+  ): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'cross'>;
 };
 
 type SelectTopFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Omit<

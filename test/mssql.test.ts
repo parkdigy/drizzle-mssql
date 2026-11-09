@@ -84,6 +84,30 @@ test('join 콜백은 조인 컬럼 조건 헬퍼와 기준 테이블 q.t를 제�
   expect(aliasQuery.sql).toMatch(/inner join \[users\] \[joined\] on \[joined\]\.\[id\] = \[base\]\.\[id\]/i);
 });
 
+test('조인 후 where 콜백도 조인 전과 같은 조건 헬퍼를 제공한다', () => {
+  const joinedTable = createAlias({ users }).users('joined');
+  const secondJoinedTable = createAlias({ users }).users('second_joined');
+  const beforeJoin = usersQuery.select().where((q) => q.eq({ id: 1 })).toSQL();
+  const afterJoin = usersQuery
+    .select()
+    .innerJoin(joinedTable, drizzleEq(joinedTable.id, users.id))
+    .where((q) => q.eq({ id: 1 }))
+    .toSQL();
+  const afterTwoJoins = usersQuery
+    .select()
+    .innerJoin(joinedTable, drizzleEq(joinedTable.id, users.id))
+    .innerJoin(secondJoinedTable, drizzleEq(secondJoinedTable.id, users.id))
+    .where((q) => q.eq({ id: 1 }))
+    .orderBy((q) => q.desc('name'))
+    .toSQL();
+
+  expect(beforeJoin.sql).toMatch(/where \[users\]\.\[id\] = @par0/i);
+  expect(afterJoin.sql).toMatch(/inner join \[users\] \[joined\] on \[joined\]\.\[id\] = \[users\]\.\[id\] where \[users\]\.\[id\] = @par0/i);
+  expect(afterJoin.params).toEqual([1]);
+  expect(afterTwoJoins.sql).toMatch(/inner join \[users\] \[joined\].*inner join \[users\] \[second_joined\].*where \[users\]\.\[id\] = @par0 order by \[users\]\.\[name\] desc/i);
+  expect(afterTwoJoins.params).toEqual([1]);
+});
+
 test('select 서브쿼리를 직접 조건으로 조인한다', () => {
   const builder = usersQuery.select(['id']).top(1).orderBy(usersQuery.desc('id'));
   const subquery = builder.as('latest');

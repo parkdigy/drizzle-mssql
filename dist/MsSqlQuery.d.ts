@@ -262,13 +262,18 @@ type JoinConditionQuery<TTable extends MsSqlTable, TJoinedTable extends Joinable
 };
 type Joinable = MsSqlTable | Subquery | MsSqlViewBase | SQL;
 type JoinCondition<TTable extends MsSqlTable, TSelection extends FieldSet | undefined, TBranch extends 'from' | 'top', TJoinedTable extends Joinable> = TJoinedTable extends MsSqlTable | Subquery ? SQL | undefined | ((query: JoinConditionQuery<TTable, TJoinedTable>) => SQL | undefined) : SQL | undefined | ((aliases: SelectQueryBase<TTable, TSelection, TBranch>['_']['selection']) => SQL | undefined);
+type JoinedSelect<TTable extends MsSqlTable, TSelection extends FieldSet | undefined, TBranch extends 'from' | 'top', TJoinedTable extends Joinable, TKind extends 'inner' | 'left' | 'right' | 'full' | 'cross'> = Omit<MsSqlJoin<SelectQueryBase<TTable, TSelection, TBranch>, false, TKind, TJoinedTable>, 'where' | 'orderBy' | keyof SelectJoinMethods<TTable, TSelection, TBranch>> & SelectJoinMethods<TTable, TSelection, TBranch> & {
+    where(condition: TableWhere<TTable>): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'where'>;
+    orderBy(builder: OrderByCallback<TTable>): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'orderBy'>;
+    orderBy(...columns: OrderByValue[]): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'orderBy'>;
+};
 type SelectJoinMethods<TTable extends MsSqlTable, TSelection extends FieldSet | undefined, TBranch extends 'from' | 'top'> = {
-    innerJoin<TJoinedTable extends Joinable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): MsSqlJoin<SelectQueryBase<TTable, TSelection, TBranch>, false, 'inner', TJoinedTable>;
-    leftJoin<TJoinedTable extends Joinable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): MsSqlJoin<SelectQueryBase<TTable, TSelection, TBranch>, false, 'left', TJoinedTable>;
-    rightJoin<TJoinedTable extends Joinable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): MsSqlJoin<SelectQueryBase<TTable, TSelection, TBranch>, false, 'right', TJoinedTable>;
-    fullJoin<TJoinedTable extends Joinable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): MsSqlJoin<SelectQueryBase<TTable, TSelection, TBranch>, false, 'full', TJoinedTable>;
-    outerApply<TJoinedTable extends MsSqlTable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): MsSqlJoin<SelectQueryBase<TTable, TSelection, TBranch>, false, 'left', TJoinedTable>;
-    crossApply<TJoinedTable extends MsSqlTable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): MsSqlJoin<SelectQueryBase<TTable, TSelection, TBranch>, false, 'cross', TJoinedTable>;
+    innerJoin<TJoinedTable extends Joinable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'inner'>;
+    leftJoin<TJoinedTable extends Joinable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'left'>;
+    rightJoin<TJoinedTable extends Joinable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'right'>;
+    fullJoin<TJoinedTable extends Joinable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'full'>;
+    outerApply<TJoinedTable extends MsSqlTable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'left'>;
+    crossApply<TJoinedTable extends MsSqlTable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'cross'>;
 };
 type SelectTopFrom<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Omit<SelectQueryBase<TTable, TSelection, 'top'>, 'where' | 'orderBy' | keyof SelectJoinMethods<TTable, TSelection, 'top'>> & SelectJoinMethods<TTable, TSelection, 'top'> & {
     where(condition: TableWhere<TTable>): Omit<SelectTopFrom<TTable, TSelection>, 'where'>;

@@ -78,7 +78,19 @@ export class TestData extends MsSqlQuery<'testData'> {
     console.log(await this.select().innerJoin(j, (q) => q.eq({ id: q.t.id })));
 
     const td = mssql.a.testData('td');
-    console.log(await this.select().innerJoin(td, mssql.eq(td.id, this.t.id)));
+    const td2 = mssql.a.testData('td2');
+    console.log(await this.select().where((q) => q.eq({ id: 1 })));
+    console.log(
+      await this.select([
+        this.columns('id', 'name'),
+        mssql.columns(td, 'id as td_id'),
+        mssql.columns(td2, 'id as td2_id'),
+      ])
+        .innerJoin(td, mssql.eq(td.id, this.t.id))
+        .innerJoin(td2, mssql.eq(td2.id, this.t.id))
+        .where((q) => q.eq({ id: 2 }))
+        .orderBy((q) => q.desc('name'))
+    );
     console.log(await this.select().innerJoin(td, (q) => q.eq({ id: q.t.id })));
   }
 

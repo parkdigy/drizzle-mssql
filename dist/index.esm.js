@@ -413,10 +413,10 @@ class MsSqlQuery {
                     continue;
                 enhancements[joinMethod] = (joinedTable, on) => {
                     if (typeof on !== 'function' || (!isTable(joinedTable) && !is(joinedTable, Subquery))) {
-                        return Reflect.apply(join, query, [joinedTable, on]);
+                        return enhance(Reflect.apply(join, query, [joinedTable, on]));
                     }
                     const joinQuery = conditionQuery(joinedTable, table);
-                    return Reflect.apply(join, query, [joinedTable, () => on(joinQuery)]);
+                    return enhance(Reflect.apply(join, query, [joinedTable, () => on(joinQuery)]));
                 };
             }
             return Object.assign(query, enhancements);
