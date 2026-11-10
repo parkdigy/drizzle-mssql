@@ -12,12 +12,12 @@ type DefaultBlocked<T extends MsSqlTable, K> = K extends keyof T['_']['columns']
 } ? undefined extends G ? false : keyof G extends never ? true : false : false) extends true ? K : never : never;
 type Blocked<T extends MsSqlTable> = {
     [K in keyof UpdateSource<T>]-?: K extends keyof TablePolicies<T> ? TablePolicies<T>[K] extends {
-        timestamp: 'created';
-    } | {
         update: 'blocked';
     } ? K : TablePolicies<T>[K] extends {
         update: 'allowed';
-    } ? never : K extends keyof T['_']['columns'] ? T['_']['columns'][K]['_']['isPrimaryKey'] extends true ? K : TablePolicies<T>[K] extends {
+    } ? never : TablePolicies<T>[K] extends {
+        timestamp: 'created';
+    } ? K : K extends keyof T['_']['columns'] ? T['_']['columns'][K]['_']['isPrimaryKey'] extends true ? K : TablePolicies<T>[K] extends {
         update: 'required';
     } ? never : DefaultBlocked<T, K> : never : DefaultBlocked<T, K>;
 }[keyof UpdateSource<T>] & keyof UpdateSource<T>;

@@ -69,7 +69,7 @@ if (false) {
   const missingIdentity: MsSqlEditValues<typeof requiredIdentity> = {};
   // @ts-expect-error 기본 키는 updateRequired만으로 수정할 수 없다.
   const requiredPrimaryUpdate: MsSqlEditValues<typeof requiredPrimary> = { id: 2 };
-  // @ts-expect-error createdAt의 수정 금지는 updateAllowed보다 우선한다.
+  // updateAllowed는 createdAt의 기본 수정 금지를 명시적으로 해제한다.
   const createdIdentityUpdate: MsSqlEditValues<typeof createdIdentity> = { id: 2 };
   // @ts-expect-error 사용자가 명시적으로 제외한 컬럼도 차단한다.
   const excludedIdentity: MsSqlEditValues<typeof allowedIdentity, 'id'> = { id: 2 };
@@ -103,12 +103,12 @@ test('허용한 IDENTITY를 edit와 editByPrimaryKey의 SET 절에 전달한다'
   }
 });
 
-test('IDENTITY의 필수·생성 시각·기본 키 정책을 유지한다', () => {
+test('IDENTITY의 필수·생성 시각·기본 키 정책과 명시적 수정 허용을 적용한다', () => {
   const required = new MsSqlQuery(requiredIdentity, () => raw);
   expect(required.edit({ id: 2, longId: BigInt(3) }, sql`1 = 1`).toSQL().params).toEqual([2, BigInt(3)]);
   expect(() => required.edit({} as never, sql`1 = 1`)).toThrow('id');
   expect(() => new MsSqlQuery(requiredPrimary, () => raw).edit({ id: 2 } as never, sql`1 = 1`)).toThrow('id');
-  expect(() => new MsSqlQuery(createdIdentity, () => raw).edit({ id: 2 } as never, sql`1 = 1`)).toThrow('id');
+  expect(new MsSqlQuery(createdIdentity, () => raw).edit({ id: 2 }, sql`1 = 1`).toSQL().params).toEqual([2]);
 });
 
 test('입력 정책과 시각 자동 입력을 등록과 수정에 적용한다', async () => {

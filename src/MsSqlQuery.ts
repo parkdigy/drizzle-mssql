@@ -665,7 +665,7 @@ export class MsSqlQuery<
       const rule = operation === 'insert' ? policy.insert : policy.update;
       const primary = column.primary;
       const blocked =
-        (operation === 'update' && policy.timestamp === 'created') ||
+        (operation === 'update' && policy.timestamp === 'created' && rule !== 'allowed') ||
         rule === 'blocked' ||
         (operation === 'update' && primary && rule !== 'allowed') ||
         (auto && rule !== 'allowed' && rule !== 'required');
