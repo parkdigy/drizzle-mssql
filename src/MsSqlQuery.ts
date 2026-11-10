@@ -188,7 +188,10 @@ export class MsSqlQuery<
     ? SelectFrom<TAlias, ResolveSelectInput<TAlias, TRest[0]>>
     : SelectFrom<TTable, ResolveSelectInput<TTable, TArgs[0]>>;
 
-  select<TAlias extends MsSqlAliasTable<TTable, string>, const TSelection extends FieldSet | readonly FieldInput[]>(
+  select<
+    TAlias extends MsSqlAliasTable<TTable, string>,
+    const TSelection extends FieldSet | readonly SelectFieldInput<TAlias>[],
+  >(
     alias: TAlias,
     fields: (query: FieldsQuery<TAlias>) => TSelection
   ): SelectFrom<TAlias, ResolveSelectInput<TAlias, () => TSelection>>;
@@ -214,7 +217,7 @@ export class MsSqlQuery<
 
   selectDistinct<
     TAlias extends MsSqlAliasTable<TTable, string>,
-    const TSelection extends FieldSet | readonly FieldInput[],
+    const TSelection extends FieldSet | readonly SelectFieldInput<TAlias>[],
   >(
     alias: TAlias,
     fields: (query: FieldsQuery<TAlias>) => TSelection
@@ -1326,6 +1329,11 @@ const normalizeFields = (fields: unknown, table?: MsSqlTable | Subquery): FieldS
   const result: FieldSet = {};
   for (const group of groups) {
     if (Array.isArray(fields) && (group === false || group === undefined)) continue;
+    if (Array.isArray(fields) && typeof group === 'string') {
+      if (!table) throw new Error('fields: a table is required for column-name selections.');
+      Object.assign(result, sourceColumns(table, [group]));
+      continue;
+    }
     if (typeof group !== 'object' || group === null || Array.isArray(group) || isTable(group) || is(group, SQL)) {
       throw new Error('fields: expected a selection object or an array of selection objects.');
     }

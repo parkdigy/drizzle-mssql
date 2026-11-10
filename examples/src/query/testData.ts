@@ -126,6 +126,18 @@ export class TestData extends MsSqlQuery<'testData'> {
       const j = builder.as('j');
       mssql.columns(j, 'id', 'name');
     }
+
+    {
+      const ac2 = mssql.a.testData('ac2');
+      const appInfoBuilder = this.select({
+        app_info: mssql.sqlString(''),
+      }).where((q) =>
+        q.and({
+          eq: { id: ac2.id },
+        })
+      );
+      console.log(await this.select(ac2, ['id', 'name', { app_info: appInfoBuilder }]));
+    }
   }
 
   /********************************************************************************************************************
@@ -182,10 +194,6 @@ export class TestData extends MsSqlQuery<'testData'> {
       notInArray: { id: multiRowBuilder },
       between: { id: [oneRowBuilder, oneRowBuilder] },
     });
-
-    const list = await this.select([{
-      id: oneRowBuilder,
-    }]);
   }
 
   /********************************************************************************************************************

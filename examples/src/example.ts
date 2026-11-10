@@ -6,11 +6,11 @@ import { testData } from './query';
 // const aliasedRows = await mssql.select(td, (q) => q.columns('id'));
 // 위 예제 사용 시 import mssql from './mssql'을 추가한다.
 
-await testData.selectTest();
+// await testData.selectTest();
 // await testData.selectColumnsTest();
 // await testData.aliasSelectTest();
 // await testData.selectTopTest();
-// await testData.subQueryTest();
+await testData.subQueryTest();
 // await testData.selectDistinctTest();
 // await testData.findTest();
 // await testData.conditionTest();
