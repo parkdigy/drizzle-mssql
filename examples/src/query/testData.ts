@@ -128,6 +128,9 @@ export class TestData extends MsSqlQuery<'testData'> {
     }
   }
 
+  /********************************************************************************************************************
+   * selectDistinctTest
+   * ******************************************************************************************************************/
   async selectDistinctTest() {
     console.log(await this.selectDistinct(['name']));
   }

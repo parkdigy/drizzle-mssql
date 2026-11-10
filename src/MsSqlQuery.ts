@@ -198,131 +198,7 @@ export class MsSqlQuery<
   ): SelectFrom<TSource, ResolveSubquerySelectInput<TSource, TArgs[0]>>;
 
   select(fieldsOrAlias?: unknown, fields?: unknown): any {
-    const tx = this.getTx();
-
-    const isAlias = isTable(fieldsOrAlias) || is(fieldsOrAlias, Subquery);
-    const table = isAlias ? (fieldsOrAlias as MsSqlTable | Subquery) : this.t;
-    const selectedFields = this.resolveFields(isAlias ? fields : fieldsOrAlias, table);
-    const selectBuilder = tx.select(selectedFields ?? sourceColumns(table));
-    const enhance = (query: unknown): unknown => {
-      if (typeof query !== 'object' || query === null) return query;
-
-      const builder = query as { where: (condition: unknown) => unknown };
-      const originalWhere = builder.where.bind(query);
-      const orderBy = (query as { orderBy?: (...args: unknown[]) => unknown }).orderBy;
-      const originalOrderBy = typeof orderBy === 'function' ? orderBy.bind(query) : undefined;
-      const bindCondition =
-        (operator: string, conditionTable: MsSqlTable | Subquery = table) =>
-        (input: unknown): SQL | undefined => {
-          const conditionOperator = (this.drizzle as unknown as Record<string, (...args: unknown[]) => unknown>)[
-            operator
-          ];
-          if (isTable(conditionTable)) {
-            return Reflect.apply(conditionOperator, undefined, [conditionTable, input]) as SQL | undefined;
-          }
-
-          if (operator === 'isNull' || operator === 'isNotNull') {
-            const names = Array.isArray(input) ? input : [input];
-            return drizzleAnd(
-              ...names
-                .filter((name) => name !== undefined)
-                .map((name) => {
-                  const column = (conditionTable as unknown as Record<string, unknown>)[String(name)];
-                  if (column === undefined) throw new Error(`Condition: unknown column "${name}".`);
-                  return Reflect.apply(conditionOperator, undefined, [column]) as SQL;
-                })
-            );
-          }
-
-          if (operator === 'and' || operator === 'or') {
-            if (typeof input !== 'object' || input === null || Array.isArray(input)) {
-              throw new Error(`${operator}: expected a condition object.`);
-            }
-            const conditions: (SQL | undefined)[] = Object.entries(input).map(([nestedOperator, values]) =>
-              bindCondition(nestedOperator, conditionTable)(values)
-            );
-            return Reflect.apply(conditionOperator, undefined, conditions as SQL[]) as SQL | undefined;
-          }
-
-          if (typeof input !== 'object' || input === null || Array.isArray(input)) {
-            throw new Error(`${operator}: expected a column/value object.`);
-          }
-          const conditions = Object.entries(input).map(([name, value]) => {
-            const column = (conditionTable as unknown as Record<string, unknown>)[name];
-            if (column === undefined) throw new Error(`Condition: unknown column "${name}".`);
-            if (operator === 'between' || operator === 'notBetween') {
-              if (!Array.isArray(value) || value.length !== 2) {
-                throw new Error(`${operator}: expected two bounds.`);
-              }
-              return Reflect.apply(conditionOperator, undefined, [column, value[0], value[1]]);
-            }
-            return Reflect.apply(conditionOperator, undefined, [column, value]);
-          });
-          return drizzleAnd(...(conditions as SQL[]));
-        };
-      const conditionQuery = (conditionTable: MsSqlTable | Subquery, contextTable: MsSqlTable | Subquery) =>
-        ({
-          t: contextTable,
-          eq: bindCondition('eq', conditionTable),
-          ne: bindCondition('ne', conditionTable),
-          gt: bindCondition('gt', conditionTable),
-          gte: bindCondition('gte', conditionTable),
-          lt: bindCondition('lt', conditionTable),
-          lte: bindCondition('lte', conditionTable),
-          inArray: bindCondition('inArray', conditionTable),
-          notInArray: bindCondition('notInArray', conditionTable),
-          between: bindCondition('between', conditionTable),
-          notBetween: bindCondition('notBetween', conditionTable),
-          like: bindCondition('like', conditionTable),
-          notLike: bindCondition('notLike', conditionTable),
-          ilike: bindCondition('ilike', conditionTable),
-          notIlike: bindCondition('notIlike', conditionTable),
-          isNull: bindCondition('isNull', conditionTable),
-          isNotNull: bindCondition('isNotNull', conditionTable),
-          and: bindCondition('and', conditionTable),
-          or: bindCondition('or', conditionTable),
-        }) as unknown as SelectConditionQuery<MsSqlTable>;
-      const whereQuery = conditionQuery(table, table);
-      const orderByQuery: SelectOrderByQuery<MsSqlTable | Subquery> = {
-        t: table,
-        asc: (name) => drizzleAsc(this.resolveOrderColumn(name, table)),
-        desc: (name) => drizzleDesc(this.resolveOrderColumn(name, table)),
-      };
-      const enhancements: Record<string, unknown> = {
-        where: (condition: unknown) =>
-          originalWhere(
-            typeof condition === 'function'
-              ? () => (condition as (query: SelectConditionQuery<MsSqlTable>) => unknown)(whereQuery)
-              : condition
-          ),
-        top: (count: number) =>
-          typeof selectBuilder.top === 'function' ? enhance(selectBuilder.top(count).from(table)) : query,
-      };
-      if (originalOrderBy) {
-        enhancements.orderBy = (...args: unknown[]) =>
-          typeof args[0] === 'function'
-            ? originalOrderBy(() =>
-                (args[0] as (query: SelectOrderByQuery<MsSqlTable | Subquery>) => unknown)(orderByQuery)
-              )
-            : originalOrderBy(...args);
-      }
-      for (const joinMethod of ['innerJoin', 'leftJoin', 'rightJoin', 'fullJoin', 'outerApply', 'crossApply']) {
-        const join = (query as Record<string, unknown>)[joinMethod];
-        if (typeof join !== 'function') continue;
-        enhancements[joinMethod] = (joinedTable: unknown, on: unknown) => {
-          if (typeof on !== 'function' || (!isTable(joinedTable) && !is(joinedTable, Subquery))) {
-            return enhance(Reflect.apply(join, query, [joinedTable, on]));
-          }
-          const joinQuery = conditionQuery(joinedTable, table) as JoinConditionQuery<MsSqlTable, Joinable>;
-          return enhance(
-            Reflect.apply(join, query, [joinedTable, () => (on as (query: unknown) => unknown)(joinQuery)])
-          );
-        };
-      }
-      return Object.assign(query, enhancements);
-    };
-
-    return enhance(selectBuilder.from(table));
+    return this.buildSelectQuery(fieldsOrAlias, fields, false);
   }
 
   /********************************************************************************************************************
@@ -349,12 +225,21 @@ export class MsSqlQuery<
   ): SelectFrom<TSource, ResolveSubquerySelectInput<TSource, TArgs[0]>>;
 
   selectDistinct(fieldsOrAlias?: unknown, fields?: unknown): any {
+    return this.buildSelectQuery(fieldsOrAlias, fields, true);
+  }
+
+  /********************************************************************************************************************
+   * (PRIVATE) buildSelectQuery
+   * ******************************************************************************************************************/
+  private buildSelectQuery(fieldsOrAlias: unknown, fields: unknown, distinct: boolean): any {
     const tx = this.getTx();
 
     const isAlias = isTable(fieldsOrAlias) || is(fieldsOrAlias, Subquery);
     const table = isAlias ? (fieldsOrAlias as MsSqlTable | Subquery) : this.t;
     const selectedFields = this.resolveFields(isAlias ? fields : fieldsOrAlias, table);
-    const selectBuilder = tx.selectDistinct(selectedFields ?? sourceColumns(table));
+    const selectBuilder = distinct
+      ? tx.selectDistinct(selectedFields ?? sourceColumns(table))
+      : tx.select(selectedFields ?? sourceColumns(table));
     const enhance = (query: unknown): unknown => {
       if (typeof query !== 'object' || query === null) return query;
 

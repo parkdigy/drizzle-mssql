@@ -66,6 +66,10 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddVa
     selectDistinct<TAlias extends MsSqlAliasTable<TTable, string>, const TSelection extends FieldSet | readonly FieldInput[]>(alias: TAlias, fields: (query: FieldsQuery<TAlias>) => TSelection): SelectFrom<TAlias, ResolveSelectInput<TAlias, () => TSelection>>;
     selectDistinct<TSource extends Subquery, const TArgs extends readonly [fields?: SubquerySelectInput<TSource>]>(source: TSource, ...args: TArgs): SelectFrom<TSource, ResolveSubquerySelectInput<TSource, TArgs[0]>>;
     /********************************************************************************************************************
+     * (PRIVATE) buildSelectQuery
+     * ******************************************************************************************************************/
+    private buildSelectQuery;
+    /********************************************************************************************************************
      * find
      * ******************************************************************************************************************/
     find(where: BaseWhere<this>): Promise<FindResult<TTable, undefined>>;

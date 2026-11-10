@@ -328,118 +328,22 @@ class MsSqlQuery {
         return normalizeFields(fields(query), table);
     }
     select(fieldsOrAlias, fields) {
-        const tx = this.getTx();
-        const isAlias = isTable(fieldsOrAlias) || is(fieldsOrAlias, Subquery);
-        const table = isAlias ? fieldsOrAlias : this.t;
-        const selectedFields = this.resolveFields(isAlias ? fields : fieldsOrAlias, table);
-        const selectBuilder = tx.select(selectedFields !== null && selectedFields !== void 0 ? selectedFields : sourceColumns(table));
-        const enhance = (query) => {
-            if (typeof query !== 'object' || query === null)
-                return query;
-            const builder = query;
-            const originalWhere = builder.where.bind(query);
-            const orderBy = query.orderBy;
-            const originalOrderBy = typeof orderBy === 'function' ? orderBy.bind(query) : undefined;
-            const bindCondition = (operator, conditionTable = table) => (input) => {
-                const conditionOperator = this.drizzle[operator];
-                if (isTable(conditionTable)) {
-                    return Reflect.apply(conditionOperator, undefined, [conditionTable, input]);
-                }
-                if (operator === 'isNull' || operator === 'isNotNull') {
-                    const names = Array.isArray(input) ? input : [input];
-                    return and(...names
-                        .filter((name) => name !== undefined)
-                        .map((name) => {
-                        const column = conditionTable[String(name)];
-                        if (column === undefined)
-                            throw new Error(`Condition: unknown column "${name}".`);
-                        return Reflect.apply(conditionOperator, undefined, [column]);
-                    }));
-                }
-                if (operator === 'and' || operator === 'or') {
-                    if (typeof input !== 'object' || input === null || Array.isArray(input)) {
-                        throw new Error(`${operator}: expected a condition object.`);
-                    }
-                    const conditions = Object.entries(input).map(([nestedOperator, values]) => bindCondition(nestedOperator, conditionTable)(values));
-                    return Reflect.apply(conditionOperator, undefined, conditions);
-                }
-                if (typeof input !== 'object' || input === null || Array.isArray(input)) {
-                    throw new Error(`${operator}: expected a column/value object.`);
-                }
-                const conditions = Object.entries(input).map(([name, value]) => {
-                    const column = conditionTable[name];
-                    if (column === undefined)
-                        throw new Error(`Condition: unknown column "${name}".`);
-                    if (operator === 'between' || operator === 'notBetween') {
-                        if (!Array.isArray(value) || value.length !== 2) {
-                            throw new Error(`${operator}: expected two bounds.`);
-                        }
-                        return Reflect.apply(conditionOperator, undefined, [column, value[0], value[1]]);
-                    }
-                    return Reflect.apply(conditionOperator, undefined, [column, value]);
-                });
-                return and(...conditions);
-            };
-            const conditionQuery = (conditionTable, contextTable) => ({
-                t: contextTable,
-                eq: bindCondition('eq', conditionTable),
-                ne: bindCondition('ne', conditionTable),
-                gt: bindCondition('gt', conditionTable),
-                gte: bindCondition('gte', conditionTable),
-                lt: bindCondition('lt', conditionTable),
-                lte: bindCondition('lte', conditionTable),
-                inArray: bindCondition('inArray', conditionTable),
-                notInArray: bindCondition('notInArray', conditionTable),
-                between: bindCondition('between', conditionTable),
-                notBetween: bindCondition('notBetween', conditionTable),
-                like: bindCondition('like', conditionTable),
-                notLike: bindCondition('notLike', conditionTable),
-                ilike: bindCondition('ilike', conditionTable),
-                notIlike: bindCondition('notIlike', conditionTable),
-                isNull: bindCondition('isNull', conditionTable),
-                isNotNull: bindCondition('isNotNull', conditionTable),
-                and: bindCondition('and', conditionTable),
-                or: bindCondition('or', conditionTable),
-            });
-            const whereQuery = conditionQuery(table, table);
-            const orderByQuery = {
-                t: table,
-                asc: (name) => asc(this.resolveOrderColumn(name, table)),
-                desc: (name) => desc(this.resolveOrderColumn(name, table)),
-            };
-            const enhancements = {
-                where: (condition) => originalWhere(typeof condition === 'function'
-                    ? () => condition(whereQuery)
-                    : condition),
-                top: (count) => typeof selectBuilder.top === 'function' ? enhance(selectBuilder.top(count).from(table)) : query,
-            };
-            if (originalOrderBy) {
-                enhancements.orderBy = (...args) => typeof args[0] === 'function'
-                    ? originalOrderBy(() => args[0](orderByQuery))
-                    : originalOrderBy(...args);
-            }
-            for (const joinMethod of ['innerJoin', 'leftJoin', 'rightJoin', 'fullJoin', 'outerApply', 'crossApply']) {
-                const join = query[joinMethod];
-                if (typeof join !== 'function')
-                    continue;
-                enhancements[joinMethod] = (joinedTable, on) => {
-                    if (typeof on !== 'function' || (!isTable(joinedTable) && !is(joinedTable, Subquery))) {
-                        return enhance(Reflect.apply(join, query, [joinedTable, on]));
-                    }
-                    const joinQuery = conditionQuery(joinedTable, table);
-                    return enhance(Reflect.apply(join, query, [joinedTable, () => on(joinQuery)]));
-                };
-            }
-            return Object.assign(query, enhancements);
-        };
-        return enhance(selectBuilder.from(table));
+        return this.buildSelectQuery(fieldsOrAlias, fields, false);
     }
     selectDistinct(fieldsOrAlias, fields) {
+        return this.buildSelectQuery(fieldsOrAlias, fields, true);
+    }
+    /********************************************************************************************************************
+     * (PRIVATE) buildSelectQuery
+     * ******************************************************************************************************************/
+    buildSelectQuery(fieldsOrAlias, fields, distinct) {
         const tx = this.getTx();
         const isAlias = isTable(fieldsOrAlias) || is(fieldsOrAlias, Subquery);
         const table = isAlias ? fieldsOrAlias : this.t;
         const selectedFields = this.resolveFields(isAlias ? fields : fieldsOrAlias, table);
-        const selectBuilder = tx.selectDistinct(selectedFields !== null && selectedFields !== void 0 ? selectedFields : sourceColumns(table));
+        const selectBuilder = distinct
+            ? tx.selectDistinct(selectedFields !== null && selectedFields !== void 0 ? selectedFields : sourceColumns(table))
+            : tx.select(selectedFields !== null && selectedFields !== void 0 ? selectedFields : sourceColumns(table));
         const enhance = (query) => {
             if (typeof query !== 'object' || query === null)
                 return query;
