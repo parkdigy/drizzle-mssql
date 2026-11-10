@@ -1236,10 +1236,11 @@ type FieldsQuery<TTable extends MsSqlTable> = {
   max: MsSqlQuery<TTable>['max'];
 };
 type Fields<TQuery, TSelection> = TSelection | ((query: TQuery) => TSelection);
+type SelectFieldInput<TTable extends MsSqlTable> = FieldInput | MixedSelection<TTable>;
 export type SelectInput<TTable extends MsSqlTable> =
-  | readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[]
+  | readonly (SelectFieldInput<TTable> | MsSqlColumnSelectionName<TTable>)[]
   | MixedSelection<TTable>
-  | ((query: FieldsQuery<TTable>) => FieldSet | readonly FieldInput[]);
+  | ((query: FieldsQuery<TTable>) => FieldSet | readonly SelectFieldInput<TTable>[]);
 type SelectArgs<TTable extends MsSqlTable> =
   | readonly [fields?: SelectInput<TTable>]
   | readonly [
@@ -1249,11 +1250,11 @@ type SelectArgs<TTable extends MsSqlTable> =
 export type ResolveSelectInput<TTable extends MsSqlTable, T> = T extends undefined
   ? undefined
   : T extends (...args: never[]) => infer R
-    ? R extends readonly FieldInput[]
-      ? MergeFields<R>
+    ? R extends readonly SelectFieldInput<TTable>[]
+      ? MergeSelectFields<TTable, R>
       : Extract<R, FieldSet>
-    : T extends readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[]
-      ? MergeFields<NamedFields<TTable, T>>
+    : T extends readonly (SelectFieldInput<TTable> | MsSqlColumnSelectionName<TTable>)[]
+      ? MergeSelectFields<TTable, SelectNamedFields<TTable, T>>
       : T extends StringColumnSelection<TTable>
         ? StringColumnSelectionFields<TTable, T>
         : ResolveMixedSelection<TTable, T>;
@@ -1262,6 +1263,38 @@ type NamedFields<TTable extends MsSqlTable, T extends readonly (FieldInput | MsS
     ? MsSqlSelectedNamedColumns<TTable, readonly [T[I]]>
     : Extract<T[I], FieldInput>;
 };
+type SelectNamedFields<
+  TTable extends MsSqlTable,
+  T extends readonly (SelectFieldInput<TTable> | MsSqlColumnSelectionName<TTable>)[],
+> = {
+  [I in keyof T]: T[I] extends MsSqlColumnSelectionName<TTable>
+    ? MsSqlSelectedNamedColumns<TTable, readonly [T[I]]>
+    : T[I] extends SelectFieldInput<TTable>
+      ? T[I]
+      : never;
+};
+type ResolveSelectField<TTable extends MsSqlTable, TField> = TField extends FieldSet
+  ? TField
+  : TField extends MixedSelection<TTable>
+    ? ResolveMixedSelection<TTable, TField>
+    : never;
+type MergeSelectFields<
+  TTable extends MsSqlTable,
+  T extends readonly unknown[],
+  Result = {},
+> = T extends readonly [infer First, ...infer Rest]
+  ? MergeSelectFields<
+      TTable,
+      Rest,
+      First extends FieldSet | MixedSelection<TTable>
+        ? Omit<Result, keyof First> & ResolveSelectField<TTable, First>
+          : Result
+    >
+  : number extends T['length']
+    ? ResolveSelectField<TTable, Exclude<T[number], false | undefined>>
+    : Result extends unknown
+      ? { [P in keyof Result]: Result[P] }
+      : never;
 type MergeField<First, Result> = First extends FieldSet
   ? Result extends unknown
     ? Omit<Result, keyof First> & First
