@@ -1,7 +1,8 @@
 import { SQL, Subquery, min as drizzleMin, max as drizzleMax } from 'drizzle-orm';
-import { MsSqlTable, MsSqlColumn, type MsSqlSelectBase } from 'drizzle-orm/mssql-core';
+import { MsSqlTable, MsSqlColumn, MsSqlSelectBase } from 'drizzle-orm/mssql-core';
 import type { SelectedFields } from 'drizzle-orm/operations';
 import type { SQLWrapper } from 'drizzle-orm';
+import type { TypedQueryBuilder } from 'drizzle-orm/query-builders/query-builder';
 import type { GetSelectTableName } from 'drizzle-orm/query-builders/select.types';
 import type { MsSqlJoin } from 'drizzle-orm/mssql-core/query-builders/select.types';
 import type { MsSqlViewBase } from 'drizzle-orm/mssql-core/view-base';
@@ -137,7 +138,9 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddVa
      * add
      * ******************************************************************************************************************/
     add(value: AV[]): Promise<AR[]>;
+    add<TSelection extends Record<string, unknown>>(value: TypedQueryBuilder<TSelection>): Promise<AR[]>;
     add(value: AV): Promise<AR>;
+    private executeInsertSelect;
     /********************************************************************************************************************
      * edit
      * ******************************************************************************************************************/

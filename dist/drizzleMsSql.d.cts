@@ -8,7 +8,7 @@ import { MsSqlQuery, type SelectFrom, type SelectInput, type ResolveSelectInput,
 export interface DrizzleMsSqlOptions<TSchema extends Record<string, MsSqlTable>> {
     url: string;
     schema: TSchema;
-    getTimestamp: () => unknown;
+    getTimestamp?: () => unknown;
 }
 type MsSqlConnection<TSchema extends Record<string, MsSqlTable>> = ReturnType<typeof createConnection<TSchema>>;
 interface MsSqlDatabaseHelpers<TSchema extends Record<string, MsSqlTable>> extends MsSqlNativeHelpers {

@@ -18,7 +18,7 @@ import {
 export interface DrizzleMsSqlOptions<TSchema extends Record<string, MsSqlTable>> {
   url: string;
   schema: TSchema;
-  getTimestamp: () => unknown;
+  getTimestamp?: () => unknown;
 }
 
 type MsSqlConnection<TSchema extends Record<string, MsSqlTable>> = ReturnType<typeof createConnection<TSchema>>;
@@ -78,7 +78,15 @@ function createConnection<TSchema extends Record<string, MsSqlTable>>(options: D
   const raw = drizzle({ connection: options.url, relations: defineRelations(options.schema) });
   type Transaction = Parameters<Parameters<typeof raw.transaction>[0]>[0];
   const context = new AsyncLocalStorage<Transaction>();
-  const current = Object.assign(() => context.getStore() ?? raw, { getTimestamp: options.getTimestamp });
+  const getTimestamp =
+    options.getTimestamp ??
+    (() => {
+      const now = new Date();
+      const pad = (value: number, length = 2) => String(value).padStart(length, '0');
+      const localDateTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}.${pad(now.getMilliseconds(), 3)}`;
+      return sql`CONVERT(datetime2, ${localDateTime}, 126)`;
+    });
+  const current = Object.assign(() => context.getStore() ?? raw, { getTimestamp });
   const trans = <T>(callback: () => Promise<T>): Promise<T> => {
     const parent = context.getStore();
     const execute = (tx: Transaction) => context.run(tx, callback);
@@ -140,7 +148,10 @@ export function drizzleMsSql<TSchema extends Record<string, MsSqlTable>>(
     if (!table) throw new Error(`select: unknown table "${tableOrName}".`);
     if (is(table, native.Subquery)) {
       // select의 서브쿼리 분기는 기준 테이블 대신 전달한 source를 사용한다.
-      return new MsSqlQuery(table as unknown as MsSqlTable, connection.current).select(table, fields as SubquerySelectInput<Subquery>);
+      return new MsSqlQuery(table as unknown as MsSqlTable, connection.current).select(
+        table,
+        fields as SubquerySelectInput<Subquery>
+      );
     }
     return new MsSqlQuery(table, connection.current).select(fields as SelectInput<MsSqlTable>);
   }

@@ -653,9 +653,43 @@ class MsSqlQuery {
         return values;
     }
     add(value) {
+        if (native.is(value, mssqlCore.MsSqlSelectBase)) {
+            return this.executeInsertSelect(value);
+        }
         const items = Array.isArray(value) ? value : [value];
         const values = items.map((item) => this.prepareValues(item, 'insert'));
         return this.executeInsert((Array.isArray(value) ? values : values[0]));
+    }
+    async executeInsertSelect(selectQuery) {
+        var _a;
+        const policies = getColumnPolicies(this.t);
+        const timestampColumns = Object.entries(policies).filter(([, policy]) => policy.timestamp === 'created' || policy.timestamp === 'updated');
+        let timestamp;
+        let generated = false;
+        const getTimestamp = (_a = this.getTimestamp) !== null && _a !== void 0 ? _a : this.current.getTimestamp;
+        const selectedFields = selectQuery.getSelectedFields();
+        const missingTimestamps = timestampColumns.filter(([name]) => !Object.hasOwn(selectedFields, name));
+        if (missingTimestamps.length > 0) {
+            if (!getTimestamp)
+                throw new Error('timestamp generator is not configured');
+            const source = selectQuery.as('__insert_source');
+            const fields = Object.fromEntries(Object.keys(selectedFields).map((name) => [name, source[name]]));
+            for (const [name] of missingTimestamps) {
+                if (!generated) {
+                    timestamp = getTimestamp();
+                    generated = true;
+                }
+                fields[name] = native.sql `${timestamp}`.as(name);
+            }
+            selectQuery = this.getTx().select(fields).from(source);
+        }
+        const autoIncrementColumn = mssqlCore.getTableConfig(this.t).columns.find((column) => 'identity' in column && column.identity !== undefined);
+        const rows = (await this.getTx().insert(this.t).output().select(selectQuery));
+        if (!autoIncrementColumn)
+            return rows.map(() => undefined);
+        const columns = native.getTableColumns(this.t);
+        const autoIncrementKey = Object.keys(columns).find((key) => columns[key] === autoIncrementColumn);
+        return rows.map((row) => row[autoIncrementKey]);
     }
     /********************************************************************************************************************
      * edit
@@ -857,9 +891,16 @@ function sourceColumns(source, names = []) {
         ? TableColumns(source, ...names)
         : TableColumns(source, ...names);
 }function createConnection(options) {
+    var _a;
     const raw = nodeMssql.drizzle({ connection: options.url, relations: native.defineRelations(options.schema) });
     const context = new node_async_hooks.AsyncLocalStorage();
-    const current = Object.assign(() => { var _a; return (_a = context.getStore()) !== null && _a !== void 0 ? _a : raw; }, { getTimestamp: options.getTimestamp });
+    const getTimestamp = (_a = options.getTimestamp) !== null && _a !== void 0 ? _a : (() => {
+        const now = new Date();
+        const pad = (value, length = 2) => String(value).padStart(length, '0');
+        const localDateTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}.${pad(now.getMilliseconds(), 3)}`;
+        return native.sql `CONVERT(datetime2, ${localDateTime}, 126)`;
+    });
+    const current = Object.assign(() => { var _a; return (_a = context.getStore()) !== null && _a !== void 0 ? _a : raw; }, { getTimestamp });
     const trans = (callback) => {
         const parent = context.getStore();
         const execute = (tx) => context.run(tx, callback);

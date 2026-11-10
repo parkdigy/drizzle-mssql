@@ -16,12 +16,13 @@ import {
 import {
   MsSqlTable,
   MsSqlColumn,
+  MsSqlSelectBase,
   getTableConfig,
-  type MsSqlSelectBase,
   type MsSqlUpdateSetSource,
 } from 'drizzle-orm/mssql-core';
 import type { SelectedFields } from 'drizzle-orm/operations';
 import type { SQLWrapper } from 'drizzle-orm';
+import type { TypedQueryBuilder } from 'drizzle-orm/query-builders/query-builder';
 import type { GetSelectTableName } from 'drizzle-orm/query-builders/select.types';
 import type { MsSqlJoin } from 'drizzle-orm/mssql-core/query-builders/select.types';
 import type { MsSqlViewBase } from 'drizzle-orm/mssql-core/view-base';
@@ -745,12 +746,60 @@ export class MsSqlQuery<
    * ******************************************************************************************************************/
   add(value: AV[]): Promise<AR[]>;
 
+  add<TSelection extends Record<string, unknown>>(value: TypedQueryBuilder<TSelection>): Promise<AR[]>;
+
   add(value: AV): Promise<AR>;
 
-  add(value: AV | AV[]) {
+  add(value: AV | AV[] | TypedQueryBuilder<Record<string, unknown>>) {
+    if (is(value, MsSqlSelectBase)) {
+      return this.executeInsertSelect(value as TypedQueryBuilder<Record<string, unknown>>);
+    }
+
     const items = Array.isArray(value) ? value : [value];
     const values = items.map((item) => this.prepareValues(item, 'insert'));
     return this.executeInsert((Array.isArray(value) ? values : values[0]) as unknown as MsSqlInsertValue<TTable>);
+  }
+
+  private async executeInsertSelect(selectQuery: TypedQueryBuilder<Record<string, unknown>>): Promise<AR[]> {
+    const policies = getColumnPolicies(this.t);
+    const timestampColumns = Object.entries(policies).filter(
+      ([, policy]) => policy.timestamp === 'created' || policy.timestamp === 'updated'
+    );
+    let timestamp: unknown;
+    let generated = false;
+    const getTimestamp = this.getTimestamp ?? this.current.getTimestamp;
+    const selectedFields = (selectQuery as any).getSelectedFields() as Record<string, unknown>;
+    const missingTimestamps = timestampColumns.filter(([name]) => !Object.hasOwn(selectedFields, name));
+
+    if (missingTimestamps.length > 0) {
+      if (!getTimestamp) throw new Error('timestamp generator is not configured');
+
+      const source = (selectQuery as any).as('__insert_source');
+      const fields = Object.fromEntries(
+        Object.keys(selectedFields).map((name) => [name, source[name]])
+      ) as Record<string, unknown>;
+
+      for (const [name] of missingTimestamps) {
+        if (!generated) {
+          timestamp = getTimestamp();
+          generated = true;
+        }
+        fields[name] = sql`${timestamp}`.as(name);
+      }
+
+      selectQuery = this.getTx().select(fields as any).from(source) as TypedQueryBuilder<Record<string, unknown>>;
+    }
+
+    const autoIncrementColumn = getTableConfig(this.t).columns.find(
+      (column) => 'identity' in column && column.identity !== undefined
+    );
+    const rows = (await this.getTx().insert(this.t).output().select(selectQuery as any)) as Record<string, unknown>[];
+
+    if (!autoIncrementColumn) return rows.map(() => undefined as AR);
+
+    const columns = getTableColumns(this.t);
+    const autoIncrementKey = Object.keys(columns).find((key) => columns[key] === autoIncrementColumn);
+    return rows.map((row) => row[autoIncrementKey!] as AR);
   }
 
   /********************************************************************************************************************
