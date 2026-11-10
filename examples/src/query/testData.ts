@@ -167,9 +167,15 @@ export class TestData extends MsSqlQuery<'testData'> {
     this.eq({ id: 1, name: 'name' });
 
     this.ne({ id: 1, name: 'name' });
+
+    const oneRowBuilder = this.select(['id'])
+      .top(1)
+      .where((q) => q.lt({ id: 1 }));
+    const multiRowBuilder = this.select(['id']).where((q) => q.lt({ id: 10 }));
     this.and({
-      eq: { id: 1 },
-      like: { name: '%name%' },
+      inArray: { id: multiRowBuilder },
+      notInArray: { id: multiRowBuilder },
+      between: { id: [oneRowBuilder, oneRowBuilder] },
     });
   }
 
