@@ -43,10 +43,13 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddVa
     private resolveOrderColumn;
     private resolveConditionColumn;
     /********************************************************************************************************************
-     * asc / desc
+     * asc
      * ******************************************************************************************************************/
     asc(name: MsSqlColumnName<TTable>): SQL;
     asc<TAlias extends string>(table: MsSqlAliasTable<TTable, TAlias>, name: MsSqlColumnName<MsSqlAliasTable<TTable, TAlias>>): SQL;
+    /********************************************************************************************************************
+     * desc
+     * ******************************************************************************************************************/
     desc(name: MsSqlColumnName<TTable>): SQL;
     desc<TAlias extends string>(table: MsSqlAliasTable<TTable, TAlias>, name: MsSqlColumnName<MsSqlAliasTable<TTable, TAlias>>): SQL;
     private resolveFields;
@@ -56,6 +59,12 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddVa
     select<const TArgs extends SelectArgs<TTable>>(...args: TArgs): TArgs extends readonly [infer TAlias extends MsSqlTable, ...infer TRest] ? SelectFrom<TAlias, ResolveSelectInput<TAlias, TRest[0]>> : SelectFrom<TTable, ResolveSelectInput<TTable, TArgs[0]>>;
     select<TAlias extends MsSqlAliasTable<TTable, string>, const TSelection extends FieldSet | readonly FieldInput[]>(alias: TAlias, fields: (query: FieldsQuery<TAlias>) => TSelection): SelectFrom<TAlias, ResolveSelectInput<TAlias, () => TSelection>>;
     select<TSource extends Subquery, const TArgs extends readonly [fields?: SubquerySelectInput<TSource>]>(source: TSource, ...args: TArgs): SelectFrom<TSource, ResolveSubquerySelectInput<TSource, TArgs[0]>>;
+    /********************************************************************************************************************
+     * selectDistinct
+     * ******************************************************************************************************************/
+    selectDistinct<const TArgs extends SelectArgs<TTable>>(...args: TArgs): TArgs extends readonly [infer TAlias extends MsSqlTable, ...infer TRest] ? SelectFrom<TAlias, ResolveSelectInput<TAlias, TRest[0]>> : SelectFrom<TTable, ResolveSelectInput<TTable, TArgs[0]>>;
+    selectDistinct<TAlias extends MsSqlAliasTable<TTable, string>, const TSelection extends FieldSet | readonly FieldInput[]>(alias: TAlias, fields: (query: FieldsQuery<TAlias>) => TSelection): SelectFrom<TAlias, ResolveSelectInput<TAlias, () => TSelection>>;
+    selectDistinct<TSource extends Subquery, const TArgs extends readonly [fields?: SubquerySelectInput<TSource>]>(source: TSource, ...args: TArgs): SelectFrom<TSource, ResolveSubquerySelectInput<TSource, TArgs[0]>>;
     /********************************************************************************************************************
      * find
      * ******************************************************************************************************************/
@@ -321,7 +330,10 @@ type FieldsQuery<TTable extends MsSqlTable> = {
 };
 type Fields<TQuery, TSelection> = TSelection | ((query: TQuery) => TSelection);
 export type SelectInput<TTable extends MsSqlTable> = readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[] | MixedSelection<TTable> | ((query: FieldsQuery<TTable>) => FieldSet | readonly FieldInput[]);
-type SelectArgs<TTable extends MsSqlTable> = readonly [fields?: SelectInput<TTable>] | readonly [alias: MsSqlAliasTable<TTable, string>, fields?: Exclude<SelectInput<TTable>, (...args: never[]) => unknown>];
+type SelectArgs<TTable extends MsSqlTable> = readonly [fields?: SelectInput<TTable>] | readonly [
+    alias: MsSqlAliasTable<TTable, string>,
+    fields?: Exclude<SelectInput<TTable>, (...args: never[]) => unknown>
+];
 export type ResolveSelectInput<TTable extends MsSqlTable, T> = T extends undefined ? undefined : T extends (...args: never[]) => infer R ? R extends readonly FieldInput[] ? MergeFields<R> : Extract<R, FieldSet> : T extends readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[] ? MergeFields<NamedFields<TTable, T>> : T extends StringColumnSelection<TTable> ? StringColumnSelectionFields<TTable, T> : ResolveMixedSelection<TTable, T>;
 type NamedFields<TTable extends MsSqlTable, T extends readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[]> = {
     [I in keyof T]: T[I] extends MsSqlColumnSelectionName<TTable> ? MsSqlSelectedNamedColumns<TTable, readonly [T[I]]> : Extract<T[I], FieldInput>;
@@ -376,7 +388,10 @@ type SubqueryArrayValues<T extends Subquery> = {
     [K in keyof T['_']['selectedFields']]?: (NonNullable<SubqueryFieldData<T['_']['selectedFields'][K]>> | SQLWrapper)[];
 };
 type SubqueryRangeValues<T extends Subquery> = {
-    [K in keyof T['_']['selectedFields']]?: [NonNullable<SubqueryFieldData<T['_']['selectedFields'][K]>>, NonNullable<SubqueryFieldData<T['_']['selectedFields'][K]>>];
+    [K in keyof T['_']['selectedFields']]?: [
+        NonNullable<SubqueryFieldData<T['_']['selectedFields'][K]>>,
+        NonNullable<SubqueryFieldData<T['_']['selectedFields'][K]>>
+    ];
 };
 type SubqueryPatternValues<T extends Subquery> = {
     [K in keyof T['_']['selectedFields'] as NonNullable<SubqueryFieldData<T['_']['selectedFields'][K]>> extends string ? K : never]?: string;
