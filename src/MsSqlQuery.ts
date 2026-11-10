@@ -1217,10 +1217,19 @@ type ResolveMixedSelection<TTable extends MsSqlTable, TSelection> = {
     ? TTable['_']['columns'][TSelection[K]]
     : TSelection[K] extends MsSqlColumn
       ? TSelection[K]
+      : TSelection[K] extends { _: { result: unknown } }
+        ? SQL.Aliased<SelectBuilderFieldData<TSelection[K]>>
       : TSelection[K] extends SQLWrapper<infer TData>
         ? SQL.Aliased<TData>
         : Extract<TSelection[K], FieldSet[string]>;
 };
+type SelectBuilderFieldData<TBuilder> = TBuilder extends { _: { result: unknown } }
+  ? Awaited<TBuilder> extends readonly (infer TRow)[]
+    ? TRow extends Record<string, unknown>
+      ? TRow[keyof TRow]
+      : unknown
+    : unknown
+  : unknown;
 type StringColumnSelection<TTable extends MsSqlTable> = Record<string, keyof TTable['_']['columns'] & string>;
 type StringColumnSelectionFields<TTable extends MsSqlTable, TSelection extends StringColumnSelection<TTable>> = {
   [K in keyof TSelection]: TTable['_']['columns'][TSelection[K]] extends MsSqlColumn<infer TConfig>
