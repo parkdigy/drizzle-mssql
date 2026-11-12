@@ -12,7 +12,7 @@ npm install @pdg/drizzle-mssql drizzle-orm@1.0.0-rc.5 mssql@^11
 
 ### 연결과 스키마
 
-테이블 정의에는 Drizzle의 SQL Server 스키마 API를 패키지 루트에서 가져올 수 있습니다. 연결은 `drizzleMsSql`에 `mssql` 드라이버의 SQL Server 연결 문자열과 스키마를 전달해 만듭니다.
+테이블 정의에는 Drizzle의 SQL Server 스키마 API를 패키지 루트에서 가져올 수 있습니다. 연결은 `url` 또는 `mssql` 드라이버 설정과 스키마를 전달해 만듭니다. `url`을 사용할 때 `server`, `port`, `user`, `password`, `database`는 함께 전달할 수 없습니다.
 
 ```ts
 import {
@@ -44,6 +44,20 @@ const db = drizzleMsSql({
 const user = db.query(users);
 ```
 
+연결 문자열 대신 `mssql` 설정을 직접 전달할 수도 있습니다. `options`에는 `mssql` 드라이버 옵션을 지정합니다.
+
+```ts
+const db = drizzleMsSql({
+  server: process.env.DB_SERVER!,
+  port: Number(process.env.DB_PORT!),
+  user: process.env.DB_USER!,
+  password: process.env.DB_PASSWORD!,
+  database: process.env.DB_DATABASE,
+  options: { encrypt: true },
+  schema: { users, posts },
+});
+```
+
 스키마 타입은 `schema`에 전달한 객체에서 추론됩니다. 테이블명과 컬럼명의 자동완성을 유지하려면 스키마를 넓은 `Record<string, MsSqlTable>` 타입으로 지정하지 않고 구체적인 타입을 유지하세요.
 
 반환 타입 `DrizzleMsSql<typeof schema>`와 `MsSqlAliases`, `MsSqlSchemaConditions`를 공개합니다. 연결 타입과 테이블별 보조 함수 타입을 분리하며, `query(table)`은 전달받은 테이블만으로 타입을 추론합니다. 등록된 테이블 외에도 별칭 테이블이나 직접 가져온 테이블을 전달할 수 있습니다.
@@ -56,7 +70,7 @@ const query = db.query(u);
 
 200개 테이블에 대한 자동완성 후보를 TypeScript Language Service 테스트로 검증합니다. IDE 자체의 자동완성 동작은 사용하는 TypeScript 엔진과 설정에 따라서도 달라질 수 있습니다.
 
-`drizzleMsSql` 옵션은 필수인 `url`, `schema`, `getTimestamp`입니다. `new MsSqlQuery(table, db.current, getTimestamp?)`에서 생성 함수를 지정하면 해당 쿼리에서 우선 사용합니다. `db.query(table)`은 해당 테이블에 맞춰 타입이 지정된 쿼리 객체를 반환합니다. 연결을 다 사용한 뒤 `await db.close()`로 커넥션 풀을 닫습니다.
+`drizzleMsSql`에는 `schema`와 `url` 또는 직접 연결 설정이 필요하며, `getTimestamp`는 선택 사항입니다. `new MsSqlQuery(table, db.current, getTimestamp?)`에서 생성 함수를 지정하면 해당 쿼리에서 우선 사용합니다. `db.query(table)`은 해당 테이블에 맞춰 타입이 지정된 쿼리 객체를 반환합니다. 연결을 다 사용한 뒤 `await db.close()`로 커넥션 풀을 닫습니다.
 
 ### 데이터 추가·수정·삭제
 

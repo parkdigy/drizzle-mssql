@@ -15,6 +15,12 @@ test('200개 테이블과 200개 추가 컬럼에서도 공개 API의 자동완�
     const db = drizzleMsSql({ url: '', getTimestamp: () => 0, schema: {
       ${Array.from({ length: 200 }, (_, i) => `table${i}`).join(',')}
     }});
+    // @ts-expect-error 자동완성용 연결 설정 키
+    drizzleMsSql({ ser/*connectionOption*/, schema: { table199 } });
+    // @ts-expect-error 자동완성용 mssql options 키
+    drizzleMsSql({ server: 'localhost', options: { en/*mssqlOption*/ }, schema: { table199 } });
+    // @ts-expect-error url과 직접 연결 정보는 함께 사용할 수 없다
+    drizzleMsSql({ url: '', server: 'localhost', schema: { table199 } });
     const a = db.a.table199('a');
     db./*members*/s;
     db.a./*aliases*/table199;
@@ -184,6 +190,8 @@ test('200개 테이블과 200개 추가 컬럼에서도 공개 API의 자동완�
       namedCondition: ['id', 'name'],
       findCondition: ['id'],
       editCondition: ['id'],
+      connectionOption: ['server', 'port', 'user', 'password', 'database', 'options'],
+      mssqlOption: ['encrypt', 'trustServerCertificate', 'useUTC'],
     })) {
       const entries = service.getCompletionsAtPosition(file, positions[name], {})?.entries.map((entry) => entry.name);
       expect({ name, entries }).toEqual({ name, entries: expect.arrayContaining(expected) });
