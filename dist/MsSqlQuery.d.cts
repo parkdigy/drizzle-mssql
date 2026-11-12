@@ -82,7 +82,9 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddVa
     find<N extends MsSqlColumnSelectionName<TTable>>(fields: readonly N[], where?: BaseWhere<this>): Promise<FindResult<TTable, MsSqlSelectedNamedColumns<TTable, readonly N[]>>>;
     find<const T extends readonly FieldInput[]>(fields: (query: FieldsQuery<TTable>) => T, where: BaseWhere<this>): Promise<FindResult<TTable, MergeFields<T>>>;
     find<const T extends readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[]>(fields: T, where: BaseWhere<this>): Promise<FindResult<TTable, MergeFields<NamedFields<TTable, T>>>>;
+    find<const TSelection extends StringColumnSelection<TTable>>(fields: TSelection, where: (query: WhereQuery<MsSqlQuery<TTable, AV, EV, AR>>) => SQL | undefined): Promise<FindResult<TTable, StringColumnSelectionFields<TTable, TSelection>>>;
     find<const TSelection extends StringColumnSelection<TTable>>(fields: TSelection, where?: BaseWhere<this>): Promise<FindResult<TTable, StringColumnSelectionFields<TTable, TSelection>>>;
+    find<TSelection extends SelectedFields<MsSqlColumn, TTable>>(fields: Fields<FieldsQuery<TTable>, TSelection>, where: (query: WhereQuery<MsSqlQuery<TTable, AV, EV, AR>>) => SQL | undefined): Promise<FindResult<TTable, TSelection>>;
     find<TSelection extends SelectedFields<MsSqlColumn, TTable>>(fields: Fields<FieldsQuery<TTable>, TSelection>, where?: BaseWhere<this>): Promise<FindResult<TTable, TSelection>>;
     find<TAlias extends string>(alias: MsSqlAliasTable<TTable, TAlias>, where: BaseWhere<this>): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, undefined>>;
     find<TAlias extends string>(alias: MsSqlAliasTable<TTable, TAlias>, fields: readonly [], where?: BaseWhere<this>): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, {}>>;
@@ -173,9 +175,9 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddVa
     /********************************************************************************************************************
      * eq
      * ******************************************************************************************************************/
+    eq(values: MsSqlCompareValues<TTable>): SQL | undefined;
     eq<N extends MsSqlColumnName<TTable>>(name: N, value: Required<MsSqlCompareValues<TTable>>[N]): SQL;
     eq<TAlias extends string, N extends MsSqlColumnName<MsSqlAliasTable<TTable, TAlias>>>(table: MsSqlAliasTable<TTable, TAlias>, name: N, value: Required<MsSqlCompareValues<MsSqlAliasTable<TTable, TAlias>>>[N]): SQL;
-    eq(values: MsSqlCompareValues<TTable>): SQL | undefined;
     orGt(values: MsSqlCompareValues<TTable>): SQL | undefined;
     orGte(values: MsSqlCompareValues<TTable>): SQL | undefined;
     orLt(values: MsSqlCompareValues<TTable>): SQL | undefined;
@@ -372,7 +374,17 @@ export type SelectFrom<TTable extends MsSqlTable | Subquery, TSelection extends 
     top(count: number): SelectTopFrom<TTable, TSelection>;
 };
 type FindResult<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Awaited<SelectFrom<TTable, TSelection>>[number] | undefined;
-type WhereQuery<TQuery> = Pick<TQuery, Extract<keyof TQuery, 't' | 'eq' | 'ne' | 'orEq' | 'orNe' | 'orIsNotNull' | 'orIsNull' | 'orNotIlike' | 'orIlike' | 'orNotLike' | 'orLike' | 'orNotBetween' | 'orBetween' | 'orNotInArray' | 'orInArray' | 'orLte' | 'orLt' | 'orGte' | 'orGt' | 'gt' | 'gte' | 'lt' | 'lte' | 'inArray' | 'notInArray' | 'between' | 'notBetween' | 'like' | 'notLike' | 'ilike' | 'notIlike' | 'isNull' | 'isNotNull' | 'and' | 'or'>>;
+type WhereQueryEq<TTable extends MsSqlTable> = {
+    (values: MsSqlCompareValues<TTable>): SQL | undefined;
+    <N extends MsSqlColumnName<TTable>>(name: N, value: Required<MsSqlCompareValues<TTable>>[N]): SQL;
+    <TAlias extends string, N extends MsSqlColumnName<MsSqlAliasTable<TTable, TAlias>>>(table: MsSqlAliasTable<TTable, TAlias>, name: N, value: Required<MsSqlCompareValues<MsSqlAliasTable<TTable, TAlias>>>[N]): SQL;
+};
+type QueryTable<TQuery> = TQuery extends {
+    readonly t: infer TTable extends MsSqlTable;
+} ? TTable : never;
+type WhereQuery<TQuery> = Omit<Pick<TQuery, Extract<keyof TQuery, 't' | 'eq' | 'ne' | 'orEq' | 'orNe' | 'orIsNotNull' | 'orIsNull' | 'orNotIlike' | 'orIlike' | 'orNotLike' | 'orLike' | 'orNotBetween' | 'orBetween' | 'orNotInArray' | 'orInArray' | 'orLte' | 'orLt' | 'orGte' | 'orGt' | 'gt' | 'gte' | 'lt' | 'lte' | 'inArray' | 'notInArray' | 'between' | 'notBetween' | 'like' | 'notLike' | 'ilike' | 'notIlike' | 'isNull' | 'isNotNull' | 'and' | 'or'>>, 'eq'> & {
+    eq: WhereQueryEq<QueryTable<TQuery>>;
+};
 type SelectConditionQuery<TSource extends MsSqlTable | Subquery> = TSource extends MsSqlTable ? TableConditionQuery<TSource> : TSource extends Subquery ? SubqueryConditionQuery<TSource> : never;
 type TableConditionQuery<TTable extends MsSqlTable> = {
     readonly t: TTable;

@@ -118,10 +118,7 @@ export class TestData extends MsSqlQuery<'testData'> {
     console.log(await this.select(['id']).orderBy((q) => mssql.desc(q.t.id)));
 
     this.select().where((q) =>
-      q.and(
-        q.and({ eq: { is_lock: true }, gt: { id: 0 } }),
-        q.or({ isNull: 'email', eq: { name: 'Ada' } })
-      )
+      q.and(q.and({ eq: { is_lock: true }, gt: { id: 0 } }), q.or({ isNull: 'email', eq: { name: 'Ada' } }))
     );
   }
 
@@ -244,6 +241,8 @@ export class TestData extends MsSqlQuery<'testData'> {
 
     console.log(await this.find({ id_2: 'id', name_2: 'name', email_2: 'email' }, this.eq({ id: 2 })));
 
+    console.log(await this.find({ id_2: 'id', name_2: 'name', email_2: 'email' }, (q) => q.eq({ id: 2 })));
+
     console.log(await this.find({ min_id: this.min('id'), max_id: this.max('id') }));
 
     console.log(await this.findByPrimaryKey(['id', 'name', 'email'], 2));
@@ -268,8 +267,6 @@ export class TestData extends MsSqlQuery<'testData'> {
       like: { name: '%name%' },
     });
 
-    const td = mssql.a.testData('td');
-
     this.select().where((q) =>
       q.and(
         q.and({
@@ -278,6 +275,8 @@ export class TestData extends MsSqlQuery<'testData'> {
         q.or({ eq: { id: 1, name: 'name' } })
       )
     );
+
+    const td = mssql.a.testData('td');
 
     this.orGt({ id: 1, name: 'name' });
     this.orInArray({ id: [1, 2], name: ['name'] });

@@ -52,6 +52,8 @@ test('200개 테이블과 200개 추가 컬럼에서도 공개 API의 자동완�
     query.select(['id', '/*nextColumn*/']);
     // @ts-expect-error 별칭 선택의 자동완성용 미완성 컬럼명
     query.select(a, ['id', '/*aliasNextColumn*/']);
+    // @ts-expect-error 자동완성용 미완성 조건 키
+    query.eq({ i/*queryEq*/ });
     const j = query.select(['id', 'name']).top(1).orderBy(query.desc('id')).as('j');
     // @ts-expect-error 서브쿼리 선택 콜백의 자동완성용 미완성 컬럼명
     db.select(j, q => q.columns('id', '/*subquerySelect*/'));
@@ -94,6 +96,9 @@ test('200개 테이블과 200개 추가 컬럼에서도 공개 API의 자동완�
     const invalidCallbackRow: CallbackRow = { id: 'wrong', name: null };
     void [callbackRow, invalidCallbackRow];
     const found = query.find({ renamed: 'id' });
+    // @ts-expect-error 자동완성용 미완성 조건 키
+    query.find({ idLabel: 'id', nameLabel: 'name' }, q => q.eq({ i/*findCondition*/ }));
+    query.find({ idLabel: 'id' }, q => q.eq('id', 1));
     const foundByKey = query.findByPrimaryKey({ renamed: 'id' }, {});
     type Row = Awaited<typeof selected>[number];
     const row: Row = { renamed: 1 };
@@ -161,7 +166,9 @@ test('200개 테이블과 200개 추가 컬럼에서도 공개 API의 자동완�
       aliasNextColumn: ['id', 'name', 'extra0', 'extra199'],
       query: ['id', 'name'],
       condition: ['id', 'name'],
+      queryEq: ['id'],
       namedCondition: ['id', 'name'],
+      findCondition: ['id'],
     })) {
       const entries = service.getCompletionsAtPosition(file, positions[name], {})?.entries.map((entry) => entry.name);
       expect({ name, entries }).toEqual({ name, entries: expect.arrayContaining(expected) });

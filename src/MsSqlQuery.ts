@@ -471,8 +471,18 @@ export class MsSqlQuery<
 
   async find<const TSelection extends StringColumnSelection<TTable>>(
     fields: TSelection,
+    where: (query: WhereQuery<MsSqlQuery<TTable, AV, EV, AR>>) => SQL | undefined
+  ): Promise<FindResult<TTable, StringColumnSelectionFields<TTable, TSelection>>>;
+
+  async find<const TSelection extends StringColumnSelection<TTable>>(
+    fields: TSelection,
     where?: BaseWhere<this>
   ): Promise<FindResult<TTable, StringColumnSelectionFields<TTable, TSelection>>>;
+
+  async find<TSelection extends SelectedFields<MsSqlColumn, TTable>>(
+    fields: Fields<FieldsQuery<TTable>, TSelection>,
+    where: (query: WhereQuery<MsSqlQuery<TTable, AV, EV, AR>>) => SQL | undefined
+  ): Promise<FindResult<TTable, TSelection>>;
 
   async find<TSelection extends SelectedFields<MsSqlColumn, TTable>>(
     fields: Fields<FieldsQuery<TTable>, TSelection>,
@@ -967,6 +977,8 @@ export class MsSqlQuery<
   /********************************************************************************************************************
    * eq
    * ******************************************************************************************************************/
+  eq(values: MsSqlCompareValues<TTable>): SQL | undefined;
+
   eq<N extends MsSqlColumnName<TTable>>(name: N, value: Required<MsSqlCompareValues<TTable>>[N]): SQL;
 
   eq<TAlias extends string, N extends MsSqlColumnName<MsSqlAliasTable<TTable, TAlias>>>(
@@ -974,8 +986,6 @@ export class MsSqlQuery<
     name: N,
     value: Required<MsSqlCompareValues<MsSqlAliasTable<TTable, TAlias>>>[N]
   ): SQL;
-
-  eq(values: MsSqlCompareValues<TTable>): SQL | undefined;
 
   eq(
     tableOrValues: MsSqlTable | string | MsSqlCompareValues<TTable>,
@@ -1399,7 +1409,20 @@ export type SelectFrom<TTable extends MsSqlTable | Subquery, TSelection extends 
 type FindResult<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> =
   Awaited<SelectFrom<TTable, TSelection>>[number] | undefined;
 
-type WhereQuery<TQuery> = Pick<
+type WhereQueryEq<TTable extends MsSqlTable> = {
+  (values: MsSqlCompareValues<TTable>): SQL | undefined;
+  <N extends MsSqlColumnName<TTable>>(name: N, value: Required<MsSqlCompareValues<TTable>>[N]): SQL;
+  <TAlias extends string, N extends MsSqlColumnName<MsSqlAliasTable<TTable, TAlias>>>(
+    table: MsSqlAliasTable<TTable, TAlias>,
+    name: N,
+    value: Required<MsSqlCompareValues<MsSqlAliasTable<TTable, TAlias>>>[N]
+  ): SQL;
+};
+
+type QueryTable<TQuery> = TQuery extends { readonly t: infer TTable extends MsSqlTable } ? TTable : never;
+
+type WhereQuery<TQuery> = Omit<
+  Pick<
   TQuery,
   Extract<
     keyof TQuery,
@@ -1439,7 +1462,11 @@ type WhereQuery<TQuery> = Pick<
     | 'and'
     | 'or'
   >
->;
+  >,
+  'eq'
+> & {
+  eq: WhereQueryEq<QueryTable<TQuery>>;
+};
 type SelectConditionQuery<TSource extends MsSqlTable | Subquery> = TSource extends MsSqlTable
   ? TableConditionQuery<TSource>
   : TSource extends Subquery
