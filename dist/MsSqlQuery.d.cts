@@ -260,10 +260,12 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddVa
      * and
      * ******************************************************************************************************************/
     and(options: MsSqlConditions<TTable>): SQL | undefined;
+    and(...conditions: (SQLWrapper | false | undefined)[]): SQL | undefined;
     /********************************************************************************************************************
      * or
      * ******************************************************************************************************************/
     or(options: MsSqlConditions<TTable>): SQL | undefined;
+    or(...conditions: (SQLWrapper | false | undefined)[]): SQL | undefined;
 }
 /********************************************************************************************************************
  * types
@@ -407,7 +409,9 @@ type TableConditionQuery<TTable extends MsSqlTable> = {
     isNull(names: MsSqlNullConditionInput<TTable>): SQL | undefined;
     isNotNull(names: MsSqlNullConditionInput<TTable>): SQL | undefined;
     and(options: MsSqlConditions<TTable>): SQL | undefined;
+    and(...conditions: (SQLWrapper | false | undefined)[]): SQL | undefined;
     or(options: MsSqlConditions<TTable>): SQL | undefined;
+    or(...conditions: (SQLWrapper | false | undefined)[]): SQL | undefined;
 };
 type BaseWhere<TQuery> = SQL | undefined | ((query: WhereQuery<TQuery>) => SQL | undefined);
 type FieldSet = SelectedFields<MsSqlColumn, MsSqlTable>;
@@ -529,7 +533,9 @@ type BaseSubqueryConditionQuery<T extends Subquery> = {
     isNull(names: SourceColumnName<T> | undefined | readonly (SourceColumnName<T> | undefined)[]): SQL | undefined;
     isNotNull(names: SourceColumnName<T> | undefined | readonly (SourceColumnName<T> | undefined)[]): SQL | undefined;
     and(values: SubqueryConditions<T>): SQL | undefined;
+    and(...conditions: (SQLWrapper | false | undefined)[]): SQL | undefined;
     or(values: SubqueryConditions<T>): SQL | undefined;
+    or(...conditions: (SQLWrapper | false | undefined)[]): SQL | undefined;
 };
 type SubqueryConditionQuery<T extends Subquery> = BaseSubqueryConditionQuery<T> & {
     [K in keyof Omit<BaseSubqueryConditionQuery<T>, 't' | 'and' | 'or'> as `or${Capitalize<K>}`]: BaseSubqueryConditionQuery<T>[K];

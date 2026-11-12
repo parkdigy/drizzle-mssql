@@ -8,6 +8,7 @@ import {
   getTableColumns,
   Subquery,
   and as drizzleAnd,
+  or as drizzleOr,
   asc as drizzleAsc,
   desc as drizzleDesc,
   min as drizzleMin,
@@ -270,7 +271,7 @@ export class MsSqlQuery<
         (input: unknown): SQL | undefined => {
           const orGroup = operator.startsWith('or') && operator !== 'or';
           const baseOperator = orGroup ? operator[2].toLowerCase() + operator.slice(3) : operator;
-          const join = orGroup ? this.drizzle.or : drizzleAnd;
+          const join = orGroup || operator === 'or' ? drizzleOr : drizzleAnd;
           const conditionOperator = (this.drizzle as unknown as Record<string, (...args: unknown[]) => unknown>)[
             operator
           ];
@@ -300,7 +301,7 @@ export class MsSqlQuery<
             const conditions: (SQL | undefined)[] = Object.entries(input).map(([nestedOperator, values]) =>
               bindCondition(nestedOperator, conditionTable)(values)
             );
-            return Reflect.apply(conditionOperator, undefined, conditions as SQL[]) as SQL | undefined;
+            return Reflect.apply(join, undefined, conditions as SQL[]) as SQL | undefined;
           }
 
           if (typeof input !== 'object' || input === null || Array.isArray(input)) {
@@ -325,6 +326,27 @@ export class MsSqlQuery<
             });
           return join(...(conditions as SQL[]));
         };
+      const combineCallbackConditions = (
+        operator: 'and' | 'or',
+        conditionTable: MsSqlTable | Subquery,
+        inputs: unknown[]
+      ): SQL | undefined => {
+        const conditions: (SQLWrapper | undefined | false)[] = [];
+        for (const input of inputs) {
+          if (input === undefined || input === false) continue;
+          if (typeof input === 'object' && input !== null && 'getSQL' in input && typeof input.getSQL === 'function') {
+            conditions.push(input as SQLWrapper);
+            continue;
+          }
+          if (typeof input === 'object' && input !== null && !Array.isArray(input)) {
+            conditions.push(bindCondition(operator, conditionTable)(input));
+            continue;
+          }
+          throw new Error(`${operator}: expected SQL conditions or a condition object.`);
+        }
+        const filtered = conditions.filter((condition): condition is SQLWrapper | undefined => condition !== false);
+        return operator === 'and' ? drizzleAnd(...filtered) : drizzleOr(...filtered);
+      };
       const conditionQuery = (conditionTable: MsSqlTable | Subquery, contextTable: MsSqlTable | Subquery) =>
         ({
           t: contextTable,
@@ -344,8 +366,8 @@ export class MsSqlQuery<
           notIlike: bindCondition('notIlike', conditionTable),
           isNull: bindCondition('isNull', conditionTable),
           isNotNull: bindCondition('isNotNull', conditionTable),
-          and: bindCondition('and', conditionTable),
-          or: bindCondition('or', conditionTable),
+          and: (...conditions: unknown[]) => combineCallbackConditions('and', conditionTable, conditions),
+          or: (...conditions: unknown[]) => combineCallbackConditions('or', conditionTable, conditions),
           orEq: bindCondition('orEq', conditionTable),
           orNe: bindCondition('orNe', conditionTable),
           orIsNotNull: bindCondition('orIsNotNull', conditionTable),
@@ -1147,15 +1169,31 @@ export class MsSqlQuery<
   /********************************************************************************************************************
    * and
    * ******************************************************************************************************************/
-  and(options: MsSqlConditions<TTable>): SQL | undefined {
-    return this.drizzle.and(this.t, options);
+  and(options: MsSqlConditions<TTable>): SQL | undefined;
+  and(...conditions: (SQLWrapper | false | undefined)[]): SQL | undefined;
+  and(
+    options: MsSqlConditions<TTable> | SQLWrapper | false | undefined,
+    ...conditions: (SQLWrapper | false | undefined)[]
+  ): SQL | undefined {
+    if (typeof options === 'object' && options !== null && !('getSQL' in options)) {
+      return this.drizzle.and(this.t, options as MsSqlConditions<TTable>);
+    }
+    return drizzleAnd(...[options, ...conditions].filter((condition): condition is SQLWrapper | undefined => condition !== false));
   }
 
   /********************************************************************************************************************
    * or
    * ******************************************************************************************************************/
-  or(options: MsSqlConditions<TTable>): SQL | undefined {
-    return this.drizzle.or(this.t, options);
+  or(options: MsSqlConditions<TTable>): SQL | undefined;
+  or(...conditions: (SQLWrapper | false | undefined)[]): SQL | undefined;
+  or(
+    options: MsSqlConditions<TTable> | SQLWrapper | false | undefined,
+    ...conditions: (SQLWrapper | false | undefined)[]
+  ): SQL | undefined {
+    if (typeof options === 'object' && options !== null && !('getSQL' in options)) {
+      return this.drizzle.or(this.t, options as MsSqlConditions<TTable>);
+    }
+    return drizzleOr(...[options, ...conditions].filter((condition): condition is SQLWrapper | undefined => condition !== false));
   }
 }
 
@@ -1442,7 +1480,9 @@ type TableConditionQuery<TTable extends MsSqlTable> = {
   isNull(names: MsSqlNullConditionInput<TTable>): SQL | undefined;
   isNotNull(names: MsSqlNullConditionInput<TTable>): SQL | undefined;
   and(options: MsSqlConditions<TTable>): SQL | undefined;
+  and(...conditions: (SQLWrapper | false | undefined)[]): SQL | undefined;
   or(options: MsSqlConditions<TTable>): SQL | undefined;
+  or(...conditions: (SQLWrapper | false | undefined)[]): SQL | undefined;
 };
 type BaseWhere<TQuery> = SQL | undefined | ((query: WhereQuery<TQuery>) => SQL | undefined);
 
@@ -1728,7 +1768,9 @@ type BaseSubqueryConditionQuery<T extends Subquery> = {
   isNull(names: SourceColumnName<T> | undefined | readonly (SourceColumnName<T> | undefined)[]): SQL | undefined;
   isNotNull(names: SourceColumnName<T> | undefined | readonly (SourceColumnName<T> | undefined)[]): SQL | undefined;
   and(values: SubqueryConditions<T>): SQL | undefined;
+  and(...conditions: (SQLWrapper | false | undefined)[]): SQL | undefined;
   or(values: SubqueryConditions<T>): SQL | undefined;
+  or(...conditions: (SQLWrapper | false | undefined)[]): SQL | undefined;
 };
 type SubqueryConditionQuery<T extends Subquery> = BaseSubqueryConditionQuery<T> & {
   [

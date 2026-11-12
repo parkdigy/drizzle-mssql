@@ -1,4 +1,4 @@
-import {drizzle}from'drizzle-orm/node-mssql';import*as native from'drizzle-orm';import {isTable,is,Subquery,sql,getTableColumns,min,max,asc as asc$1,desc as desc$1,SQL,eq,and,count,defineRelations}from'drizzle-orm';export{asc,avg,avgDistinct,count,countDistinct,desc,exists,max,min,not,notExists,sum,sumDistinct}from'drizzle-orm';import {MsSqlTable,mssqlTable as mssqlTable$1,getTableConfig,MsSqlSelectBase,MsSqlColumn,alias as alias$1}from'drizzle-orm/mssql-core';export{bigint,binary,bit,char,check,customType,date,datetime,datetime2,datetimeoffset,decimal,float,foreignKey,index,int,mssqlSchema,mssqlTableCreator,mssqlView,nchar,ntext,numeric,nvarchar,primaryKey,real,smallint,text,time,tinyint,unique,uniqueIndex,varbinary,varchar}from'drizzle-orm/mssql-core';import {AsyncLocalStorage}from'node:async_hooks';import {alias}from'drizzle-orm/mssql-core/alias';import {MsSqlColumnBuilder}from'drizzle-orm/mssql-core/columns/common';function createAlias(schema) {
+import {drizzle}from'drizzle-orm/node-mssql';import*as native from'drizzle-orm';import {isTable,is,Subquery,sql,getTableColumns,min,max,asc as asc$1,desc as desc$1,SQL,eq,and,count,or,defineRelations}from'drizzle-orm';export{asc,avg,avgDistinct,count,countDistinct,desc,exists,max,min,not,notExists,sum,sumDistinct}from'drizzle-orm';import {MsSqlTable,mssqlTable as mssqlTable$1,getTableConfig,MsSqlSelectBase,MsSqlColumn,alias as alias$1}from'drizzle-orm/mssql-core';export{bigint,binary,bit,char,check,customType,date,datetime,datetime2,datetimeoffset,decimal,float,foreignKey,index,int,mssqlSchema,mssqlTableCreator,mssqlView,nchar,ntext,numeric,nvarchar,primaryKey,real,smallint,text,time,tinyint,unique,uniqueIndex,varbinary,varchar}from'drizzle-orm/mssql-core';import {AsyncLocalStorage}from'node:async_hooks';import {alias}from'drizzle-orm/mssql-core/alias';import {MsSqlColumnBuilder}from'drizzle-orm/mssql-core/columns/common';function createAlias(schema) {
     /********************************************************************************************************************
      * getDefaultAlias
      * ******************************************************************************************************************/
@@ -371,7 +371,7 @@ class MsSqlQuery {
             const bindCondition = (operator, conditionTable = table) => (input) => {
                 const orGroup = operator.startsWith('or') && operator !== 'or';
                 const baseOperator = orGroup ? operator[2].toLowerCase() + operator.slice(3) : operator;
-                const join = orGroup ? this.drizzle.or : and;
+                const join = orGroup || operator === 'or' ? or : and;
                 const conditionOperator = this.drizzle[operator];
                 if (isTable(conditionTable)) {
                     return Reflect.apply(conditionOperator, undefined, [conditionTable, input]);
@@ -394,7 +394,7 @@ class MsSqlQuery {
                         throw new Error(`${operator}: expected a condition object.`);
                     }
                     const conditions = Object.entries(input).map(([nestedOperator, values]) => bindCondition(nestedOperator, conditionTable)(values));
-                    return Reflect.apply(conditionOperator, undefined, conditions);
+                    return Reflect.apply(join, undefined, conditions);
                 }
                 if (typeof input !== 'object' || input === null || Array.isArray(input)) {
                     throw new Error(`${operator}: expected a column/value object.`);
@@ -419,6 +419,24 @@ class MsSqlQuery {
                 });
                 return join(...conditions);
             };
+            const combineCallbackConditions = (operator, conditionTable, inputs) => {
+                const conditions = [];
+                for (const input of inputs) {
+                    if (input === undefined || input === false)
+                        continue;
+                    if (typeof input === 'object' && input !== null && 'getSQL' in input && typeof input.getSQL === 'function') {
+                        conditions.push(input);
+                        continue;
+                    }
+                    if (typeof input === 'object' && input !== null && !Array.isArray(input)) {
+                        conditions.push(bindCondition(operator, conditionTable)(input));
+                        continue;
+                    }
+                    throw new Error(`${operator}: expected SQL conditions or a condition object.`);
+                }
+                const filtered = conditions.filter((condition) => condition !== false);
+                return operator === 'and' ? and(...filtered) : or(...filtered);
+            };
             const conditionQuery = (conditionTable, contextTable) => ({
                 t: contextTable,
                 eq: bindCondition('eq', conditionTable),
@@ -437,8 +455,8 @@ class MsSqlQuery {
                 notIlike: bindCondition('notIlike', conditionTable),
                 isNull: bindCondition('isNull', conditionTable),
                 isNotNull: bindCondition('isNotNull', conditionTable),
-                and: bindCondition('and', conditionTable),
-                or: bindCondition('or', conditionTable),
+                and: (...conditions) => combineCallbackConditions('and', conditionTable, conditions),
+                or: (...conditions) => combineCallbackConditions('or', conditionTable, conditions),
                 orEq: bindCondition('orEq', conditionTable),
                 orNe: bindCondition('orNe', conditionTable),
                 orIsNotNull: bindCondition('orIsNotNull', conditionTable),
@@ -952,17 +970,17 @@ class MsSqlQuery {
     isNotNull(names) {
         return this.drizzle.isNotNull(this.t, names);
     }
-    /********************************************************************************************************************
-     * and
-     * ******************************************************************************************************************/
-    and(options) {
-        return this.drizzle.and(this.t, options);
+    and(options, ...conditions) {
+        if (typeof options === 'object' && options !== null && !('getSQL' in options)) {
+            return this.drizzle.and(this.t, options);
+        }
+        return and(...[options, ...conditions].filter((condition) => condition !== false));
     }
-    /********************************************************************************************************************
-     * or
-     * ******************************************************************************************************************/
-    or(options) {
-        return this.drizzle.or(this.t, options);
+    or(options, ...conditions) {
+        if (typeof options === 'object' && options !== null && !('getSQL' in options)) {
+            return this.drizzle.or(this.t, options);
+        }
+        return or(...[options, ...conditions].filter((condition) => condition !== false));
     }
 }
 const normalizeFields = (fields, table) => {

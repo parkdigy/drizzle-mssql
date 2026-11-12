@@ -116,6 +116,13 @@ export class TestData extends MsSqlQuery<'testData'> {
     console.log(await this.select(['id']).orderBy((q) => [q.asc('name'), q.asc('id')]));
 
     console.log(await this.select(['id']).orderBy((q) => mssql.desc(q.t.id)));
+
+    this.select().where((q) =>
+      q.and(
+        q.and({ eq: { is_lock: true }, gt: { id: 0 } }),
+        q.or({ isNull: 'email', eq: { name: 'Ada' } })
+      )
+    );
   }
 
   /********************************************************************************************************************
@@ -262,6 +269,15 @@ export class TestData extends MsSqlQuery<'testData'> {
     });
 
     const td = mssql.a.testData('td');
+
+    this.select().where((q) =>
+      q.and(
+        q.and({
+          eq: { id: 1 },
+        }),
+        q.or({ eq: { id: 1, name: 'name' } })
+      )
+    );
 
     this.orGt({ id: 1, name: 'name' });
     this.orInArray({ id: [1, 2], name: ['name'] });
