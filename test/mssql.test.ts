@@ -325,6 +325,10 @@ test('복합 기본 키 조건과 안전한 수정 삭제를 지원한다', () =
     () => new Date()
   );
   expect(query.removeByPrimaryKey({ userId: 1, groupId: 2 }).toSQL().params).toEqual([1, 2]);
+  const removeAll = usersQuery.remove().toSQL();
+  expect(removeAll.sql).toMatch(/delete from \[users\]/i);
+  expect(removeAll.sql).not.toMatch(/where/i);
+  expect(removeAll.params).toEqual([]);
   expect(() => usersQuery.remove(undefined as never)).toThrow(/where condition is required/);
   expect(() => usersQuery.edit({ name: 'x' }, undefined as never)).toThrow(/where condition is required/);
 });

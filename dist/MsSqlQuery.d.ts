@@ -164,7 +164,7 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddVa
      * ******************************************************************************************************************/
     remove(this: this & (TableMutationPolicy<TTable> extends {
         deleteBlocked: true;
-    } ? never : unknown), where: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>): Omit<import("drizzle-orm/mssql-core").MsSqlDeleteBase<TTable, import("drizzle-orm/node-mssql").NodeMsSqlQueryResultHKT, NodeMsSqlPreparedQueryHKT, undefined, false, "where">, "where">;
+    } ? never : unknown), where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>): Omit<import("drizzle-orm/mssql-core").MsSqlDeleteBase<TTable, import("drizzle-orm/node-mssql").NodeMsSqlQueryResultHKT, NodeMsSqlPreparedQueryHKT, undefined, false, "where">, "where">;
     /********************************************************************************************************************
      * removeByPrimaryKey
      * ******************************************************************************************************************/

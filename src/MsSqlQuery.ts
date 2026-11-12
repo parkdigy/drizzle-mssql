@@ -948,16 +948,20 @@ export class MsSqlQuery<
    * ******************************************************************************************************************/
   remove(
     this: this & (TableMutationPolicy<TTable> extends { deleteBlocked: true } ? never : unknown),
-    where: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>
+    where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>
   ) {
     this.assertMutationAllowed('delete', 'remove');
+    const tx = this.getTx();
+
+    if (arguments.length === 0) {
+      return tx.delete(this.t);
+    }
+
     const condition = typeof where === 'function' ? where(this) : where;
 
     if (!is(condition, SQL)) {
       throw new Error('remove: a SQL where condition is required.');
     }
-
-    const tx = this.getTx();
 
     return tx.delete(this.t).where(condition);
   }

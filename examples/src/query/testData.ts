@@ -431,7 +431,11 @@ export class TestData extends MsSqlQuery<'testData'> {
   async removeTest() {
     console.log('::::: TestData::removeTest() :::::');
 
+    console.log(await this.remove());
+
     console.log(await this.remove(this.eq({ id: 1 })));
+
+    console.log(await this.remove((q) => q.eq({ id: 1 })));
   }
 
   /********************************************************************************************************************
