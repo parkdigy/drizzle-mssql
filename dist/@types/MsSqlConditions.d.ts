@@ -1,6 +1,6 @@
 import type { MsSqlTable } from 'drizzle-orm/mssql-core';
 import type { MsSqlArrayCompareValues, MsSqlCompareValues, MsSqlNullConditionInput, MsSqlPatternCompareValues, MsSqlRangeCompareValues } from './common.js';
-export type MsSqlConditions<T extends MsSqlTable> = {
+type BaseConditions<T extends MsSqlTable> = {
     eq?: MsSqlCompareValues<T>;
     ne?: MsSqlCompareValues<T>;
     gt?: MsSqlCompareValues<T>;
@@ -18,3 +18,7 @@ export type MsSqlConditions<T extends MsSqlTable> = {
     isNull?: MsSqlNullConditionInput<T>;
     isNotNull?: MsSqlNullConditionInput<T>;
 };
+export type MsSqlConditions<T extends MsSqlTable> = BaseConditions<T> & {
+    [K in keyof BaseConditions<T> as `or${Capitalize<K>}`]?: BaseConditions<T>[K];
+};
+export {};

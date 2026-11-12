@@ -254,6 +254,9 @@ export class MsSqlQuery<
       const bindCondition =
         (operator: string, conditionTable: MsSqlTable | Subquery = table) =>
         (input: unknown): SQL | undefined => {
+          const orGroup = operator.startsWith('or') && operator !== 'or';
+          const baseOperator = orGroup ? operator[2].toLowerCase() + operator.slice(3) : operator;
+          const join = orGroup ? this.drizzle.or : drizzleAnd;
           const conditionOperator = (this.drizzle as unknown as Record<string, (...args: unknown[]) => unknown>)[
             operator
           ];
@@ -261,15 +264,17 @@ export class MsSqlQuery<
             return Reflect.apply(conditionOperator, undefined, [conditionTable, input]) as SQL | undefined;
           }
 
-          if (operator === 'isNull' || operator === 'isNotNull') {
+          if (baseOperator === 'isNull' || baseOperator === 'isNotNull') {
             const names = Array.isArray(input) ? input : [input];
-            return drizzleAnd(
+            return join(
               ...names
                 .filter((name) => name !== undefined)
                 .map((name) => {
                   const column = (conditionTable as unknown as Record<string, unknown>)[String(name)];
                   if (column === undefined) throw new Error(`Condition: unknown column "${name}".`);
-                  return Reflect.apply(conditionOperator, undefined, [column]) as SQL;
+                  return Reflect.apply(this.drizzle[baseOperator as 'isNull' | 'isNotNull'], undefined, [
+                    column,
+                  ]) as SQL;
                 })
             );
           }
@@ -287,18 +292,24 @@ export class MsSqlQuery<
           if (typeof input !== 'object' || input === null || Array.isArray(input)) {
             throw new Error(`${operator}: expected a column/value object.`);
           }
-          const conditions = Object.entries(input).map(([name, value]) => {
-            const column = (conditionTable as unknown as Record<string, unknown>)[name];
-            if (column === undefined) throw new Error(`Condition: unknown column "${name}".`);
-            if (operator === 'between' || operator === 'notBetween') {
-              if (!Array.isArray(value) || value.length !== 2) {
-                throw new Error(`${operator}: expected two bounds.`);
+          const conditions = Object.entries(input)
+            .filter(([, value]) => value !== undefined)
+            .map(([name, value]) => {
+              const column = (conditionTable as unknown as Record<string, unknown>)[name];
+              if (column === undefined) throw new Error(`Condition: unknown column "${name}".`);
+              if (value === null && (baseOperator === 'eq' || baseOperator === 'ne')) {
+                return Reflect.apply(this.drizzle[baseOperator === 'eq' ? 'isNull' : 'isNotNull'], undefined, [column]);
               }
-              return Reflect.apply(conditionOperator, undefined, [column, value[0], value[1]]);
-            }
-            return Reflect.apply(conditionOperator, undefined, [column, value]);
-          });
-          return drizzleAnd(...(conditions as SQL[]));
+              const nativeOperator = this.drizzle[baseOperator as 'eq'];
+              if (baseOperator === 'between' || baseOperator === 'notBetween') {
+                if (!Array.isArray(value) || value.length !== 2) {
+                  throw new Error(`${operator}: expected two bounds.`);
+                }
+                return Reflect.apply(nativeOperator, undefined, [column, value[0], value[1]]);
+              }
+              return Reflect.apply(nativeOperator, undefined, [column, value]);
+            });
+          return join(...(conditions as SQL[]));
         };
       const conditionQuery = (conditionTable: MsSqlTable | Subquery, contextTable: MsSqlTable | Subquery) =>
         ({
@@ -321,6 +332,22 @@ export class MsSqlQuery<
           isNotNull: bindCondition('isNotNull', conditionTable),
           and: bindCondition('and', conditionTable),
           or: bindCondition('or', conditionTable),
+          orEq: bindCondition('orEq', conditionTable),
+          orNe: bindCondition('orNe', conditionTable),
+          orIsNotNull: bindCondition('orIsNotNull', conditionTable),
+          orIsNull: bindCondition('orIsNull', conditionTable),
+          orNotIlike: bindCondition('orNotIlike', conditionTable),
+          orIlike: bindCondition('orIlike', conditionTable),
+          orNotLike: bindCondition('orNotLike', conditionTable),
+          orLike: bindCondition('orLike', conditionTable),
+          orNotBetween: bindCondition('orNotBetween', conditionTable),
+          orBetween: bindCondition('orBetween', conditionTable),
+          orNotInArray: bindCondition('orNotInArray', conditionTable),
+          orInArray: bindCondition('orInArray', conditionTable),
+          orLte: bindCondition('orLte', conditionTable),
+          orLt: bindCondition('orLt', conditionTable),
+          orGte: bindCondition('orGte', conditionTable),
+          orGt: bindCondition('orGt', conditionTable),
         }) as unknown as SelectConditionQuery<MsSqlTable>;
       const whereQuery = conditionQuery(table, table);
       const orderByQuery: SelectOrderByQuery<MsSqlTable | Subquery> = {
@@ -778,9 +805,10 @@ export class MsSqlQuery<
       if (!getTimestamp) throw new Error('timestamp generator is not configured');
 
       const source = (selectQuery as any).as('__insert_source');
-      const fields = Object.fromEntries(
-        Object.keys(selectedFields).map((name) => [name, source[name]])
-      ) as Record<string, unknown>;
+      const fields = Object.fromEntries(Object.keys(selectedFields).map((name) => [name, source[name]])) as Record<
+        string,
+        unknown
+      >;
 
       for (const [name] of missingTimestamps) {
         if (!generated) {
@@ -790,13 +818,18 @@ export class MsSqlQuery<
         fields[name] = sql`${timestamp}`.as(name);
       }
 
-      selectQuery = this.getTx().select(fields as any).from(source) as TypedQueryBuilder<Record<string, unknown>>;
+      selectQuery = this.getTx()
+        .select(fields as any)
+        .from(source) as TypedQueryBuilder<Record<string, unknown>>;
     }
 
     const autoIncrementColumn = getTableConfig(this.t).columns.find(
       (column) => 'identity' in column && column.identity !== undefined
     );
-    const rows = (await this.getTx().insert(this.t).output().select(selectQuery as any)) as Record<string, unknown>[];
+    const rows = (await this.getTx()
+      .insert(this.t)
+      .output()
+      .select(selectQuery as any)) as Record<string, unknown>[];
 
     if (!autoIncrementColumn) return rows.map(() => undefined as AR);
 
@@ -902,6 +935,72 @@ export class MsSqlQuery<
       return eq(this.resolveConditionColumn(nameOrValue as string, tableOrValues), value as SQLWrapper);
     }
     return this.drizzle.eq(this.t, tableOrValues);
+  }
+
+  orGt(values: MsSqlCompareValues<TTable>): SQL | undefined {
+    return this.drizzle.orGt(this.t, values);
+  }
+
+  orGte(values: MsSqlCompareValues<TTable>): SQL | undefined {
+    return this.drizzle.orGte(this.t, values);
+  }
+
+  orLt(values: MsSqlCompareValues<TTable>): SQL | undefined {
+    return this.drizzle.orLt(this.t, values);
+  }
+
+  orLte(values: MsSqlCompareValues<TTable>): SQL | undefined {
+    return this.drizzle.orLte(this.t, values);
+  }
+
+  orInArray(values: MsSqlArrayCompareValues<TTable>): SQL | undefined {
+    return this.drizzle.orInArray(this.t, values);
+  }
+
+  orNotInArray(values: MsSqlArrayCompareValues<TTable>): SQL | undefined {
+    return this.drizzle.orNotInArray(this.t, values);
+  }
+
+  orBetween(values: MsSqlRangeCompareValues<TTable>): SQL | undefined {
+    return this.drizzle.orBetween(this.t, values);
+  }
+
+  orNotBetween(values: MsSqlRangeCompareValues<TTable>): SQL | undefined {
+    return this.drizzle.orNotBetween(this.t, values);
+  }
+
+  orLike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined {
+    return this.drizzle.orLike(this.t, values);
+  }
+
+  orNotLike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined {
+    return this.drizzle.orNotLike(this.t, values);
+  }
+
+  orIlike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined {
+    return this.drizzle.orIlike(this.t, values);
+  }
+
+  orNotIlike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined {
+    return this.drizzle.orNotIlike(this.t, values);
+  }
+
+  orIsNull(values: MsSqlNullConditionInput<TTable>): SQL | undefined {
+    return this.drizzle.orIsNull(this.t, values);
+  }
+
+  orIsNotNull(values: MsSqlNullConditionInput<TTable>): SQL | undefined {
+    return this.drizzle.orIsNotNull(this.t, values);
+  }
+
+  /** 객체의 컬럼별 동등 비교를 OR로 결합한다. */
+  orEq(values: MsSqlCompareValues<TTable>): SQL | undefined {
+    return this.drizzle.orEq(this.t, values);
+  }
+
+  /** 객체의 컬럼별 비동등 비교를 OR로 결합한다. */
+  orNe(values: MsSqlCompareValues<TTable>): SQL | undefined {
+    return this.drizzle.orNe(this.t, values);
   }
 
   /********************************************************************************************************************
@@ -1164,6 +1263,22 @@ type WhereQuery<TQuery> = Pick<
     | 't'
     | 'eq'
     | 'ne'
+    | 'orEq'
+    | 'orNe'
+    | 'orIsNotNull'
+    | 'orIsNull'
+    | 'orNotIlike'
+    | 'orIlike'
+    | 'orNotLike'
+    | 'orLike'
+    | 'orNotBetween'
+    | 'orBetween'
+    | 'orNotInArray'
+    | 'orInArray'
+    | 'orLte'
+    | 'orLt'
+    | 'orGte'
+    | 'orGt'
     | 'gt'
     | 'gte'
     | 'lt'
@@ -1191,6 +1306,22 @@ type TableConditionQuery<TTable extends MsSqlTable> = {
   readonly t: TTable;
   eq(values: MsSqlCompareValues<TTable>): SQL | undefined;
   ne(values: MsSqlCompareValues<TTable>): SQL | undefined;
+  orEq(values: MsSqlCompareValues<TTable>): SQL | undefined;
+  orNe(values: MsSqlCompareValues<TTable>): SQL | undefined;
+  orIsNotNull(values: MsSqlNullConditionInput<TTable>): SQL | undefined;
+  orIsNull(values: MsSqlNullConditionInput<TTable>): SQL | undefined;
+  orNotIlike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
+  orIlike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
+  orNotLike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
+  orLike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
+  orNotBetween(values: MsSqlRangeCompareValues<TTable>): SQL | undefined;
+  orBetween(values: MsSqlRangeCompareValues<TTable>): SQL | undefined;
+  orNotInArray(values: MsSqlArrayCompareValues<TTable>): SQL | undefined;
+  orInArray(values: MsSqlArrayCompareValues<TTable>): SQL | undefined;
+  orLte(values: MsSqlCompareValues<TTable>): SQL | undefined;
+  orLt(values: MsSqlCompareValues<TTable>): SQL | undefined;
+  orGte(values: MsSqlCompareValues<TTable>): SQL | undefined;
+  orGt(values: MsSqlCompareValues<TTable>): SQL | undefined;
   gt(values: MsSqlCompareValues<TTable>): SQL | undefined;
   gte(values: MsSqlCompareValues<TTable>): SQL | undefined;
   lt(values: MsSqlCompareValues<TTable>): SQL | undefined;
@@ -1222,9 +1353,9 @@ type ResolveMixedSelection<TTable extends MsSqlTable, TSelection> = {
       ? TSelection[K]
       : TSelection[K] extends { _: { result: unknown } }
         ? SQL.Aliased<SelectBuilderFieldData<TSelection[K]>>
-      : TSelection[K] extends SQLWrapper<infer TData>
-        ? SQL.Aliased<TData>
-        : Extract<TSelection[K], FieldSet[string]>;
+        : TSelection[K] extends SQLWrapper<infer TData>
+          ? SQL.Aliased<TData>
+          : Extract<TSelection[K], FieldSet[string]>;
 };
 type SelectBuilderFieldData<TBuilder> = TBuilder extends { _: { result: unknown } }
   ? Awaited<TBuilder> extends readonly (infer TRow)[]
@@ -1290,17 +1421,16 @@ type ResolveSelectField<TTable extends MsSqlTable, TField> = TField extends Fiel
   : TField extends MixedSelection<TTable>
     ? ResolveMixedSelection<TTable, TField>
     : never;
-type MergeSelectFields<
-  TTable extends MsSqlTable,
-  T extends readonly unknown[],
-  Result = {},
-> = T extends readonly [infer First, ...infer Rest]
+type MergeSelectFields<TTable extends MsSqlTable, T extends readonly unknown[], Result = {}> = T extends readonly [
+  infer First,
+  ...infer Rest,
+]
   ? MergeSelectFields<
       TTable,
       Rest,
       First extends FieldSet | MixedSelection<TTable>
         ? Omit<Result, keyof First> & ResolveSelectField<TTable, First>
-          : Result
+        : Result
     >
   : number extends T['length']
     ? ResolveSelectField<TTable, Exclude<T[number], false | undefined>>
@@ -1468,8 +1598,7 @@ type SubqueryValues<T extends Subquery> = {
 };
 type SubqueryArrayValues<T extends Subquery> = {
   [K in keyof T['_']['selectedFields']]?:
-    | (NonNullable<SubqueryFieldData<T['_']['selectedFields'][K]>> | SQLWrapper)[]
-    | SQLWrapper;
+    (NonNullable<SubqueryFieldData<T['_']['selectedFields'][K]>> | SQLWrapper)[] | SQLWrapper;
 };
 type SubqueryRangeValues<T extends Subquery> = {
   [K in keyof T['_']['selectedFields']]?: [
@@ -1484,7 +1613,7 @@ type SubqueryPatternValues<T extends Subquery> = {
       : never
   ]?: string;
 };
-type SubqueryConditionQuery<T extends Subquery> = {
+type BaseSubqueryConditionQuery<T extends Subquery> = {
   readonly t: T;
 } & { [K in 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte']: (values: SubqueryValues<T>) => SQL | undefined } & {
   [K in 'inArray' | 'notInArray']: (values: SubqueryArrayValues<T>) => SQL | undefined;
@@ -1495,6 +1624,11 @@ type SubqueryConditionQuery<T extends Subquery> = {
   isNotNull(names: SourceColumnName<T> | undefined | readonly (SourceColumnName<T> | undefined)[]): SQL | undefined;
   and(values: SubqueryConditions<T>): SQL | undefined;
   or(values: SubqueryConditions<T>): SQL | undefined;
+};
+type SubqueryConditionQuery<T extends Subquery> = BaseSubqueryConditionQuery<T> & {
+  [
+    K in keyof Omit<BaseSubqueryConditionQuery<T>, 't' | 'and' | 'or'> as `or${Capitalize<K>}`
+  ]: BaseSubqueryConditionQuery<T>[K];
 };
 type SubqueryConditions<T extends Subquery> = {
   [K in keyof Omit<SubqueryConditionQuery<T>, 't'>]?: SubqueryConditionQuery<T>[K] extends (values: infer V) => unknown

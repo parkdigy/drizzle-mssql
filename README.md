@@ -201,6 +201,28 @@ const changedIds = await user
   }));
 ```
 
+`orEq`와 `orNe`는 객체 안의 컬럼 비교를 `OR`로 결합합니다. `eq`·`ne`와 동일하게 `undefined`는 생략하고, 빈 객체는 `undefined`를 반환합니다. `null`은 각각 `IS NULL`·`IS NOT NULL`로 변환합니다.
+
+```ts
+user.orEq({ id: 1, name: '홍길동' }); // id = 1 OR name = '홍길동'
+user.orNe({ id: 1, name: '홍길동' }); // id <> 1 OR name <> '홍길동'
+const u = db.a.users('u');
+db.orEq(u, { id: 1, name: '홍길동' });
+db.orNe('users', { id: 1, name: '홍길동' });
+```
+
+모든 비교 조건에는 컬럼 사이를 `OR`로 결합하는 대응 함수가 있습니다: `orGt`, `orGte`, `orLt`, `orLte`, `orInArray`, `orNotInArray`, `orBetween`, `orNotBetween`, `orLike`, `orNotLike`, `orIlike`, `orNotIlike`, `orIsNull`, `orIsNotNull`. 원래 함수와 같은 입력 타입과 검증 규칙을 사용합니다. `orIsNull`·`orIsNotNull`은 컬럼명 또는 컬럼명 배열을 받으며, `orBetween`은 각 컬럼의 범위 내부 `AND`를 유지합니다. `orIlike`·`orNotIlike`도 SQL Server의 ILIKE 실행 제한을 그대로 가집니다.
+
+```ts
+user.orGt({ id: 10, age: 20 });
+db.orInArray(u, { id: [1, 2], name: ['홍길동'] });
+user.orIsNull(['email', 'name']);
+user.select().where(q => q.orLike({ name: '%홍%', email: '%example.com' }));
+user.and({ orEq: { id: 1, name: '홍길동' }, gt: { age: 20 } });
+```
+
+`and`·`or` 조건 객체 안에서도 위 OR 함수 이름을 키로 사용할 수 있습니다.
+
 `eq({ email: null })`은 `IS NULL`, `ne({ email: null })`은 `IS NOT NULL`로 변환됩니다. `gt` 등의 비교 연산자에는 `null`을 전달할 수 없습니다.
 
 #### 배열과 범위
@@ -258,7 +280,7 @@ const optionalNullCheck = user.isNull(shouldCheckEmail ? 'email' : undefined);
 
 #### AND·OR 조합
 
-`query.and({ ... })`와 `query.or({ ... })`는 여러 연산자 그룹을 객체로 구성합니다. 한 연산자 아래의 컬럼 비교는 먼저 `AND`로 묶이고, 바깥 함수가 각 연산자 그룹을 `AND` 또는 `OR`로 결합합니다. `and` / `or` 객체는 조건 그룹이며, 그 안에 다시 `and` / `or`를 중첩하는 형식은 지원하지 않습니다.
+`query.and({ ... })`와 `query.or({ ... })`는 여러 연산자 그룹을 객체로 구성합니다. 한 연산자 아래의 컬럼 비교는 기본적으로 `AND`로, `or` 접두사 조건은 `OR`로 묶이고, 바깥 함수가 각 연산자 그룹을 `AND` 또는 `OR`로 결합합니다. `and` / `or` 객체는 조건 그룹이며, 그 안에 다시 `and` / `or`를 중첩하는 형식은 지원하지 않습니다.
 
 ```ts
 const usersMatchingEither = await user.find((query) =>
@@ -315,7 +337,7 @@ const rows = await user.select().where(columnCondition);
 const count = await user.count(columnCondition);
 ```
 
-지원하는 객체 조건 함수는 `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `inArray`, `notInArray`, `between`, `notBetween`, `like`, `notLike`, `ilike`, `notIlike`, `isNull`, `isNotNull`, `and`, `or`입니다. 존재하지 않는 스키마 키나 컬럼, 잘못된 값 형식은 조건을 조용히 생략하지 않고 오류로 처리합니다.
+지원하는 객체 조건 함수는 `eq`, `ne`, `orEq`, `orNe`, `gt`, `gte`, `lt`, `lte`, `inArray`, `notInArray`, `between`, `notBetween`, `like`, `notLike`, `ilike`, `notIlike`, `isNull`, `isNotNull`, `and`, `or`입니다. 존재하지 않는 스키마 키나 컬럼, 잘못된 값 형식은 조건을 조용히 생략하지 않고 오류로 처리합니다.
 
 ### 별칭과 조인
 

@@ -172,6 +172,24 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddVa
     eq<N extends MsSqlColumnName<TTable>>(name: N, value: Required<MsSqlCompareValues<TTable>>[N]): SQL;
     eq<TAlias extends string, N extends MsSqlColumnName<MsSqlAliasTable<TTable, TAlias>>>(table: MsSqlAliasTable<TTable, TAlias>, name: N, value: Required<MsSqlCompareValues<MsSqlAliasTable<TTable, TAlias>>>[N]): SQL;
     eq(values: MsSqlCompareValues<TTable>): SQL | undefined;
+    orGt(values: MsSqlCompareValues<TTable>): SQL | undefined;
+    orGte(values: MsSqlCompareValues<TTable>): SQL | undefined;
+    orLt(values: MsSqlCompareValues<TTable>): SQL | undefined;
+    orLte(values: MsSqlCompareValues<TTable>): SQL | undefined;
+    orInArray(values: MsSqlArrayCompareValues<TTable>): SQL | undefined;
+    orNotInArray(values: MsSqlArrayCompareValues<TTable>): SQL | undefined;
+    orBetween(values: MsSqlRangeCompareValues<TTable>): SQL | undefined;
+    orNotBetween(values: MsSqlRangeCompareValues<TTable>): SQL | undefined;
+    orLike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
+    orNotLike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
+    orIlike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
+    orNotIlike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
+    orIsNull(values: MsSqlNullConditionInput<TTable>): SQL | undefined;
+    orIsNotNull(values: MsSqlNullConditionInput<TTable>): SQL | undefined;
+    /** 객체의 컬럼별 동등 비교를 OR로 결합한다. */
+    orEq(values: MsSqlCompareValues<TTable>): SQL | undefined;
+    /** 객체의 컬럼별 비동등 비교를 OR로 결합한다. */
+    orNe(values: MsSqlCompareValues<TTable>): SQL | undefined;
     /********************************************************************************************************************
      * ne
      * ******************************************************************************************************************/
@@ -294,12 +312,28 @@ export type SelectFrom<TTable extends MsSqlTable | Subquery, TSelection extends 
     top(count: number): SelectTopFrom<TTable, TSelection>;
 };
 type FindResult<TTable extends MsSqlTable, TSelection extends FieldSet | undefined> = Awaited<SelectFrom<TTable, TSelection>>[number] | undefined;
-type WhereQuery<TQuery> = Pick<TQuery, Extract<keyof TQuery, 't' | 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'inArray' | 'notInArray' | 'between' | 'notBetween' | 'like' | 'notLike' | 'ilike' | 'notIlike' | 'isNull' | 'isNotNull' | 'and' | 'or'>>;
+type WhereQuery<TQuery> = Pick<TQuery, Extract<keyof TQuery, 't' | 'eq' | 'ne' | 'orEq' | 'orNe' | 'orIsNotNull' | 'orIsNull' | 'orNotIlike' | 'orIlike' | 'orNotLike' | 'orLike' | 'orNotBetween' | 'orBetween' | 'orNotInArray' | 'orInArray' | 'orLte' | 'orLt' | 'orGte' | 'orGt' | 'gt' | 'gte' | 'lt' | 'lte' | 'inArray' | 'notInArray' | 'between' | 'notBetween' | 'like' | 'notLike' | 'ilike' | 'notIlike' | 'isNull' | 'isNotNull' | 'and' | 'or'>>;
 type SelectConditionQuery<TSource extends MsSqlTable | Subquery> = TSource extends MsSqlTable ? TableConditionQuery<TSource> : TSource extends Subquery ? SubqueryConditionQuery<TSource> : never;
 type TableConditionQuery<TTable extends MsSqlTable> = {
     readonly t: TTable;
     eq(values: MsSqlCompareValues<TTable>): SQL | undefined;
     ne(values: MsSqlCompareValues<TTable>): SQL | undefined;
+    orEq(values: MsSqlCompareValues<TTable>): SQL | undefined;
+    orNe(values: MsSqlCompareValues<TTable>): SQL | undefined;
+    orIsNotNull(values: MsSqlNullConditionInput<TTable>): SQL | undefined;
+    orIsNull(values: MsSqlNullConditionInput<TTable>): SQL | undefined;
+    orNotIlike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
+    orIlike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
+    orNotLike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
+    orLike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
+    orNotBetween(values: MsSqlRangeCompareValues<TTable>): SQL | undefined;
+    orBetween(values: MsSqlRangeCompareValues<TTable>): SQL | undefined;
+    orNotInArray(values: MsSqlArrayCompareValues<TTable>): SQL | undefined;
+    orInArray(values: MsSqlArrayCompareValues<TTable>): SQL | undefined;
+    orLte(values: MsSqlCompareValues<TTable>): SQL | undefined;
+    orLt(values: MsSqlCompareValues<TTable>): SQL | undefined;
+    orGte(values: MsSqlCompareValues<TTable>): SQL | undefined;
+    orGt(values: MsSqlCompareValues<TTable>): SQL | undefined;
     gt(values: MsSqlCompareValues<TTable>): SQL | undefined;
     gte(values: MsSqlCompareValues<TTable>): SQL | undefined;
     lt(values: MsSqlCompareValues<TTable>): SQL | undefined;
@@ -359,7 +393,10 @@ type SelectNamedFields<TTable extends MsSqlTable, T extends readonly (SelectFiel
     [I in keyof T]: T[I] extends MsSqlColumnSelectionName<TTable> ? MsSqlSelectedNamedColumns<TTable, readonly [T[I]]> : T[I] extends SelectFieldInput<TTable> ? T[I] : never;
 };
 type ResolveSelectField<TTable extends MsSqlTable, TField> = TField extends FieldSet ? TField : TField extends MixedSelection<TTable> ? ResolveMixedSelection<TTable, TField> : never;
-type MergeSelectFields<TTable extends MsSqlTable, T extends readonly unknown[], Result = {}> = T extends readonly [infer First, ...infer Rest] ? MergeSelectFields<TTable, Rest, First extends FieldSet | MixedSelection<TTable> ? Omit<Result, keyof First> & ResolveSelectField<TTable, First> : Result> : number extends T['length'] ? ResolveSelectField<TTable, Exclude<T[number], false | undefined>> : Result extends unknown ? {
+type MergeSelectFields<TTable extends MsSqlTable, T extends readonly unknown[], Result = {}> = T extends readonly [
+    infer First,
+    ...infer Rest
+] ? MergeSelectFields<TTable, Rest, First extends FieldSet | MixedSelection<TTable> ? Omit<Result, keyof First> & ResolveSelectField<TTable, First> : Result> : number extends T['length'] ? ResolveSelectField<TTable, Exclude<T[number], false | undefined>> : Result extends unknown ? {
     [P in keyof Result]: Result[P];
 } : never;
 type MergeField<First, Result> = First extends FieldSet ? Result extends unknown ? Omit<Result, keyof First> & First : never : Result;
@@ -420,7 +457,7 @@ type SubqueryRangeValues<T extends Subquery> = {
 type SubqueryPatternValues<T extends Subquery> = {
     [K in keyof T['_']['selectedFields'] as NonNullable<SubqueryFieldData<T['_']['selectedFields'][K]>> extends string ? K : never]?: string;
 };
-type SubqueryConditionQuery<T extends Subquery> = {
+type BaseSubqueryConditionQuery<T extends Subquery> = {
     readonly t: T;
 } & {
     [K in 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte']: (values: SubqueryValues<T>) => SQL | undefined;
@@ -435,6 +472,9 @@ type SubqueryConditionQuery<T extends Subquery> = {
     isNotNull(names: SourceColumnName<T> | undefined | readonly (SourceColumnName<T> | undefined)[]): SQL | undefined;
     and(values: SubqueryConditions<T>): SQL | undefined;
     or(values: SubqueryConditions<T>): SQL | undefined;
+};
+type SubqueryConditionQuery<T extends Subquery> = BaseSubqueryConditionQuery<T> & {
+    [K in keyof Omit<BaseSubqueryConditionQuery<T>, 't' | 'and' | 'or'> as `or${Capitalize<K>}`]: BaseSubqueryConditionQuery<T>[K];
 };
 type SubqueryConditions<T extends Subquery> = {
     [K in keyof Omit<SubqueryConditionQuery<T>, 't'>]?: SubqueryConditionQuery<T>[K] extends (values: infer V) => unknown ? V : never;

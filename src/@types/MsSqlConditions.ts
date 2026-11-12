@@ -7,7 +7,7 @@ import type {
   MsSqlRangeCompareValues,
 } from './common';
 
-export type MsSqlConditions<T extends MsSqlTable> = {
+type BaseConditions<T extends MsSqlTable> = {
   eq?: MsSqlCompareValues<T>;
   ne?: MsSqlCompareValues<T>;
   gt?: MsSqlCompareValues<T>;
@@ -24,4 +24,8 @@ export type MsSqlConditions<T extends MsSqlTable> = {
   notIlike?: MsSqlPatternCompareValues<T>;
   isNull?: MsSqlNullConditionInput<T>;
   isNotNull?: MsSqlNullConditionInput<T>;
+};
+
+export type MsSqlConditions<T extends MsSqlTable> = BaseConditions<T> & {
+  [K in keyof BaseConditions<T> as `or${Capitalize<K>}`]?: BaseConditions<T>[K];
 };

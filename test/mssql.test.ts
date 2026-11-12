@@ -1,5 +1,5 @@
 import { drizzle } from 'drizzle-orm/node-mssql';
-import { asc as drizzleAsc, eq as drizzleEq, sql } from 'drizzle-orm';
+import { asc as drizzleAsc, eq as drizzleEq, sql, type SQL } from 'drizzle-orm';
 import { int, mssqlTable, nvarchar, primaryKey } from 'drizzle-orm/mssql-core';
 import { MsSqlQuery } from '../src/MsSqlQuery';
 import { createConditions } from '../src/conditions';
@@ -50,14 +50,26 @@ test('where 콜백에는 컬럼 대신 조건 헬퍼만 제공한다', () => {
 
 test('where 콜백에서 테이블 컬럼과 조건 헬퍼를 함께 사용한다', () => {
   const alias = createAlias({ users }).users('u');
-  const tableColumn = usersQuery.select(['id']).where((q) => drizzleEq(q.t.name, 'Ada')).toSQL();
-  const aliasTableColumn = usersQuery.select(alias, ['id']).where((q) => drizzleEq(q.t.name, 'Ada')).toSQL();
-  const queryCondition = usersQuery.select(['id']).where((q) => q.eq({ name: 'Ada' })).toSQL();
+  const tableColumn = usersQuery
+    .select(['id'])
+    .where((q) => drizzleEq(q.t.name, 'Ada'))
+    .toSQL();
+  const aliasTableColumn = usersQuery
+    .select(alias, ['id'])
+    .where((q) => drizzleEq(q.t.name, 'Ada'))
+    .toSQL();
+  const queryCondition = usersQuery
+    .select(['id'])
+    .where((q) => q.eq({ name: 'Ada' }))
+    .toSQL();
   const groupedCondition = usersQuery
     .select(['id'])
     .where((q) => q.and({ eq: { name: 'Ada' }, gt: { id: 1 } }))
     .toSQL();
-  const aliasCondition = usersQuery.select(alias, ['id']).where((q) => q.eq({ name: 'Ada' })).toSQL();
+  const aliasCondition = usersQuery
+    .select(alias, ['id'])
+    .where((q) => q.eq({ name: 'Ada' }))
+    .toSQL();
 
   expect(tableColumn.sql).toMatch(/where \[users\]\.\[name\] = @par0/i);
   expect(tableColumn.params).toEqual(['Ada']);
@@ -74,7 +86,10 @@ test('where 콜백에서 테이블 컬럼과 조건 헬퍼를 함께 사용한�
 test('join 콜백은 조인 컬럼 조건 헬퍼와 기준 테이블 q.t를 제공한다', () => {
   const baseAlias = createAlias({ users }).users('base');
   const joinAlias = createAlias({ users }).users('joined');
-  const query = usersQuery.select().innerJoin(joinAlias, (q) => q.eq({ id: q.t.id })).toSQL();
+  const query = usersQuery
+    .select()
+    .innerJoin(joinAlias, (q) => q.eq({ id: q.t.id }))
+    .toSQL();
   const aliasQuery = usersQuery
     .select(baseAlias)
     .innerJoin(joinAlias, (q) => q.eq({ id: q.t.id }))
@@ -87,7 +102,10 @@ test('join 콜백은 조인 컬럼 조건 헬퍼와 기준 테이블 q.t를 제�
 test('조인 후 where 콜백도 조인 전과 같은 조건 헬퍼를 제공한다', () => {
   const joinedTable = createAlias({ users }).users('joined');
   const secondJoinedTable = createAlias({ users }).users('second_joined');
-  const beforeJoin = usersQuery.select().where((q) => q.eq({ id: 1 })).toSQL();
+  const beforeJoin = usersQuery
+    .select()
+    .where((q) => q.eq({ id: 1 }))
+    .toSQL();
   const afterJoin = usersQuery
     .select()
     .innerJoin(joinedTable, drizzleEq(joinedTable.id, users.id))
@@ -102,9 +120,13 @@ test('조인 후 where 콜백도 조인 전과 같은 조건 헬퍼를 제공한
     .toSQL();
 
   expect(beforeJoin.sql).toMatch(/where \[users\]\.\[id\] = @par0/i);
-  expect(afterJoin.sql).toMatch(/inner join \[users\] \[joined\] on \[joined\]\.\[id\] = \[users\]\.\[id\] where \[users\]\.\[id\] = @par0/i);
+  expect(afterJoin.sql).toMatch(
+    /inner join \[users\] \[joined\] on \[joined\]\.\[id\] = \[users\]\.\[id\] where \[users\]\.\[id\] = @par0/i
+  );
   expect(afterJoin.params).toEqual([1]);
-  expect(afterTwoJoins.sql).toMatch(/inner join \[users\] \[joined\].*inner join \[users\] \[second_joined\].*where \[users\]\.\[id\] = @par0 order by \[users\]\.\[name\] desc/i);
+  expect(afterTwoJoins.sql).toMatch(
+    /inner join \[users\] \[joined\].*inner join \[users\] \[second_joined\].*where \[users\]\.\[id\] = @par0 order by \[users\]\.\[name\] desc/i
+  );
   expect(afterTwoJoins.params).toEqual([1]);
 });
 
@@ -112,11 +134,18 @@ test('select 서브쿼리를 직접 조건으로 조인한다', () => {
   const builder = usersQuery.select(['id']).top(1).orderBy(usersQuery.desc('id'));
   const subquery = builder.as('latest');
   const query = usersQuery.select().innerJoin(subquery, drizzleEq(subquery.id, users.id)).toSQL();
-  const callbackQuery = usersQuery.select().innerJoin(subquery, (q) => q.eq({ id: q.t.id })).toSQL();
+  const callbackQuery = usersQuery
+    .select()
+    .innerJoin(subquery, (q) => q.eq({ id: q.t.id }))
+    .toSQL();
 
-  expect(query.sql).toMatch(/inner join \(select top\(@par0\) \[id\] from \[users\] order by \[users\]\.\[id\] desc\) \[latest\] on \[latest\]\.\[id\] = \[users\]\.\[id\]/i);
+  expect(query.sql).toMatch(
+    /inner join \(select top\(@par0\) \[id\] from \[users\] order by \[users\]\.\[id\] desc\) \[latest\] on \[latest\]\.\[id\] = \[users\]\.\[id\]/i
+  );
   expect(query.params).toEqual([1]);
-  expect(callbackQuery.sql).toMatch(/inner join \(select top\(@par0\) \[id\] from \[users\] order by \[users\]\.\[id\] desc\) \[latest\] on \[latest\]\.\[id\] = \[users\]\.\[id\]/i);
+  expect(callbackQuery.sql).toMatch(
+    /inner join \(select top\(@par0\) \[id\] from \[users\] order by \[users\]\.\[id\] desc\) \[latest\] on \[latest\]\.\[id\] = \[users\]\.\[id\]/i
+  );
   expect(callbackQuery.params).toEqual([1]);
 });
 
@@ -128,7 +157,9 @@ test('서브쿼리 별칭의 컬럼을 columns 선택자로 고른다', () => {
     .innerJoin(subquery, drizzleEq(subquery.id, users.id))
     .toSQL();
 
-  expect(query.sql).toMatch(/select \[latest\]\.\[id\] as \[id\] from \[users\] inner join \(select top\(@par0\) \[id\] from \[users\] order by \[users\]\.\[id\] desc\) \[latest\] on \[latest\]\.\[id\] = \[users\]\.\[id\]/i);
+  expect(query.sql).toMatch(
+    /select \[latest\]\.\[id\] as \[id\] from \[users\] inner join \(select top\(@par0\) \[id\] from \[users\] order by \[users\]\.\[id\] desc\) \[latest\] on \[latest\]\.\[id\] = \[users\]\.\[id\]/i
+  );
   expect(query.params).toEqual([1]);
 });
 
@@ -146,11 +177,19 @@ test('eq에서 컬럼명 또는 별칭 컬럼과 서브쿼리 빌더를 비교�
   const builder = usersQuery.select(['id']).top(1).orderBy(usersQuery.desc('id'));
   const alias = createAlias({ users }).users('u');
   const condition = db.select().from(users).where(usersQuery.eq('id', builder)).toSQL();
-  const aliasCondition = db.select().from(alias).where(usersQuery.eq(alias, 'id', builder)).toSQL();
+  const aliasCondition = db
+    .select()
+    .from(alias)
+    .where(usersQuery.eq(alias, 'id', builder))
+    .toSQL();
 
-  expect(condition.sql).toMatch(/where \[users\]\.\[id\] = \(select top\(@par0\) \[id\] from \[users\] order by \[users\]\.\[id\] desc\)/i);
+  expect(condition.sql).toMatch(
+    /where \[users\]\.\[id\] = \(select top\(@par0\) \[id\] from \[users\] order by \[users\]\.\[id\] desc\)/i
+  );
   expect(condition.params).toEqual([1]);
-  expect(aliasCondition.sql).toMatch(/where \[u\]\.\[id\] = \(select top\(@par0\) \[id\] from \[users\] order by \[users\]\.\[id\] desc\)/i);
+  expect(aliasCondition.sql).toMatch(
+    /where \[u\]\.\[id\] = \(select top\(@par0\) \[id\] from \[users\] order by \[users\]\.\[id\] desc\)/i
+  );
   expect(aliasCondition.params).toEqual([1]);
 });
 
@@ -161,7 +200,9 @@ test('서브쿼리 SQL 표현식과 일반 컬럼을 함께 선택한다', () =>
   const row: Row = { id: 1, test: 1 };
   const selected = statement.toSQL();
 
-  expect(selected.sql).toMatch(/select .*\[id\] as \[id\].*\(select top\(@par0\) \[id\] from \[users\] order by \[users\]\.\[id\] desc\) as \[test\] from \[users\]/i);
+  expect(selected.sql).toMatch(
+    /select .*\[id\] as \[id\].*\(select top\(@par0\) \[id\] from \[users\] order by \[users\]\.\[id\] desc\) as \[test\] from \[users\]/i
+  );
   expect(selected.params).toEqual([1]);
   expect(row).toEqual({ id: 1, test: 1 });
   const rawSqlSelection = usersQuery.select({ id: 'id', test: sql`(${builder})` }).toSQL();
@@ -172,9 +213,18 @@ test('컬럼명과 별칭 테이블로 오름차순과 내림차순을 지정한
   const alias = createAlias({ users }).users('u');
   const descending = usersQuery.select().orderBy(usersQuery.desc('id')).toSQL();
   const ascending = usersQuery.select().orderBy(usersQuery.asc('id')).toSQL();
-  const callbackDescending = usersQuery.select(['id']).orderBy((q) => q.desc('id')).toSQL();
-  const callbackAscending = usersQuery.select(['id']).orderBy((q) => q.asc('id')).toSQL();
-  const callbackColumn = usersQuery.select(['id']).orderBy((q) => drizzleAsc(q.t.id)).toSQL();
+  const callbackDescending = usersQuery
+    .select(['id'])
+    .orderBy((q) => q.desc('id'))
+    .toSQL();
+  const callbackAscending = usersQuery
+    .select(['id'])
+    .orderBy((q) => q.asc('id'))
+    .toSQL();
+  const callbackColumn = usersQuery
+    .select(['id'])
+    .orderBy((q) => drizzleAsc(q.t.id))
+    .toSQL();
   const aliasDescending = usersQuery.select(alias).orderBy(usersQuery.desc(alias, 'id')).toSQL();
   const aliasAscending = usersQuery.select(alias).orderBy(usersQuery.asc(alias, 'id')).toSQL();
 
@@ -190,12 +240,20 @@ test('컬럼명과 별칭 테이블로 오름차순과 내림차순을 지정한
 
 test('select 빌더를 조건과 선택 필드의 서브쿼리로 사용한다', () => {
   const builder = usersQuery.select({ id: usersQuery.min('id').as('id') }).where(usersQuery.gt({ id: 2 }));
-  const condition = db.select().from(users).where(usersQuery.eq({ id: builder })).toSQL();
+  const condition = db
+    .select()
+    .from(users)
+    .where(usersQuery.eq({ id: builder }))
+    .toSQL();
   const selected = usersQuery.select({ sub_query_value: sql`(${builder})`.as('sub_query_value') }).toSQL();
 
-  expect(condition.sql).toMatch(/where \[users\]\.\[id\] = \(select min\(\[id\]\) as \[id\] from \[users\] where \[users\]\.\[id\] > @par0\)/i);
+  expect(condition.sql).toMatch(
+    /where \[users\]\.\[id\] = \(select min\(\[id\]\) as \[id\] from \[users\] where \[users\]\.\[id\] > @par0\)/i
+  );
   expect(condition.params).toEqual([2]);
-  expect(selected.sql).toMatch(/select \(\(select min\(\[id\]\) as \[id\] from \[users\] where \[users\]\.\[id\] > @par0\)\) as \[sub_query_value\] from \[users\]/i);
+  expect(selected.sql).toMatch(
+    /select \(\(select min\(\[id\]\) as \[id\] from \[users\] where \[users\]\.\[id\] > @par0\)\) as \[sub_query_value\] from \[users\]/i
+  );
   expect(selected.params).toEqual([2]);
 });
 
@@ -292,7 +350,9 @@ test('min과 max가 컬럼 객체와 속성명의 결과 타입 및 SQL을 유�
 test('선택 콜백의 집계는 별칭 테이블을 사용한다', () => {
   const alias = createAlias({ users }).users('u');
   const query = usersQuery.select(alias, (q) => ({ minId: q.min('id'), maxName: q.max(q.t.name) }));
-  expect(query.leftJoin(users, sql`1 = 1`).toSQL().sql).toMatch(/min\(\[u\]\.\[id\]\).*max\(\[u\]\.\[name\]\).*from \[users\] \[u\]/i);
+  expect(query.leftJoin(users, sql`1 = 1`).toSQL().sql).toMatch(
+    /min\(\[u\]\.\[id\]\).*max\(\[u\]\.\[name\]\).*from \[users\] \[u\]/i
+  );
 });
 
 test('find에서도 집계 선택과 선택 콜백을 사용할 수 있다', async () => {
@@ -352,4 +412,151 @@ test('배열 조건에서 일반 값과 별칭 컬럼 및 SQL 표현식을 함�
     // @ts-expect-error notInArray도 컬럼의 값 타입을 검사한다.
     conditions.notInArray(td, { id: ['wrong'] });
   }
+});
+
+test('orEq와 orNe는 쿼리·스키마 키·별칭에서 컬럼 비교를 OR로 결합한다', () => {
+  const conditions = createConditions({ users });
+  const alias = createAlias({ users }).users('u');
+  const optional = mssqlTable('optional', { id: int('id'), name: nvarchar('name', { length: 100 }) });
+  for (const operator of ['orEq', 'orNe'] as const) {
+    const comparison = operator === 'orEq' ? '=' : '<>';
+    for (const condition of [
+      usersQuery[operator]({ id: 1, name: 'Ada' }),
+      conditions[operator]('users', { id: 1, name: 'Ada' }),
+      conditions[operator](users, { id: 1, name: 'Ada' }),
+    ]) {
+      const query = db.select().from(users).where(condition).toSQL();
+      expect(query.sql.replace(/[()]/g, '')).toContain(
+        `[users].[id] ${comparison} @par0 or [users].[name] ${comparison} @par1`
+      );
+      expect(query.params).toEqual([1, 'Ada']);
+    }
+    const aliased = db
+      .select()
+      .from(alias)
+      .where(conditions[operator](alias, { id: 1, name: 'Ada' }))
+      .toSQL();
+    expect(aliased.sql.replace(/[()]/g, '')).toContain(
+      `[u].[id] ${comparison} @par0 or [u].[name] ${comparison} @par1`
+    );
+    expect(usersQuery[operator]({})).toBeUndefined();
+    expect(conditions[operator](users, { id: undefined })).toBeUndefined();
+    const nullable = db
+      .select()
+      .from(optional)
+      .where(conditions[operator](optional, { id: null, name: undefined }))
+      .toSQL();
+    expect(nullable.sql).toContain(operator === 'orEq' ? '[optional].[id] is null' : '[optional].[id] is not null');
+    expect(nullable.params).toEqual([]);
+    expect(() => conditions[operator](users, { missing: 1 } as never)).toThrow('unknown column');
+  }
+  const callback = usersQuery
+    .select()
+    .where((q) => q.orEq({ id: 1, name: 'Ada' }))
+    .toSQL();
+  expect(callback.sql).toContain(' or ');
+  const aliasCallback = usersQuery
+    .select(alias)
+    .where((q) => q.orNe({ id: 1, name: 'Ada' }))
+    .toSQL();
+  expect(aliasCallback.sql.replace(/[()]/g, '')).toContain('[u].[id] <> @par0 or [u].[name] <> @par1');
+  if (false) {
+    // @ts-expect-error 존재하지 않는 컬럼은 허용하지 않는다.
+    usersQuery.orEq({ missing: 1 });
+    // @ts-expect-error 컬럼 값의 타입을 검사한다.
+    conditions.orNe(alias, { id: 'invalid' });
+  }
+});
+
+test('모든 OR 조건은 기존 비교 규칙을 유지하고 컬럼 사이만 OR로 결합한다', () => {
+  const conditions = createConditions({ users });
+  const alias = createAlias({ users }).users('u');
+  const cases = {
+    gt: { id: 1, name: 'Ada' },
+    gte: { id: 1, name: 'Ada' },
+    lt: { id: 1, name: 'Ada' },
+    lte: { id: 1, name: 'Ada' },
+    inArray: { id: [1, 2], name: ['Ada'] },
+    notInArray: { id: [1, 2], name: ['Ada'] },
+    between: { id: [1, 2], name: ['A', 'Z'] },
+    notBetween: { id: [1, 2], name: ['A', 'Z'] },
+    like: { name: 'A%' },
+    notLike: { name: 'A%' },
+    ilike: { name: 'A%' },
+    notIlike: { name: 'A%' },
+    isNull: ['id', 'name'],
+    isNotNull: ['id', 'name'],
+  };
+  for (const [base, values] of Object.entries(cases)) {
+    const operator = `or${base[0].toUpperCase()}${base.slice(1)}`;
+    const call = (target: object, method: string, ...args: unknown[]) =>
+      Reflect.apply((target as Record<string, (...args: unknown[]) => SQL | undefined>)[method], target, args);
+    for (const table of [users, alias, 'users'] as const) {
+      const oldSql = db
+        .select()
+        .from(users)
+        .where(call(conditions, base, table, values))
+        .toSQL();
+      const newSql = db
+        .select()
+        .from(users)
+        .where(call(conditions, operator, table, values))
+        .toSQL();
+      // BETWEEN 자체의 AND는 유지한다.
+      expect(newSql.sql).toEqual(oldSql.sql.replace(/\) and \(/g, ') or ('));
+      expect(newSql.params).toEqual(oldSql.params);
+    }
+    const direct = usersQuery
+      .select()
+      .where(call(usersQuery, operator, values))
+      .toSQL();
+    const callback = usersQuery
+      .select()
+      .where((q) => call(q, operator, values))
+      .toSQL();
+    expect(callback).toEqual(direct);
+    expect(call(conditions, operator, users, base.startsWith('is') ? [] : {})).toBeUndefined();
+    const grouped = conditions.and('users', { [operator]: values });
+    expect(db.select().from(users).where(grouped).toSQL()).toEqual(direct);
+  }
+  if (false) {
+    // @ts-expect-error 숫자 컬럼에는 문자열 패턴을 지정할 수 없다.
+    usersQuery.orLike({ id: '%' });
+    // @ts-expect-error 범위는 두 값이 필요하다.
+    conditions.orBetween(alias, { id: [1] });
+    // @ts-expect-error 존재하지 않는 컬럼은 허용하지 않는다.
+    usersQuery.orIsNull(['missing']);
+  }
+});
+
+test('OR 패턴·NULL 조건과 서브쿼리 콜백에서도 여러 컬럼을 결합한다', () => {
+  const contacts = mssqlTable('contacts', {
+    name: nvarchar('name', { length: 100 }),
+    email: nvarchar('email', { length: 100 }),
+  });
+  const conditions = createConditions({ contacts });
+  for (const op of ['orLike', 'orNotLike', 'orIlike', 'orNotIlike'] as const) {
+    const generated = db
+      .select()
+      .from(contacts)
+      .where(conditions[op](contacts, { name: 'A%', email: '%@a' }))
+      .toSQL();
+    expect(generated.sql).toContain(' or ');
+    expect(generated.params).toEqual(['A%', '%@a']);
+  }
+  expect(() => conditions.orBetween(contacts, { name: ['A'] } as never)).toThrow('two non-null bounds');
+  expect(() => conditions.orInArray(contacts, { name: 'A' } as never)).toThrow('array or a SQL query');
+  expect(() => conditions.orIsNull(contacts, ['missing'] as never)).toThrow('unknown column');
+  const subquery = usersQuery.select(['id', 'name']).as('sq');
+  const generated = usersQuery
+    .select(subquery)
+    .where((q) => q.orGt({ id: 1, name: 'A' }))
+    .toSQL();
+  expect(generated.sql).toContain('[sq].[id] > @par0');
+  expect(generated.sql).toContain(' or ');
+  const nulls = usersQuery
+    .select(subquery)
+    .where((q) => q.orIsNull(['id', 'name']))
+    .toSQL();
+  expect(nulls.sql).toContain(' or ');
 });

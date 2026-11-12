@@ -185,6 +185,12 @@ export class TestData extends MsSqlQuery<'testData'> {
       like: { name: '%name%' },
     });
 
+    this.orGt({ id: 1, name: 'name' });
+    this.orInArray({ id: [1, 2], name: ['name'] });
+    this.orBetween({ id: [1, 10], name: ['a', 'z'] });
+    this.orIsNull(['name', 'email']);
+    mssql.orLike(td, { name: '%name%', email: '%example.com' });
+
     const oneRowBuilder = this.select(['id'])
       .top(1)
       .where((q) => q.lt({ id: 1 }));
@@ -327,8 +333,7 @@ export class TestData extends MsSqlQuery<'testData'> {
    * otherTest
    * ******************************************************************************************************************/
   async otherTest() {
-    const td = mssql.a.testData('td');
-    mssql.select(td, ['id']);
+    //
   }
 }
 
