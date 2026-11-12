@@ -33,10 +33,10 @@ export class TestData extends MsSqlQuery<'testData'> {
 
     console.log(await this.select().orderBy(this.asc('id')));
 
-    console.log(await this.select(['id']).orderBy((q) => q.desc('id')));
+    console.log(await this.select(['id']).orderBy((q) => q.desc('id', 'name')));
 
-    const td1 = mssql.a.testData('td1');
-    const td2 = mssql.a.testData('td2');
+    const td1 = this.alias('td1');
+    const td2 = this.alias('td2');
     console.log(
       await this.select(td1, ['id'])
         .crossJoin(td2)
@@ -102,6 +102,14 @@ export class TestData extends MsSqlQuery<'testData'> {
         .groupBy((t) => [t.id])
         .orderBy((q) => q.desc('id'))
     );
+
+    const td = this.alias('td');
+    this.select(td).orderBy(mssql.asc(td.id), mssql.asc(td.name), mssql.desc(td.email));
+
+    this.select(td).orderBy(mssql.asc(td.id, td.name), mssql.desc(td.email, td.is_lock));
+    this.select(td).orderBy(mssql.asc(td, 'id', 'name'), mssql.desc(td, 'email', 'is_lock'));
+    this.select().orderBy((q) => q.asc('id', 'name'));
+    this.select().orderBy((q) => [q.asc('id', 'name'), q.desc('email', 'is_lock')]);
 
     console.log(await this.select(['id']).orderBy((q) => q.asc('id')));
 

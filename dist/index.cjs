@@ -277,6 +277,12 @@ class MsSqlQuery {
         this.t = table;
     }
     /********************************************************************************************************************
+     * alias
+     * ******************************************************************************************************************/
+    alias(name) {
+        return alias.alias(this.t, name);
+    }
+    /********************************************************************************************************************
      * (PROTECTED) getTx
      * ******************************************************************************************************************/
     getTx() {
@@ -451,10 +457,14 @@ class MsSqlQuery {
                 orGt: bindCondition('orGt', conditionTable),
             });
             const whereQuery = conditionQuery(table, table);
+            const orderByColumns = (direction, name, ...names) => {
+                const orders = [name, ...names].map((columnName) => direction(this.resolveOrderColumn(columnName, table)));
+                return orders.length === 1 ? orders[0] : orders;
+            };
             const orderByQuery = {
                 t: table,
-                asc: (name) => native.asc(this.resolveOrderColumn(name, table)),
-                desc: (name) => native.desc(this.resolveOrderColumn(name, table)),
+                asc: (name, ...names) => orderByColumns(native.asc, name, ...names),
+                desc: (name, ...names) => orderByColumns(native.desc, name, ...names),
             };
             const enhancements = {
                 where: (condition) => originalWhere(typeof condition === 'function'
@@ -463,9 +473,27 @@ class MsSqlQuery {
                 top: (count) => typeof selectBuilder.top === 'function' ? enhance(selectBuilder.top(count).from(table)) : query,
             };
             if (originalOrderBy) {
-                enhancements.orderBy = (...args) => typeof args[0] === 'function'
-                    ? originalOrderBy(() => args[0](orderByQuery))
-                    : originalOrderBy(...args);
+                enhancements.orderBy = (...args) => {
+                    if (typeof args[0] === 'function') {
+                        const result = args[0](orderByQuery);
+                        const columns = Array.isArray(result) ? result.flat(Infinity) : [result];
+                        return originalOrderBy(...columns);
+                    }
+                    return originalOrderBy(...args.flat(Infinity));
+                };
+            }
+            for (const setOperator of ['union', 'unionAll', 'intersect', 'except']) {
+                const operation = query[setOperator];
+                if (typeof operation !== 'function')
+                    continue;
+                enhancements[setOperator] = (...args) => {
+                    const result = Reflect.apply(operation, query, args);
+                    return result === query ? query : enhance(result);
+                };
+            }
+            const crossJoin = query.crossJoin;
+            if (typeof crossJoin === 'function') {
+                enhancements.crossJoin = (joinedTable) => enhance(Reflect.apply(crossJoin, query, [joinedTable]));
             }
             for (const joinMethod of ['innerJoin', 'leftJoin', 'rightJoin', 'fullJoin', 'outerApply', 'crossApply']) {
                 const join = query[joinMethod];
@@ -989,7 +1017,30 @@ function sourceColumns(source, names = []) {
     return native.is(source, native.Subquery)
         ? TableColumns(source, ...names)
         : TableColumns(source, ...names);
-}function createConnection(options) {
+}const createOrderByHelper = (direction) => {
+    const implementation = (...args) => {
+        let columns;
+        if (native.isTable(args[0])) {
+            const [table, ...names] = args;
+            const tableColumns = native.getTableColumns(table);
+            columns = names.map((name) => {
+                const column = tableColumns[name];
+                if (!column)
+                    throw new Error(`orderBy: unknown column "${name}".`);
+                return column;
+            });
+        }
+        else {
+            columns = args;
+        }
+        const orders = columns.map(direction);
+        return orders.length === 1 ? orders[0] : orders;
+    };
+    return implementation;
+};
+const asc = createOrderByHelper(native__namespace.asc);
+const desc = createOrderByHelper(native__namespace.desc);
+function createConnection(options) {
     var _a;
     const raw = nodeMssql.drizzle({ connection: options.url, relations: native.defineRelations(options.schema) });
     const context = new node_async_hooks.AsyncLocalStorage();
@@ -1048,6 +1099,7 @@ function drizzleMsSql(options) {
         }
         return new MsSqlQuery(table, connection.current).select(fields);
     }
-    return Object.assign(Object.assign(Object.assign(Object.assign({ select: select, asc: native__namespace.asc, desc: native__namespace.desc, count: native__namespace.count, countDistinct: native__namespace.countDistinct, avg: native__namespace.avg, avgDistinct: native__namespace.avgDistinct, sum: native__namespace.sum, sumDistinct: native__namespace.sumDistinct, max: native__namespace.max, min: native__namespace.min, not: native__namespace.not, exists: native__namespace.exists, notExists: native__namespace.notExists, arrayContains: native__namespace.arrayContains, arrayContained: native__namespace.arrayContained, arrayOverlaps: native__namespace.arrayOverlaps, s: options.schema, a: createAlias(options.schema) }, createConditions(options.schema)), { columns: TableColumns, alias: mssqlCore.alias,
+    return Object.assign(Object.assign(Object.assign(Object.assign({ select: select, asc,
+        desc, count: native__namespace.count, countDistinct: native__namespace.countDistinct, avg: native__namespace.avg, avgDistinct: native__namespace.avgDistinct, sum: native__namespace.sum, sumDistinct: native__namespace.sumDistinct, max: native__namespace.max, min: native__namespace.min, not: native__namespace.not, exists: native__namespace.exists, notExists: native__namespace.notExists, arrayContains: native__namespace.arrayContains, arrayContained: native__namespace.arrayContained, arrayOverlaps: native__namespace.arrayOverlaps, s: options.schema, a: createAlias(options.schema) }, createConditions(options.schema)), { columns: TableColumns, alias: mssqlCore.alias,
         sql: native.sql, sqlNumber: (value) => (native.is(value, native.SQL) ? value : native.sql `${value}`).mapWith(Number), sqlString: (value) => (native.is(value, native.SQL) ? value : native.sql `${value}`).mapWith(String), sqlBoolean: (value) => (native.is(value, native.SQL) ? value : native.sql `${value}`).mapWith((v) => v === true || v === 1) }), connection), { query: (table) => new MsSqlQuery(table, connection.current) });
 }Object.defineProperty(exports,"asc",{enumerable:true,get:function(){return native.asc}});Object.defineProperty(exports,"avg",{enumerable:true,get:function(){return native.avg}});Object.defineProperty(exports,"avgDistinct",{enumerable:true,get:function(){return native.avgDistinct}});Object.defineProperty(exports,"count",{enumerable:true,get:function(){return native.count}});Object.defineProperty(exports,"countDistinct",{enumerable:true,get:function(){return native.countDistinct}});Object.defineProperty(exports,"desc",{enumerable:true,get:function(){return native.desc}});Object.defineProperty(exports,"exists",{enumerable:true,get:function(){return native.exists}});Object.defineProperty(exports,"max",{enumerable:true,get:function(){return native.max}});Object.defineProperty(exports,"min",{enumerable:true,get:function(){return native.min}});Object.defineProperty(exports,"not",{enumerable:true,get:function(){return native.not}});Object.defineProperty(exports,"notExists",{enumerable:true,get:function(){return native.notExists}});Object.defineProperty(exports,"sum",{enumerable:true,get:function(){return native.sum}});Object.defineProperty(exports,"sumDistinct",{enumerable:true,get:function(){return native.sumDistinct}});Object.defineProperty(exports,"bigint",{enumerable:true,get:function(){return mssqlCore.bigint}});Object.defineProperty(exports,"binary",{enumerable:true,get:function(){return mssqlCore.binary}});Object.defineProperty(exports,"bit",{enumerable:true,get:function(){return mssqlCore.bit}});Object.defineProperty(exports,"char",{enumerable:true,get:function(){return mssqlCore.char}});Object.defineProperty(exports,"check",{enumerable:true,get:function(){return mssqlCore.check}});Object.defineProperty(exports,"customType",{enumerable:true,get:function(){return mssqlCore.customType}});Object.defineProperty(exports,"date",{enumerable:true,get:function(){return mssqlCore.date}});Object.defineProperty(exports,"datetime",{enumerable:true,get:function(){return mssqlCore.datetime}});Object.defineProperty(exports,"datetime2",{enumerable:true,get:function(){return mssqlCore.datetime2}});Object.defineProperty(exports,"datetimeoffset",{enumerable:true,get:function(){return mssqlCore.datetimeoffset}});Object.defineProperty(exports,"decimal",{enumerable:true,get:function(){return mssqlCore.decimal}});Object.defineProperty(exports,"float",{enumerable:true,get:function(){return mssqlCore.float}});Object.defineProperty(exports,"foreignKey",{enumerable:true,get:function(){return mssqlCore.foreignKey}});Object.defineProperty(exports,"index",{enumerable:true,get:function(){return mssqlCore.index}});Object.defineProperty(exports,"int",{enumerable:true,get:function(){return mssqlCore.int}});Object.defineProperty(exports,"mssqlSchema",{enumerable:true,get:function(){return mssqlCore.mssqlSchema}});Object.defineProperty(exports,"mssqlTableCreator",{enumerable:true,get:function(){return mssqlCore.mssqlTableCreator}});Object.defineProperty(exports,"mssqlView",{enumerable:true,get:function(){return mssqlCore.mssqlView}});Object.defineProperty(exports,"nchar",{enumerable:true,get:function(){return mssqlCore.nchar}});Object.defineProperty(exports,"ntext",{enumerable:true,get:function(){return mssqlCore.ntext}});Object.defineProperty(exports,"numeric",{enumerable:true,get:function(){return mssqlCore.numeric}});Object.defineProperty(exports,"nvarchar",{enumerable:true,get:function(){return mssqlCore.nvarchar}});Object.defineProperty(exports,"primaryKey",{enumerable:true,get:function(){return mssqlCore.primaryKey}});Object.defineProperty(exports,"real",{enumerable:true,get:function(){return mssqlCore.real}});Object.defineProperty(exports,"smallint",{enumerable:true,get:function(){return mssqlCore.smallint}});Object.defineProperty(exports,"text",{enumerable:true,get:function(){return mssqlCore.text}});Object.defineProperty(exports,"time",{enumerable:true,get:function(){return mssqlCore.time}});Object.defineProperty(exports,"tinyint",{enumerable:true,get:function(){return mssqlCore.tinyint}});Object.defineProperty(exports,"unique",{enumerable:true,get:function(){return mssqlCore.unique}});Object.defineProperty(exports,"uniqueIndex",{enumerable:true,get:function(){return mssqlCore.uniqueIndex}});Object.defineProperty(exports,"varbinary",{enumerable:true,get:function(){return mssqlCore.varbinary}});Object.defineProperty(exports,"varchar",{enumerable:true,get:function(){return mssqlCore.varchar}});exports.MsSqlQuery=MsSqlQuery;exports.TableColumns=TableColumns;exports.createConditions=createConditions;exports.default=drizzleMsSql;exports.drizzleMsSql=drizzleMsSql;exports.mssqlTable=mssqlTable;

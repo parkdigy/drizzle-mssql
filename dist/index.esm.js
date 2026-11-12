@@ -1,4 +1,4 @@
-import {drizzle}from'drizzle-orm/node-mssql';import*as native from'drizzle-orm';import {isTable,is,Subquery,sql,getTableColumns,min,max,asc,desc,SQL,eq,and,count,defineRelations}from'drizzle-orm';export{asc,avg,avgDistinct,count,countDistinct,desc,exists,max,min,not,notExists,sum,sumDistinct}from'drizzle-orm';import {MsSqlTable,mssqlTable as mssqlTable$1,getTableConfig,MsSqlSelectBase,MsSqlColumn,alias as alias$1}from'drizzle-orm/mssql-core';export{bigint,binary,bit,char,check,customType,date,datetime,datetime2,datetimeoffset,decimal,float,foreignKey,index,int,mssqlSchema,mssqlTableCreator,mssqlView,nchar,ntext,numeric,nvarchar,primaryKey,real,smallint,text,time,tinyint,unique,uniqueIndex,varbinary,varchar}from'drizzle-orm/mssql-core';import {AsyncLocalStorage}from'node:async_hooks';import {alias}from'drizzle-orm/mssql-core/alias';import {MsSqlColumnBuilder}from'drizzle-orm/mssql-core/columns/common';function createAlias(schema) {
+import {drizzle}from'drizzle-orm/node-mssql';import*as native from'drizzle-orm';import {isTable,is,Subquery,sql,getTableColumns,min,max,asc as asc$1,desc as desc$1,SQL,eq,and,count,defineRelations}from'drizzle-orm';export{asc,avg,avgDistinct,count,countDistinct,desc,exists,max,min,not,notExists,sum,sumDistinct}from'drizzle-orm';import {MsSqlTable,mssqlTable as mssqlTable$1,getTableConfig,MsSqlSelectBase,MsSqlColumn,alias as alias$1}from'drizzle-orm/mssql-core';export{bigint,binary,bit,char,check,customType,date,datetime,datetime2,datetimeoffset,decimal,float,foreignKey,index,int,mssqlSchema,mssqlTableCreator,mssqlView,nchar,ntext,numeric,nvarchar,primaryKey,real,smallint,text,time,tinyint,unique,uniqueIndex,varbinary,varchar}from'drizzle-orm/mssql-core';import {AsyncLocalStorage}from'node:async_hooks';import {alias}from'drizzle-orm/mssql-core/alias';import {MsSqlColumnBuilder}from'drizzle-orm/mssql-core/columns/common';function createAlias(schema) {
     /********************************************************************************************************************
      * getDefaultAlias
      * ******************************************************************************************************************/
@@ -277,6 +277,12 @@ class MsSqlQuery {
         this.t = table;
     }
     /********************************************************************************************************************
+     * alias
+     * ******************************************************************************************************************/
+    alias(name) {
+        return alias(this.t, name);
+    }
+    /********************************************************************************************************************
      * (PROTECTED) getTx
      * ******************************************************************************************************************/
     getTx() {
@@ -317,12 +323,12 @@ class MsSqlQuery {
     asc(tableOrName, name) {
         const table = typeof tableOrName === 'string' ? this.t : tableOrName;
         const columnName = typeof tableOrName === 'string' ? tableOrName : name;
-        return asc(this.resolveOrderColumn(columnName, table));
+        return asc$1(this.resolveOrderColumn(columnName, table));
     }
     desc(tableOrName, name) {
         const table = typeof tableOrName === 'string' ? this.t : tableOrName;
         const columnName = typeof tableOrName === 'string' ? tableOrName : name;
-        return desc(this.resolveOrderColumn(columnName, table));
+        return desc$1(this.resolveOrderColumn(columnName, table));
     }
     resolveFields(fields, table = this.t) {
         if (Array.isArray(fields) && fields.length > 0 && fields.every((field) => typeof field === 'string')) {
@@ -451,10 +457,14 @@ class MsSqlQuery {
                 orGt: bindCondition('orGt', conditionTable),
             });
             const whereQuery = conditionQuery(table, table);
+            const orderByColumns = (direction, name, ...names) => {
+                const orders = [name, ...names].map((columnName) => direction(this.resolveOrderColumn(columnName, table)));
+                return orders.length === 1 ? orders[0] : orders;
+            };
             const orderByQuery = {
                 t: table,
-                asc: (name) => asc(this.resolveOrderColumn(name, table)),
-                desc: (name) => desc(this.resolveOrderColumn(name, table)),
+                asc: (name, ...names) => orderByColumns(asc$1, name, ...names),
+                desc: (name, ...names) => orderByColumns(desc$1, name, ...names),
             };
             const enhancements = {
                 where: (condition) => originalWhere(typeof condition === 'function'
@@ -463,9 +473,27 @@ class MsSqlQuery {
                 top: (count) => typeof selectBuilder.top === 'function' ? enhance(selectBuilder.top(count).from(table)) : query,
             };
             if (originalOrderBy) {
-                enhancements.orderBy = (...args) => typeof args[0] === 'function'
-                    ? originalOrderBy(() => args[0](orderByQuery))
-                    : originalOrderBy(...args);
+                enhancements.orderBy = (...args) => {
+                    if (typeof args[0] === 'function') {
+                        const result = args[0](orderByQuery);
+                        const columns = Array.isArray(result) ? result.flat(Infinity) : [result];
+                        return originalOrderBy(...columns);
+                    }
+                    return originalOrderBy(...args.flat(Infinity));
+                };
+            }
+            for (const setOperator of ['union', 'unionAll', 'intersect', 'except']) {
+                const operation = query[setOperator];
+                if (typeof operation !== 'function')
+                    continue;
+                enhancements[setOperator] = (...args) => {
+                    const result = Reflect.apply(operation, query, args);
+                    return result === query ? query : enhance(result);
+                };
+            }
+            const crossJoin = query.crossJoin;
+            if (typeof crossJoin === 'function') {
+                enhancements.crossJoin = (joinedTable) => enhance(Reflect.apply(crossJoin, query, [joinedTable]));
             }
             for (const joinMethod of ['innerJoin', 'leftJoin', 'rightJoin', 'fullJoin', 'outerApply', 'crossApply']) {
                 const join = query[joinMethod];
@@ -989,7 +1017,30 @@ function sourceColumns(source, names = []) {
     return is(source, Subquery)
         ? TableColumns(source, ...names)
         : TableColumns(source, ...names);
-}function createConnection(options) {
+}const createOrderByHelper = (direction) => {
+    const implementation = (...args) => {
+        let columns;
+        if (isTable(args[0])) {
+            const [table, ...names] = args;
+            const tableColumns = getTableColumns(table);
+            columns = names.map((name) => {
+                const column = tableColumns[name];
+                if (!column)
+                    throw new Error(`orderBy: unknown column "${name}".`);
+                return column;
+            });
+        }
+        else {
+            columns = args;
+        }
+        const orders = columns.map(direction);
+        return orders.length === 1 ? orders[0] : orders;
+    };
+    return implementation;
+};
+const asc = createOrderByHelper(native.asc);
+const desc = createOrderByHelper(native.desc);
+function createConnection(options) {
     var _a;
     const raw = drizzle({ connection: options.url, relations: defineRelations(options.schema) });
     const context = new AsyncLocalStorage();
@@ -1048,6 +1099,7 @@ function drizzleMsSql(options) {
         }
         return new MsSqlQuery(table, connection.current).select(fields);
     }
-    return Object.assign(Object.assign(Object.assign(Object.assign({ select: select, asc: native.asc, desc: native.desc, count: native.count, countDistinct: native.countDistinct, avg: native.avg, avgDistinct: native.avgDistinct, sum: native.sum, sumDistinct: native.sumDistinct, max: native.max, min: native.min, not: native.not, exists: native.exists, notExists: native.notExists, arrayContains: native.arrayContains, arrayContained: native.arrayContained, arrayOverlaps: native.arrayOverlaps, s: options.schema, a: createAlias(options.schema) }, createConditions(options.schema)), { columns: TableColumns, alias: alias$1,
+    return Object.assign(Object.assign(Object.assign(Object.assign({ select: select, asc,
+        desc, count: native.count, countDistinct: native.countDistinct, avg: native.avg, avgDistinct: native.avgDistinct, sum: native.sum, sumDistinct: native.sumDistinct, max: native.max, min: native.min, not: native.not, exists: native.exists, notExists: native.notExists, arrayContains: native.arrayContains, arrayContained: native.arrayContained, arrayOverlaps: native.arrayOverlaps, s: options.schema, a: createAlias(options.schema) }, createConditions(options.schema)), { columns: TableColumns, alias: alias$1,
         sql, sqlNumber: (value) => (is(value, SQL) ? value : sql `${value}`).mapWith(Number), sqlString: (value) => (is(value, SQL) ? value : sql `${value}`).mapWith(String), sqlBoolean: (value) => (is(value, SQL) ? value : sql `${value}`).mapWith((v) => v === true || v === 1) }), connection), { query: (table) => new MsSqlQuery(table, connection.current) });
 }export{MsSqlQuery,TableColumns,createConditions,drizzleMsSql as default,drizzleMsSql,mssqlTable};

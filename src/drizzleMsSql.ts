@@ -1,11 +1,12 @@
 import { drizzle } from 'drizzle-orm/node-mssql';
-import { count, defineRelations, is, SQL, sql, type Subquery } from 'drizzle-orm';
+import { count, defineRelations, getTableColumns, is, isTable, SQL, sql, type Subquery } from 'drizzle-orm';
 import { alias, type MsSqlTable } from 'drizzle-orm/mssql-core';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import * as native from 'drizzle-orm';
 import { createAlias, type MsSqlAliases } from './alias';
 import { createConditions, type MsSqlSchemaConditions } from './conditions';
 import { TableColumns } from './columns';
+import type { MsSqlColumnName } from './@types';
 import {
   MsSqlQuery,
   type SelectFrom,
@@ -56,10 +57,43 @@ interface MsSqlDatabaseHelpers<TSchema extends Record<string, MsSqlTable>> exten
   query<TTable extends MsSqlTable>(table: TTable): MsSqlQuery<TTable>;
 }
 
-type MsSqlNativeHelpers = Pick<
+type OrderByColumn = Parameters<typeof native.asc>[0];
+type AliasOrderByHelper = {
+  <TTable extends MsSqlTable>(table: TTable, name: MsSqlColumnName<TTable>): SQL;
+  <TTable extends MsSqlTable>(
+    table: TTable,
+    first: MsSqlColumnName<TTable>,
+    second: MsSqlColumnName<TTable>,
+    ...rest: MsSqlColumnName<TTable>[]
+  ): SQL[];
+};
+type MultiColumnOrderHelper = {
+  (column: OrderByColumn): SQL;
+  (first: OrderByColumn, second: OrderByColumn, ...rest: OrderByColumn[]): SQL[];
+} & AliasOrderByHelper;
+
+const createOrderByHelper = (direction: (column: OrderByColumn) => SQL): MultiColumnOrderHelper => {
+  const implementation = (...args: [OrderByColumn | MsSqlTable, ...(OrderByColumn | string)[]]) => {
+    let columns: OrderByColumn[];
+    if (isTable(args[0])) {
+      const [table, ...names] = args;
+      const tableColumns = getTableColumns(table);
+      columns = (names as string[]).map((name) => {
+        const column = tableColumns[name];
+        if (!column) throw new Error(`orderBy: unknown column "${name}".`);
+        return column;
+      });
+    } else {
+      columns = args as OrderByColumn[];
+    }
+    const orders = columns.map(direction);
+    return orders.length === 1 ? orders[0] : orders;
+  };
+  return implementation as MultiColumnOrderHelper;
+};
+
+type MsSqlNativeHelpers = Omit<Pick<
   typeof native,
-  | 'asc'
-  | 'desc'
   | 'count'
   | 'countDistinct'
   | 'avg'
@@ -74,7 +108,13 @@ type MsSqlNativeHelpers = Pick<
   | 'arrayContains'
   | 'arrayContained'
   | 'arrayOverlaps'
->;
+>, 'asc' | 'desc'> & {
+  asc: MultiColumnOrderHelper;
+  desc: MultiColumnOrderHelper;
+};
+
+const asc = createOrderByHelper(native.asc);
+const desc = createOrderByHelper(native.desc);
 
 export type DrizzleMsSql<TSchema extends Record<string, MsSqlTable>> = MsSqlDatabaseHelpers<TSchema> &
   MsSqlSchemaConditions<TSchema>;
@@ -162,8 +202,8 @@ export function drizzleMsSql<TSchema extends Record<string, MsSqlTable>>(
   }
   return {
     select: select as MsSqlDatabaseHelpers<TSchema>['select'],
-    asc: native.asc,
-    desc: native.desc,
+    asc,
+    desc,
     count: native.count,
     countDistinct: native.countDistinct,
     avg: native.avg,

@@ -25,6 +25,10 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddVa
     }, getTimestamp?: (() => unknown) | undefined);
     private readonly drizzle;
     /********************************************************************************************************************
+     * alias
+     * ******************************************************************************************************************/
+    alias<TAlias extends string>(name: TAlias): MsSqlAliasTable<TTable, TAlias>;
+    /********************************************************************************************************************
      * (PROTECTED) getTx
      * ******************************************************************************************************************/
     protected getTx(): NodeMsSqlDatabase;
@@ -270,17 +274,18 @@ type AliasedSelection<T extends FieldSet> = {
 type SelectQueryBase<TTable extends MsSqlTable | Subquery, TSelection extends FieldSet | undefined, TBranch extends 'from' | 'top'> = MsSqlSelectBase<GetSelectTableName<TTable>, TSelection extends undefined ? SourceSelection<TTable> : AliasedSelection<NonNullable<TSelection>>, 'partial', NodeMsSqlPreparedQueryHKT, TBranch>;
 type TableWhere<TTable extends MsSqlTable | Subquery> = SQL | undefined | ((query: SelectConditionQuery<TTable>) => SQL | undefined);
 type OrderByValue = MsSqlColumn | SQL | SQL.Aliased;
+type OrderByInput = OrderByValue | readonly OrderByValue[];
 type SelectOrderByQuery<TTable extends MsSqlTable | Subquery> = {
     readonly t: TTable;
-    asc(name: SourceColumnName<TTable>): SQL;
-    desc(name: SourceColumnName<TTable>): SQL;
+    asc(name: SourceColumnName<TTable>, ...names: SourceColumnName<TTable>[]): SQL | SQL[];
+    desc(name: SourceColumnName<TTable>, ...names: SourceColumnName<TTable>[]): SQL | SQL[];
 };
-type OrderByCallback<TTable extends MsSqlTable | Subquery> = (query: SelectOrderByQuery<TTable>) => OrderByValue | OrderByValue[];
+type OrderByCallback<TTable extends MsSqlTable | Subquery> = (query: SelectOrderByQuery<TTable>) => OrderByInput | OrderByInput[];
 type GroupByCallback<TTable extends MsSqlTable | Subquery, TSelection extends FieldSet | undefined, TBranch extends 'from' | 'top'> = (aliases: SelectQueryBase<TTable, TSelection, TBranch>['_']['selection']) => OrderByValue | OrderByValue[];
 type HavingCondition<TTable extends MsSqlTable | Subquery, TSelection extends FieldSet | undefined, TBranch extends 'from' | 'top'> = SQL | undefined | ((aliases: SelectQueryBase<TTable, TSelection, TBranch>['_']['selection']) => SQL | undefined);
 type OrderByPreserved<TQuery, TTable extends MsSqlTable | Subquery> = Omit<TQuery, 'orderBy'> & {
     orderBy(builder: OrderByCallback<TTable>): Omit<OrderByPreserved<TQuery, TTable>, 'orderBy'>;
-    orderBy(...columns: OrderByValue[]): Omit<OrderByPreserved<TQuery, TTable>, 'orderBy'>;
+    orderBy(...columns: OrderByInput[]): Omit<OrderByPreserved<TQuery, TTable>, 'orderBy'>;
 };
 type SelectSetOperatorMethod<TQuery extends {
     readonly _: {
@@ -297,7 +302,7 @@ type DynamicSelect<TQuery extends {
     groupBy(builder: (aliases: TQuery['_']['selection']) => OrderByValue | OrderByValue[]): DynamicSelect<TQuery, TTable>;
     groupBy(...columns: OrderByValue[]): DynamicSelect<TQuery, TTable>;
     orderBy(builder: OrderByCallback<TTable>): DynamicSelect<TQuery, TTable>;
-    orderBy(...columns: OrderByValue[]): DynamicSelect<TQuery, TTable>;
+    orderBy(...columns: OrderByInput[]): DynamicSelect<TQuery, TTable>;
     having(condition: SQL | undefined | ((aliases: TQuery['_']['selection']) => SQL | undefined)): DynamicSelect<TQuery, TTable>;
     offset(value: number | Placeholder): DynamicSelect<TQuery, TTable>;
     fetch(value: number | Placeholder): DynamicSelect<TQuery, TTable>;
@@ -320,7 +325,7 @@ type JoinedSelect<TTable extends MsSqlTable | Subquery, TSelection extends Field
     groupBy(builder: GroupByCallback<TTable, TSelection, TBranch>): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'groupBy'>;
     groupBy(...columns: OrderByValue[]): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'groupBy'>;
     orderBy(builder: OrderByCallback<TTable>): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'orderBy'>;
-    orderBy(...columns: OrderByValue[]): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'orderBy'>;
+    orderBy(...columns: OrderByInput[]): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'orderBy'>;
     offset(value: number | Placeholder): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'offset'>;
     fetch(value: number | Placeholder): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'fetch'>;
 };
@@ -344,7 +349,7 @@ type SelectTopFrom<TTable extends MsSqlTable | Subquery, TSelection extends Fiel
     groupBy(builder: GroupByCallback<TTable, TSelection, 'top'>): Omit<SelectTopFrom<TTable, TSelection>, 'groupBy'>;
     groupBy(...columns: OrderByValue[]): Omit<SelectTopFrom<TTable, TSelection>, 'groupBy'>;
     orderBy(builder: OrderByCallback<TTable>): Omit<SelectTopFrom<TTable, TSelection>, 'orderBy'>;
-    orderBy(...columns: OrderByValue[]): Omit<SelectTopFrom<TTable, TSelection>, 'orderBy'>;
+    orderBy(...columns: OrderByInput[]): Omit<SelectTopFrom<TTable, TSelection>, 'orderBy'>;
     offset(value: number | Placeholder): Omit<SelectTopFrom<TTable, TSelection>, 'offset'>;
     fetch(value: number | Placeholder): Omit<SelectTopFrom<TTable, TSelection>, 'fetch'>;
 };
@@ -359,7 +364,7 @@ export type SelectFrom<TTable extends MsSqlTable | Subquery, TSelection extends 
     groupBy(builder: GroupByCallback<TTable, TSelection, 'from'>): Omit<SelectFrom<TTable, TSelection>, 'groupBy'>;
     groupBy(...columns: OrderByValue[]): Omit<SelectFrom<TTable, TSelection>, 'groupBy'>;
     orderBy(builder: OrderByCallback<TTable>): Omit<SelectFrom<TTable, TSelection>, 'orderBy'>;
-    orderBy(...columns: OrderByValue[]): Omit<SelectFrom<TTable, TSelection>, 'orderBy'>;
+    orderBy(...columns: OrderByInput[]): Omit<SelectFrom<TTable, TSelection>, 'orderBy'>;
     offset(value: number | Placeholder): Omit<SelectFrom<TTable, TSelection>, 'offset'>;
     fetch(value: number | Placeholder): Omit<SelectFrom<TTable, TSelection>, 'fetch'>;
     top(count: number): SelectTopFrom<TTable, TSelection>;

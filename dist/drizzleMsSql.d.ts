@@ -4,6 +4,7 @@ import * as native from 'drizzle-orm';
 import { type MsSqlAliases } from './alias.js';
 import { type MsSqlSchemaConditions } from './conditions.js';
 import { TableColumns } from './columns.js';
+import type { MsSqlColumnName } from './@types/index.js';
 import { MsSqlQuery, type SelectFrom, type SelectInput, type ResolveSelectInput, type SubquerySelectInput, type ResolveSubquerySelectInput } from './MsSqlQuery.js';
 export interface DrizzleMsSqlOptions<TSchema extends Record<string, MsSqlTable>> {
     url: string;
@@ -29,7 +30,19 @@ interface MsSqlDatabaseHelpers<TSchema extends Record<string, MsSqlTable>> exten
     select<TSource extends Subquery, const TArgs extends readonly [fields?: SubquerySelectInput<TSource>]>(source: TSource, ...args: TArgs): SelectFrom<TSource, ResolveSubquerySelectInput<TSource, TArgs[0]>>;
     query<TTable extends MsSqlTable>(table: TTable): MsSqlQuery<TTable>;
 }
-type MsSqlNativeHelpers = Pick<typeof native, 'asc' | 'desc' | 'count' | 'countDistinct' | 'avg' | 'avgDistinct' | 'sum' | 'sumDistinct' | 'max' | 'min' | 'not' | 'exists' | 'notExists' | 'arrayContains' | 'arrayContained' | 'arrayOverlaps'>;
+type OrderByColumn = Parameters<typeof native.asc>[0];
+type AliasOrderByHelper = {
+    <TTable extends MsSqlTable>(table: TTable, name: MsSqlColumnName<TTable>): SQL;
+    <TTable extends MsSqlTable>(table: TTable, first: MsSqlColumnName<TTable>, second: MsSqlColumnName<TTable>, ...rest: MsSqlColumnName<TTable>[]): SQL[];
+};
+type MultiColumnOrderHelper = {
+    (column: OrderByColumn): SQL;
+    (first: OrderByColumn, second: OrderByColumn, ...rest: OrderByColumn[]): SQL[];
+} & AliasOrderByHelper;
+type MsSqlNativeHelpers = Omit<Pick<typeof native, 'count' | 'countDistinct' | 'avg' | 'avgDistinct' | 'sum' | 'sumDistinct' | 'max' | 'min' | 'not' | 'exists' | 'notExists' | 'arrayContains' | 'arrayContained' | 'arrayOverlaps'>, 'asc' | 'desc'> & {
+    asc: MultiColumnOrderHelper;
+    desc: MultiColumnOrderHelper;
+};
 export type DrizzleMsSql<TSchema extends Record<string, MsSqlTable>> = MsSqlDatabaseHelpers<TSchema> & MsSqlSchemaConditions<TSchema>;
 declare function createConnection<TSchema extends Record<string, MsSqlTable>>(options: DrizzleMsSqlOptions<TSchema>): {
     current: (() => (import("drizzle-orm/node-mssql").NodeMsSqlDatabase<native.ExtractTablesWithRelations<{}, native.ExtractTablesFromSchema<TSchema>>> & {
