@@ -1,4 +1,4 @@
-import { mssqlTable, int, varchar, bit, datetime } from '@pdg/drizzle-mssql';
+import { mssqlTable, int, varchar, bit, datetime } from '../../../src';
 
 export const testData = mssqlTable('test_data', {
   id: int().identity().primaryKey(),

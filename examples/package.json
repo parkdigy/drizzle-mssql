@@ -12,7 +12,6 @@
     "git:commit:push": "cd .. && npm run git:commit:push"
   },
   "devDependencies": {
-    "@pdg/drizzle-mssql": "file:..",
     "dotenv": "^18.0.10",
     "tsx": "4.23.15",
     "typescript": "6.0.3"

@@ -1,4 +1,4 @@
-import drizzleMsSql from '@pdg/drizzle-mssql';
+import drizzleMsSql from '../../src';
 import 'dotenv/config';
 import * as schema from './schema';
 

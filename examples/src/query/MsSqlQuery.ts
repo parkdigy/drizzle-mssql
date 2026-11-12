@@ -1,4 +1,4 @@
-import { MsSqlQuery as BaseQuery } from '@pdg/drizzle-mssql';
+import { MsSqlQuery as BaseQuery } from '../../../src';
 import mssql from './../mssql';
 import * as schema from '../schema';
 

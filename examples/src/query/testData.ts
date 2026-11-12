@@ -1,5 +1,5 @@
 import { MsSqlQuery } from './MsSqlQuery';
-import mssql from '../mssql';
+import db from '../mssql';
 
 export class TestData extends MsSqlQuery<'testData'> {
   constructor() {
@@ -104,10 +104,10 @@ export class TestData extends MsSqlQuery<'testData'> {
     );
 
     const td = this.alias('td');
-    this.select(td).orderBy(mssql.asc(td.id), mssql.asc(td.name), mssql.desc(td.email));
+    this.select(td).orderBy(db.asc(td.id), db.asc(td.name), db.desc(td.email));
 
-    this.select(td).orderBy(mssql.asc(td.id, td.name), mssql.desc(td.email, td.is_lock));
-    this.select(td).orderBy(mssql.asc(td, 'id', 'name'), mssql.desc(td, 'email', 'is_lock'));
+    this.select(td).orderBy(db.asc(td.id, td.name), db.desc(td.email, td.is_lock));
+    this.select(td).orderBy(db.asc(td, 'id', 'name'), db.desc(td, 'email', 'is_lock'));
     this.select().orderBy((q) => q.asc('id', 'name'));
     this.select().orderBy((q) => [q.asc('id', 'name'), q.desc('email', 'is_lock')]);
 
@@ -115,7 +115,7 @@ export class TestData extends MsSqlQuery<'testData'> {
 
     console.log(await this.select(['id']).orderBy((q) => [q.asc('name'), q.asc('id')]));
 
-    console.log(await this.select(['id']).orderBy((q) => mssql.desc(q.t.id)));
+    console.log(await this.select(['id']).orderBy((q) => db.desc(q.t.id)));
 
     this.select().where((q) =>
       q.and(q.and({ eq: { is_lock: true }, gt: { id: 0 } }), q.or({ isNull: 'email', eq: { name: 'Ada' } }))
@@ -139,7 +139,7 @@ export class TestData extends MsSqlQuery<'testData'> {
   async aliasSelectTest() {
     console.log('::::: TestData::aliasSelectTest() :::::');
 
-    const td = mssql.a.testData('td');
+    const td = db.a.testData('td');
 
     console.log(await this.select(td, { id: td.id, name: td.name }));
 
@@ -153,7 +153,7 @@ export class TestData extends MsSqlQuery<'testData'> {
 
     console.log(await this.select(td, ['id']).orderBy((q) => q.desc('id')));
 
-    console.log(await this.select(td, ['id']).orderBy((q) => mssql.asc(q.t.id)));
+    console.log(await this.select(td, ['id']).orderBy((q) => db.asc(q.t.id)));
   }
 
   /********************************************************************************************************************
@@ -179,22 +179,16 @@ export class TestData extends MsSqlQuery<'testData'> {
       console.log(await this.select().where(this.eq('id', builder)));
 
       const j = builder.as('j');
-      console.log(
-        await this.select([this.columns('name'), mssql.columns(j, 'id')]).innerJoin(j, mssql.eq(j.id, this.t.id))
-      );
+      console.log(await this.select([this.columns('name'), db.columns(j, 'id')]).innerJoin(j, db.eq(j.id, this.t.id)));
       console.log(await this.select().innerJoin(j, (q) => q.eq({ id: q.t.id })));
 
-      const td = mssql.a.testData('td');
-      const td2 = mssql.a.testData('td2');
+      const td = db.a.testData('td');
+      const td2 = db.a.testData('td2');
       console.log(await this.select().where((q) => q.eq({ id: 1 })));
       console.log(
-        await this.select([
-          this.columns('id', 'name'),
-          mssql.columns(td, 'id as td_id'),
-          mssql.columns(td2, 'id as td2_id'),
-        ])
-          .innerJoin(td, mssql.eq(td.id, this.t.id))
-          .innerJoin(td2, mssql.eq(td2.id, this.t.id))
+        await this.select([this.columns('id', 'name'), db.columns(td, 'id as td_id'), db.columns(td2, 'id as td2_id')])
+          .innerJoin(td, db.eq(td.id, this.t.id))
+          .innerJoin(td2, db.eq(td2.id, this.t.id))
           .where((q) => q.eq({ id: 2 }))
           .orderBy((q) => q.desc('name'))
       );
@@ -204,13 +198,13 @@ export class TestData extends MsSqlQuery<'testData'> {
     {
       const builder = this.select(['id', 'name']).top(1).orderBy(this.desc('id'));
       const j = builder.as('j');
-      mssql.columns(j, 'id', 'name');
+      db.columns(j, 'id', 'name');
     }
 
     {
-      const ac2 = mssql.a.testData('ac2');
+      const ac2 = db.a.testData('ac2');
       const appInfoBuilder = this.select({
-        app_info: mssql.sqlString(''),
+        app_info: db.sqlString(''),
       }).where((q) =>
         q.and({
           eq: { id: ac2.id },
@@ -317,8 +311,8 @@ export class TestData extends MsSqlQuery<'testData'> {
     this.orBetween({ id: [1, 10], name: ['a', 'z'] });
     this.orIsNull(['name', 'email']);
 
-    const td = mssql.a.testData('td');
-    mssql.orLike(td, { name: '%name%', email: '%example.com' });
+    const td = db.a.testData('td');
+    db.orLike(td, { name: '%name%', email: '%example.com' });
 
     const oneRowBuilder = this.select(['id'])
       .top(1)
@@ -349,11 +343,11 @@ export class TestData extends MsSqlQuery<'testData'> {
     );
 
     console.log(await this.select(['id']).where((q) => q.eq({ name: 'name' })));
-    console.log(await this.select(['id']).where((q) => mssql.eq(q.t.name, 'name')));
+    console.log(await this.select(['id']).where((q) => db.eq(q.t.name, 'name')));
 
-    const td = mssql.a.testData('td');
+    const td = db.a.testData('td');
     console.log(await this.select(td, ['id']).where((q) => q.eq({ name: 'name' })));
-    console.log(await this.select(td, ['id']).where((q) => mssql.eq(q.t.name, 'name')));
+    console.log(await this.select(td, ['id']).where((q) => db.eq(q.t.name, 'name')));
   }
 
   /********************************************************************************************************************
@@ -456,8 +450,8 @@ export class TestData extends MsSqlQuery<'testData'> {
     console.log('::::: TestData::paginateTest() :::::');
 
     const builder = this.select().orderBy(this.desc('id'));
-    console.log(await mssql.paginate(builder, 1, 2));
-    console.log(await mssql.paginate(builder, 2, 2));
+    console.log(await db.paginate(builder, 1, 2));
+    console.log(await db.paginate(builder, 2, 2));
   }
 
   /********************************************************************************************************************

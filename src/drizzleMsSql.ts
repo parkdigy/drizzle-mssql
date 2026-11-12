@@ -20,7 +20,10 @@ import {
 export type DrizzleMsSqlOptions<TSchema extends Record<string, MsSqlTable>> = {
   schema: TSchema;
   getTimestamp?: () => unknown;
-} & ({ url: string; options?: MsSqlConfig['options'] } | (MsSqlConfig & { url?: never }));
+} & (
+  | ({ url: string } & Omit<MsSqlConfig, 'server' | 'port' | 'user' | 'password' | 'database'>)
+  | (MsSqlConfig & { url?: never })
+);
 
 type MsSqlConnection<TSchema extends Record<string, MsSqlTable>> = ReturnType<typeof createConnection<TSchema>>;
 
