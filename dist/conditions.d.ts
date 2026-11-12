@@ -1,7 +1,7 @@
 import * as native from 'drizzle-orm';
 import { MsSqlTable } from 'drizzle-orm/mssql-core';
 import type { Column, SQL } from 'drizzle-orm';
-import type { MsSqlColumnName, MsSqlConditions, MsSqlNullConditionInput } from './@types/index.js';
+import type { MsSqlAndConditions, MsSqlColumnName, MsSqlNullConditionInput, MsSqlOrConditions } from './@types/index.js';
 export declare function createConditions<TSchema extends Record<string, MsSqlTable>>(schema: TSchema): {
     eq: {
         <T extends MsSqlTable>(table: T, values: import("./index.js").MsSqlCompareValues<T> | undefined): SQL | undefined;
@@ -164,12 +164,12 @@ export declare function createConditions<TSchema extends Record<string, MsSqlTab
         <K extends keyof TSchema & string>(table: K, names: MsSqlNullConditionInput<(typeof schema)[K]>): SQL | undefined;
     };
     and: {
-        <T extends MsSqlTable>(table: T, options: MsSqlConditions<T>): SQL | undefined;
-        <K extends keyof TSchema & string>(table: K, options: MsSqlConditions<TSchema[K]>): SQL | undefined;
+        <T extends MsSqlTable>(table: T, options: MsSqlAndConditions<T> | MsSqlOrConditions<T>): SQL | undefined;
+        <K extends keyof TSchema & string>(table: K, options: MsSqlAndConditions<TSchema[K]> | MsSqlOrConditions<TSchema[K]>): SQL | undefined;
     } & ((...conditions: (native.SQLWrapper | false | undefined)[]) => SQL | undefined);
     or: {
-        <T extends MsSqlTable>(table: T, options: MsSqlConditions<T>): SQL | undefined;
-        <K extends keyof TSchema & string>(table: K, options: MsSqlConditions<TSchema[K]>): SQL | undefined;
+        <T extends MsSqlTable>(table: T, options: MsSqlAndConditions<T> | MsSqlOrConditions<T>): SQL | undefined;
+        <K extends keyof TSchema & string>(table: K, options: MsSqlAndConditions<TSchema[K]> | MsSqlOrConditions<TSchema[K]>): SQL | undefined;
     } & ((...conditions: (native.SQLWrapper | false | undefined)[]) => SQL | undefined);
 };
 export type MsSqlSchemaConditions<TSchema extends Record<string, MsSqlTable>> = ReturnType<typeof createConditions<TSchema>>;

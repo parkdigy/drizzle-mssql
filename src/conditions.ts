@@ -1,13 +1,19 @@
 import * as native from 'drizzle-orm';
 import { MsSqlTable } from 'drizzle-orm/mssql-core';
 import type { Column, SQL, SQLWrapper } from 'drizzle-orm';
-import type { MsSqlColumnName, MsSqlConditions, MsSqlNullConditionInput } from './@types/index';
+import type {
+  MsSqlAndConditions,
+  MsSqlColumnName,
+  MsSqlConditions,
+  MsSqlNullConditionInput,
+  MsSqlOrConditions,
+} from './@types/index';
 
 export function createConditions<TSchema extends Record<string, MsSqlTable>>(schema: TSchema) {
   /********************************************************************************************************************
    * ValueOperators
    * ******************************************************************************************************************/
-  type ValueOperators = Exclude<keyof MsSqlConditions<MsSqlTable>, 'isNull' | 'isNotNull' | `or${string}`>;
+  type ValueOperators = Exclude<keyof MsSqlConditions<MsSqlTable>, 'isNull' | 'isNotNull' | 'and' | 'or' | `or${string}`>;
   type SchemaKey = keyof TSchema & string;
   type TableInput = MsSqlTable | SchemaKey;
 
@@ -143,18 +149,25 @@ export function createConditions<TSchema extends Record<string, MsSqlTable>>(sch
       return native[join](...conditions);
     }) as NullOperator;
 
-  type GroupOperator = {
-    <T extends MsSqlTable>(table: T, options: MsSqlConditions<T>): SQL | undefined;
-    <K extends SchemaKey>(table: K, options: MsSqlConditions<TSchema[K]>): SQL | undefined;
+  type GroupConditions<T extends MsSqlTable, TOperator extends 'and' | 'or'> = TOperator extends 'and'
+    ? MsSqlAndConditions<T>
+    : MsSqlOrConditions<T>;
+
+  type GroupOperator<TOperator extends 'and' | 'or'> = {
+    <T extends MsSqlTable>(table: T, options: GroupConditions<T, TOperator>): SQL | undefined;
+    <K extends SchemaKey>(table: K, options: GroupConditions<TSchema[K], TOperator>): SQL | undefined;
   };
 
   const groupOperator =
-    (operator: 'and' | 'or'): GroupOperator =>
+    <TOperator extends 'and' | 'or'>(operator: TOperator): GroupOperator<TOperator> =>
     (input: TableInput, options: unknown): SQL | undefined => {
       const table = resolveTable(input);
       const sqlConditions: SQL[] = [];
       for (const [name, values] of recordEntries(options)) {
-        if (!Object.hasOwn(conditions, name) || name === 'and' || name === 'or') {
+        if (name === operator) {
+          throw new Error(`Condition: cannot nest "${operator}" inside itself.`);
+        }
+        if (!Object.hasOwn(conditions, name)) {
           throw new Error(`Condition: unknown operator "${name}".`);
         }
         if (values === undefined) continue;

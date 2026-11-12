@@ -26,6 +26,21 @@ type BaseConditions<T extends MsSqlTable> = {
   isNotNull?: MsSqlNullConditionInput<T>;
 };
 
-export type MsSqlConditions<T extends MsSqlTable> = BaseConditions<T> & {
+type OrConditions<T extends MsSqlTable> = {
   [K in keyof BaseConditions<T> as `or${Capitalize<K>}`]?: BaseConditions<T>[K];
+};
+
+type AtomicConditions<T extends MsSqlTable> = BaseConditions<T> & OrConditions<T>;
+
+export type MsSqlAndConditions<T extends MsSqlTable> = AtomicConditions<T> & {
+  or?: MsSqlOrConditions<T>;
+};
+
+export type MsSqlOrConditions<T extends MsSqlTable> = AtomicConditions<T> & {
+  and?: MsSqlAndConditions<T>;
+};
+
+export type MsSqlConditions<T extends MsSqlTable> = AtomicConditions<T> & {
+  and?: MsSqlAndConditions<T>;
+  or?: MsSqlOrConditions<T>;
 };

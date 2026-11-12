@@ -8,7 +8,7 @@ import type { GetMsSqlSetOperators, MsSqlJoin, MsSqlSetOperatorWithResult, SetOp
 import type { MsSqlViewBase } from 'drizzle-orm/mssql-core/view-base';
 import type { MsSqlColumnSelectionName, MsSqlSelectedNamedColumnUnion, MsSqlSelectedNamedColumns, MsSqlSelectedTableColumns, MsSqlAliasTable } from './columns.cjs';
 import { type TableMutationPolicy } from './mssqlTable.cjs';
-import type { MsSqlAddValues, MsSqlEditValues, MsSqlCompareValues, MsSqlColumnName, MsSqlArrayCompareValues, MsSqlRangeCompareValues, MsSqlPatternCompareValues, MsSqlNullConditionInput, MsSqlConditions } from './@types/index.cjs';
+import type { MsSqlAddValues, MsSqlEditValues, MsSqlCompareValues, MsSqlColumnName, MsSqlArrayCompareValues, MsSqlRangeCompareValues, MsSqlPatternCompareValues, MsSqlNullConditionInput, MsSqlAndConditions, MsSqlOrConditions } from './@types/index.cjs';
 import type { NodeMsSqlDatabase, NodeMsSqlPreparedQueryHKT } from 'drizzle-orm/node-mssql';
 /********************************************************************************************************************
  * MsSqlQuery
@@ -261,12 +261,12 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddVa
     /********************************************************************************************************************
      * and
      * ******************************************************************************************************************/
-    and(options: MsSqlConditions<TTable>): SQL | undefined;
+    and(options: MsSqlAndConditions<TTable>): SQL | undefined;
     and(...conditions: (SQLWrapper | false | undefined)[]): SQL | undefined;
     /********************************************************************************************************************
      * or
      * ******************************************************************************************************************/
-    or(options: MsSqlConditions<TTable>): SQL | undefined;
+    or(options: MsSqlOrConditions<TTable>): SQL | undefined;
     or(...conditions: (SQLWrapper | false | undefined)[]): SQL | undefined;
 }
 /********************************************************************************************************************
@@ -420,9 +420,9 @@ type TableConditionQuery<TTable extends MsSqlTable> = {
     notIlike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
     isNull(names: MsSqlNullConditionInput<TTable>): SQL | undefined;
     isNotNull(names: MsSqlNullConditionInput<TTable>): SQL | undefined;
-    and(options: MsSqlConditions<TTable>): SQL | undefined;
+    and(options: MsSqlAndConditions<TTable>): SQL | undefined;
     and(...conditions: (SQLWrapper | false | undefined)[]): SQL | undefined;
-    or(options: MsSqlConditions<TTable>): SQL | undefined;
+    or(options: MsSqlOrConditions<TTable>): SQL | undefined;
     or(...conditions: (SQLWrapper | false | undefined)[]): SQL | undefined;
 };
 type BaseWhere<TQuery> = SQL | undefined | ((query: WhereQuery<TQuery>) => SQL | undefined);
@@ -531,6 +531,29 @@ type SubqueryRangeValues<T extends Subquery> = {
 type SubqueryPatternValues<T extends Subquery> = {
     [K in keyof T['_']['selectedFields'] as NonNullable<SubqueryFieldData<T['_']['selectedFields'][K]>> extends string ? K : never]?: string;
 };
+type SubqueryAtomicMethods<T extends Subquery> = Pick<{
+    [K in 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte']: (values: SubqueryValues<T>) => SQL | undefined;
+} & {
+    [K in 'inArray' | 'notInArray']: (values: SubqueryArrayValues<T>) => SQL | undefined;
+} & {
+    [K in 'between' | 'notBetween']: (values: SubqueryRangeValues<T>) => SQL | undefined;
+} & {
+    [K in 'like' | 'notLike' | 'ilike' | 'notIlike']: (values: SubqueryPatternValues<T>) => SQL | undefined;
+} & {
+    isNull(names: SourceColumnName<T> | undefined | readonly (SourceColumnName<T> | undefined)[]): SQL | undefined;
+    isNotNull(names: SourceColumnName<T> | undefined | readonly (SourceColumnName<T> | undefined)[]): SQL | undefined;
+}, 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'inArray' | 'notInArray' | 'between' | 'notBetween' | 'like' | 'notLike' | 'ilike' | 'notIlike' | 'isNull' | 'isNotNull'>;
+type SubqueryAtomicConditions<T extends Subquery> = {
+    [K in keyof SubqueryAtomicMethods<T>]?: Parameters<SubqueryAtomicMethods<T>[K]>[0];
+} & {
+    [K in keyof SubqueryAtomicMethods<T> as `or${Capitalize<K>}`]?: Parameters<SubqueryAtomicMethods<T>[K]>[0];
+};
+type SubqueryAndConditions<T extends Subquery> = SubqueryAtomicConditions<T> & {
+    or?: SubqueryOrConditions<T>;
+};
+type SubqueryOrConditions<T extends Subquery> = SubqueryAtomicConditions<T> & {
+    and?: SubqueryAndConditions<T>;
+};
 type BaseSubqueryConditionQuery<T extends Subquery> = {
     readonly t: T;
 } & {
@@ -544,15 +567,12 @@ type BaseSubqueryConditionQuery<T extends Subquery> = {
 } & {
     isNull(names: SourceColumnName<T> | undefined | readonly (SourceColumnName<T> | undefined)[]): SQL | undefined;
     isNotNull(names: SourceColumnName<T> | undefined | readonly (SourceColumnName<T> | undefined)[]): SQL | undefined;
-    and(values: SubqueryConditions<T>): SQL | undefined;
+    and(values: SubqueryAndConditions<T>): SQL | undefined;
     and(...conditions: (SQLWrapper | false | undefined)[]): SQL | undefined;
-    or(values: SubqueryConditions<T>): SQL | undefined;
+    or(values: SubqueryOrConditions<T>): SQL | undefined;
     or(...conditions: (SQLWrapper | false | undefined)[]): SQL | undefined;
 };
 type SubqueryConditionQuery<T extends Subquery> = BaseSubqueryConditionQuery<T> & {
     [K in keyof Omit<BaseSubqueryConditionQuery<T>, 't' | 'and' | 'or'> as `or${Capitalize<K>}`]: BaseSubqueryConditionQuery<T>[K];
-};
-type SubqueryConditions<T extends Subquery> = {
-    [K in keyof Omit<SubqueryConditionQuery<T>, 't'>]?: SubqueryConditionQuery<T>[K] extends (values: infer V) => unknown ? V : never;
 };
 export {};

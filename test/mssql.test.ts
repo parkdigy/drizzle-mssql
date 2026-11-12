@@ -83,6 +83,42 @@ test('where 콜백에서 테이블 컬럼과 조건 헬퍼를 함께 사용한�
   expect(aliasCondition.params).toEqual(['Ada']);
 });
 
+test('and 객체 조건 안에서 or 조건을 중첩한다', () => {
+  const directCondition = usersQuery
+    .select(['id'])
+    .where(
+      usersQuery.and({
+        eq: { id: 1 },
+        or: {
+          eq: { name: 'name' },
+          ne: { name: 'name2' },
+        },
+      })
+    )
+    .toSQL();
+  const callbackCondition = usersQuery
+    .select(['id'])
+    .where((q) =>
+      q.and({
+        eq: { id: 1 },
+        or: {
+          eq: { name: 'name' },
+          ne: { name: 'name2' },
+        },
+      })
+    )
+    .toSQL();
+
+  expect(directCondition.sql).toMatch(/\[users\]\.\[id\] = @par0/);
+  expect(directCondition.sql).toMatch(/\[users\]\.\[name\] = @par1/);
+  expect(directCondition.sql).toMatch(/\[users\]\.\[name\] <> @par2/);
+  expect(directCondition.params).toEqual([1, 'name', 'name2']);
+  expect(callbackCondition.sql).toBe(directCondition.sql);
+  expect(callbackCondition.params).toEqual(directCondition.params);
+  expect(() => Reflect.apply(usersQuery.and, usersQuery, [{ and: {} }])).toThrow('cannot nest "and" inside itself');
+  expect(() => Reflect.apply(usersQuery.or, usersQuery, [{ or: {} }])).toThrow('cannot nest "or" inside itself');
+});
+
 test('join 콜백은 조인 컬럼 조건 헬퍼와 기준 테이블 q.t를 제공한다', () => {
   const baseAlias = createAlias({ users }).users('base');
   const joinAlias = createAlias({ users }).users('joined');

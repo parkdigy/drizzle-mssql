@@ -53,7 +53,8 @@ import type {
   MsSqlRangeCompareValues,
   MsSqlPatternCompareValues,
   MsSqlNullConditionInput,
-  MsSqlConditions,
+  MsSqlAndConditions,
+  MsSqlOrConditions,
 } from './@types';
 import { createConditions } from './conditions';
 import type { NodeMsSqlDatabase, NodeMsSqlPreparedQueryHKT } from 'drizzle-orm/node-mssql';
@@ -1179,14 +1180,14 @@ export class MsSqlQuery<
   /********************************************************************************************************************
    * and
    * ******************************************************************************************************************/
-  and(options: MsSqlConditions<TTable>): SQL | undefined;
+  and(options: MsSqlAndConditions<TTable>): SQL | undefined;
   and(...conditions: (SQLWrapper | false | undefined)[]): SQL | undefined;
   and(
-    options: MsSqlConditions<TTable> | SQLWrapper | false | undefined,
+    options: MsSqlAndConditions<TTable> | SQLWrapper | false | undefined,
     ...conditions: (SQLWrapper | false | undefined)[]
   ): SQL | undefined {
     if (typeof options === 'object' && options !== null && !('getSQL' in options)) {
-      return this.drizzle.and(this.t, options as MsSqlConditions<TTable>);
+      return this.drizzle.and(this.t, options as MsSqlAndConditions<TTable>);
     }
     return drizzleAnd(...[options, ...conditions].filter((condition): condition is SQLWrapper | undefined => condition !== false));
   }
@@ -1194,14 +1195,14 @@ export class MsSqlQuery<
   /********************************************************************************************************************
    * or
    * ******************************************************************************************************************/
-  or(options: MsSqlConditions<TTable>): SQL | undefined;
+  or(options: MsSqlOrConditions<TTable>): SQL | undefined;
   or(...conditions: (SQLWrapper | false | undefined)[]): SQL | undefined;
   or(
-    options: MsSqlConditions<TTable> | SQLWrapper | false | undefined,
+    options: MsSqlOrConditions<TTable> | SQLWrapper | false | undefined,
     ...conditions: (SQLWrapper | false | undefined)[]
   ): SQL | undefined {
     if (typeof options === 'object' && options !== null && !('getSQL' in options)) {
-      return this.drizzle.or(this.t, options as MsSqlConditions<TTable>);
+      return this.drizzle.or(this.t, options as MsSqlOrConditions<TTable>);
     }
     return drizzleOr(...[options, ...conditions].filter((condition): condition is SQLWrapper | undefined => condition !== false));
   }
@@ -1506,9 +1507,9 @@ type TableConditionQuery<TTable extends MsSqlTable> = {
   notIlike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
   isNull(names: MsSqlNullConditionInput<TTable>): SQL | undefined;
   isNotNull(names: MsSqlNullConditionInput<TTable>): SQL | undefined;
-  and(options: MsSqlConditions<TTable>): SQL | undefined;
+  and(options: MsSqlAndConditions<TTable>): SQL | undefined;
   and(...conditions: (SQLWrapper | false | undefined)[]): SQL | undefined;
-  or(options: MsSqlConditions<TTable>): SQL | undefined;
+  or(options: MsSqlOrConditions<TTable>): SQL | undefined;
   or(...conditions: (SQLWrapper | false | undefined)[]): SQL | undefined;
 };
 type BaseWhere<TQuery> = SQL | undefined | ((query: WhereQuery<TQuery>) => SQL | undefined);
@@ -1785,6 +1786,43 @@ type SubqueryPatternValues<T extends Subquery> = {
       : never
   ]?: string;
 };
+type SubqueryAtomicMethods<T extends Subquery> = Pick<
+  {
+    [K in 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte']: (values: SubqueryValues<T>) => SQL | undefined;
+  } & { [K in 'inArray' | 'notInArray']: (values: SubqueryArrayValues<T>) => SQL | undefined } & {
+    [K in 'between' | 'notBetween']: (values: SubqueryRangeValues<T>) => SQL | undefined;
+  } & { [K in 'like' | 'notLike' | 'ilike' | 'notIlike']: (values: SubqueryPatternValues<T>) => SQL | undefined } & {
+    isNull(names: SourceColumnName<T> | undefined | readonly (SourceColumnName<T> | undefined)[]): SQL | undefined;
+    isNotNull(names: SourceColumnName<T> | undefined | readonly (SourceColumnName<T> | undefined)[]): SQL | undefined;
+  },
+  | 'eq'
+  | 'ne'
+  | 'gt'
+  | 'gte'
+  | 'lt'
+  | 'lte'
+  | 'inArray'
+  | 'notInArray'
+  | 'between'
+  | 'notBetween'
+  | 'like'
+  | 'notLike'
+  | 'ilike'
+  | 'notIlike'
+  | 'isNull'
+  | 'isNotNull'
+>;
+type SubqueryAtomicConditions<T extends Subquery> = {
+  [K in keyof SubqueryAtomicMethods<T>]?: Parameters<SubqueryAtomicMethods<T>[K]>[0];
+} & {
+  [K in keyof SubqueryAtomicMethods<T> as `or${Capitalize<K>}`]?: Parameters<SubqueryAtomicMethods<T>[K]>[0];
+};
+type SubqueryAndConditions<T extends Subquery> = SubqueryAtomicConditions<T> & {
+  or?: SubqueryOrConditions<T>;
+};
+type SubqueryOrConditions<T extends Subquery> = SubqueryAtomicConditions<T> & {
+  and?: SubqueryAndConditions<T>;
+};
 type BaseSubqueryConditionQuery<T extends Subquery> = {
   readonly t: T;
 } & { [K in 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte']: (values: SubqueryValues<T>) => SQL | undefined } & {
@@ -1794,18 +1832,13 @@ type BaseSubqueryConditionQuery<T extends Subquery> = {
 } & {
   isNull(names: SourceColumnName<T> | undefined | readonly (SourceColumnName<T> | undefined)[]): SQL | undefined;
   isNotNull(names: SourceColumnName<T> | undefined | readonly (SourceColumnName<T> | undefined)[]): SQL | undefined;
-  and(values: SubqueryConditions<T>): SQL | undefined;
+  and(values: SubqueryAndConditions<T>): SQL | undefined;
   and(...conditions: (SQLWrapper | false | undefined)[]): SQL | undefined;
-  or(values: SubqueryConditions<T>): SQL | undefined;
+  or(values: SubqueryOrConditions<T>): SQL | undefined;
   or(...conditions: (SQLWrapper | false | undefined)[]): SQL | undefined;
 };
 type SubqueryConditionQuery<T extends Subquery> = BaseSubqueryConditionQuery<T> & {
   [
     K in keyof Omit<BaseSubqueryConditionQuery<T>, 't' | 'and' | 'or'> as `or${Capitalize<K>}`
   ]: BaseSubqueryConditionQuery<T>[K];
-};
-type SubqueryConditions<T extends Subquery> = {
-  [K in keyof Omit<SubqueryConditionQuery<T>, 't'>]?: SubqueryConditionQuery<T>[K] extends (values: infer V) => unknown
-    ? V
-    : never;
 };

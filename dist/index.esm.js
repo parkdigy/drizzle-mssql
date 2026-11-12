@@ -115,7 +115,10 @@ import {drizzle}from'drizzle-orm/node-mssql';import*as native from'drizzle-orm';
         const table = resolveTable(input);
         const sqlConditions = [];
         for (const [name, values] of recordEntries(options)) {
-            if (!Object.hasOwn(conditions, name) || name === 'and' || name === 'or') {
+            if (name === operator) {
+                throw new Error(`Condition: cannot nest "${operator}" inside itself.`);
+            }
+            if (!Object.hasOwn(conditions, name)) {
                 throw new Error(`Condition: unknown operator "${name}".`);
             }
             if (values === undefined)

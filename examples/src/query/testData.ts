@@ -276,12 +276,48 @@ export class TestData extends MsSqlQuery<'testData'> {
       )
     );
 
-    const td = mssql.a.testData('td');
+    this.and({
+      eq: { id: 1 },
+      or: {
+        eq: { name: 'name' },
+        ne: { name: 'name2' },
+      },
+    });
+
+    this.select().where((q) =>
+      q.and({
+        eq: { id: 1 },
+        or: {
+          eq: { name: 'name' },
+          ne: { name: 'name2' },
+        },
+      })
+    );
+
+    this.or({
+      eq: { id: 1 },
+      and: {
+        eq: { name: 'name' },
+        ne: { name: 'name2' },
+      },
+    });
+
+    this.select().where((q) =>
+      q.or({
+        eq: { id: 1 },
+        and: {
+          eq: { name: 'name' },
+          ne: { name: 'name2' },
+        },
+      })
+    );
 
     this.orGt({ id: 1, name: 'name' });
     this.orInArray({ id: [1, 2], name: ['name'] });
     this.orBetween({ id: [1, 10], name: ['a', 'z'] });
     this.orIsNull(['name', 'email']);
+
+    const td = mssql.a.testData('td');
     mssql.orLike(td, { name: '%name%', email: '%example.com' });
 
     const oneRowBuilder = this.select(['id'])

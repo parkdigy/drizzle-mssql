@@ -54,6 +54,18 @@ test('200개 테이블과 200개 추가 컬럼에서도 공개 API의 자동완�
     query.select(a, ['id', '/*aliasNextColumn*/']);
     // @ts-expect-error 자동완성용 미완성 조건 키
     query.eq({ i/*queryEq*/ });
+    // @ts-expect-error and 객체 안에 and를 다시 넣을 수 없다
+    query.and({ and: {} });
+    // @ts-expect-error or 객체 안에 or를 다시 넣을 수 없다
+    query.or({ or: {} });
+    query.select().where((q) => {
+      // @ts-expect-error q.and 객체 안에 and를 다시 넣을 수 없다
+      return q.and({ and: {} });
+    });
+    query.select().where((q) => {
+      // @ts-expect-error q.or 객체 안에 or를 다시 넣을 수 없다
+      return q.or({ or: {} });
+    });
     const j = query.select(['id', 'name']).top(1).orderBy(query.desc('id')).as('j');
     // @ts-expect-error 서브쿼리 선택 콜백의 자동완성용 미완성 컬럼명
     db.select(j, q => q.columns('id', '/*subquerySelect*/'));
