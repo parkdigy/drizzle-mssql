@@ -1,3 +1,4 @@
+import { type config as MsSqlConfig } from 'mssql';
 import { SQL, sql, type Subquery } from 'drizzle-orm';
 import { alias, type MsSqlTable } from 'drizzle-orm/mssql-core';
 import * as native from 'drizzle-orm';
@@ -6,11 +7,15 @@ import { type MsSqlSchemaConditions } from './conditions.cjs';
 import { TableColumns } from './columns.cjs';
 import type { MsSqlColumnName } from './@types/index.cjs';
 import { MsSqlQuery, type SelectFrom, type SelectInput, type ResolveSelectInput, type SubquerySelectInput, type ResolveSubquerySelectInput } from './MsSqlQuery.cjs';
-export interface DrizzleMsSqlOptions<TSchema extends Record<string, MsSqlTable>> {
-    url: string;
+export type DrizzleMsSqlOptions<TSchema extends Record<string, MsSqlTable>> = {
     schema: TSchema;
     getTimestamp?: () => unknown;
-}
+} & ({
+    url: string;
+    options?: MsSqlConfig['options'];
+} | (MsSqlConfig & {
+    url?: never;
+}));
 type MsSqlConnection<TSchema extends Record<string, MsSqlTable>> = ReturnType<typeof createConnection<TSchema>>;
 type SelectTable<TSchema, TSource> = TSource extends MsSqlTable ? TSource : TSource extends keyof TSchema ? Extract<TSchema[TSource], MsSqlTable> : never;
 interface MsSqlDatabaseHelpers<TSchema extends Record<string, MsSqlTable>> extends MsSqlNativeHelpers {

@@ -1,4 +1,5 @@
-import { drizzle } from 'drizzle-orm/node-mssql';
+import { drizzle, getMsSqlConnectionParams } from 'drizzle-orm/node-mssql';
+import mssql, { type config as MsSqlConfig } from 'mssql';
 import { count, defineRelations, getTableColumns, is, isTable, SQL, sql, type Subquery } from 'drizzle-orm';
 import { alias, type MsSqlTable } from 'drizzle-orm/mssql-core';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -16,11 +17,10 @@ import {
   type ResolveSubquerySelectInput,
 } from './MsSqlQuery';
 
-export interface DrizzleMsSqlOptions<TSchema extends Record<string, MsSqlTable>> {
-  url: string;
+export type DrizzleMsSqlOptions<TSchema extends Record<string, MsSqlTable>> = {
   schema: TSchema;
   getTimestamp?: () => unknown;
-}
+} & ({ url: string; options?: MsSqlConfig['options'] } | (MsSqlConfig & { url?: never }));
 
 type MsSqlConnection<TSchema extends Record<string, MsSqlTable>> = ReturnType<typeof createConnection<TSchema>>;
 
@@ -92,23 +92,26 @@ const createOrderByHelper = (direction: (column: OrderByColumn) => SQL): MultiCo
   return implementation as MultiColumnOrderHelper;
 };
 
-type MsSqlNativeHelpers = Omit<Pick<
-  typeof native,
-  | 'count'
-  | 'countDistinct'
-  | 'avg'
-  | 'avgDistinct'
-  | 'sum'
-  | 'sumDistinct'
-  | 'max'
-  | 'min'
-  | 'not'
-  | 'exists'
-  | 'notExists'
-  | 'arrayContains'
-  | 'arrayContained'
-  | 'arrayOverlaps'
->, 'asc' | 'desc'> & {
+type MsSqlNativeHelpers = Omit<
+  Pick<
+    typeof native,
+    | 'count'
+    | 'countDistinct'
+    | 'avg'
+    | 'avgDistinct'
+    | 'sum'
+    | 'sumDistinct'
+    | 'max'
+    | 'min'
+    | 'not'
+    | 'exists'
+    | 'notExists'
+    | 'arrayContains'
+    | 'arrayContained'
+    | 'arrayOverlaps'
+  >,
+  'asc' | 'desc'
+> & {
   asc: MultiColumnOrderHelper;
   desc: MultiColumnOrderHelper;
 };
@@ -120,18 +123,28 @@ export type DrizzleMsSql<TSchema extends Record<string, MsSqlTable>> = MsSqlData
   MsSqlSchemaConditions<TSchema>;
 
 function createConnection<TSchema extends Record<string, MsSqlTable>>(options: DrizzleMsSqlOptions<TSchema>) {
-  const raw = drizzle({ connection: options.url, relations: defineRelations(options.schema) });
+  const { url, schema, getTimestamp, ...connectionOptions } = options;
+  if (url && Object.keys(connectionOptions).some((key) => key !== 'options')) {
+    throw new TypeError('url cannot be combined with direct connection settings.');
+  }
+  const connectionConfig: string | MsSqlConfig = url
+    ? getMsSqlConnectionParams(url)
+    : (connectionOptions as MsSqlConfig);
+  const drizzleConnection =
+    url && connectionOptions.options
+      ? {
+          ...(typeof connectionConfig === 'string'
+            ? mssql.ConnectionPool.parseConnectionString(connectionConfig)
+            : connectionConfig),
+          options: connectionOptions.options,
+        }
+      : connectionConfig;
+  // 현재 Drizzle 구현은 config 객체를 지원하지만 공개 타입은 connection을 string으로만 선언한다.
+  const raw = drizzle({ connection: drizzleConnection as string, relations: defineRelations(schema) });
   type Transaction = Parameters<Parameters<typeof raw.transaction>[0]>[0];
   const context = new AsyncLocalStorage<Transaction>();
-  const getTimestamp =
-    options.getTimestamp ??
-    (() => {
-      const now = new Date();
-      const pad = (value: number, length = 2) => String(value).padStart(length, '0');
-      const localDateTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}.${pad(now.getMilliseconds(), 3)}`;
-      return sql`CONVERT(datetime2, ${localDateTime}, 126)`;
-    });
-  const current = Object.assign(() => context.getStore() ?? raw, { getTimestamp });
+  const timestampFactory = getTimestamp ?? (() => new Date());
+  const current = Object.assign(() => context.getStore() ?? raw, { getTimestamp: timestampFactory });
   const trans = <T>(callback: () => Promise<T>): Promise<T> => {
     const parent = context.getStore();
     const execute = (tx: Transaction) => context.run(tx, callback);

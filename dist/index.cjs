@@ -1,4 +1,36 @@
-'use strict';Object.defineProperty(exports,'__esModule',{value:true});var nodeMssql=require('drizzle-orm/node-mssql'),native=require('drizzle-orm'),mssqlCore=require('drizzle-orm/mssql-core'),node_async_hooks=require('node:async_hooks'),alias=require('drizzle-orm/mssql-core/alias'),common=require('drizzle-orm/mssql-core/columns/common');function _interopNamespaceDefault(e){var n=Object.create(null);if(e){Object.keys(e).forEach(function(k){if(k!=='default'){var d=Object.getOwnPropertyDescriptor(e,k);Object.defineProperty(n,k,d.get?d:{enumerable:true,get:function(){return e[k]}});}})}n.default=e;return Object.freeze(n)}var native__namespace=/*#__PURE__*/_interopNamespaceDefault(native);function createAlias(schema) {
+'use strict';Object.defineProperty(exports,'__esModule',{value:true});var nodeMssql=require('drizzle-orm/node-mssql'),mssql=require('mssql'),native=require('drizzle-orm'),mssqlCore=require('drizzle-orm/mssql-core'),node_async_hooks=require('node:async_hooks'),alias=require('drizzle-orm/mssql-core/alias'),common=require('drizzle-orm/mssql-core/columns/common');function _interopNamespaceDefault(e){var n=Object.create(null);if(e){Object.keys(e).forEach(function(k){if(k!=='default'){var d=Object.getOwnPropertyDescriptor(e,k);Object.defineProperty(n,k,d.get?d:{enumerable:true,get:function(){return e[k]}});}})}n.default=e;return Object.freeze(n)}var native__namespace=/*#__PURE__*/_interopNamespaceDefault(native);/******************************************************************************
+Copyright (c) Microsoft Corporation.
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+***************************************************************************** */
+/* global Reflect, Promise, SuppressedError, Symbol, Iterator */
+
+
+function __rest(s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+}
+
+typeof SuppressedError === "function" ? SuppressedError : function (error, suppressed, message) {
+    var e = new Error(message);
+    return e.name = "SuppressedError", e.error = error, e.suppressed = suppressed, e;
+};function createAlias(schema) {
     /********************************************************************************************************************
      * getDefaultAlias
      * ******************************************************************************************************************/
@@ -1062,16 +1094,22 @@ function sourceColumns(source, names = []) {
 const asc = createOrderByHelper(native__namespace.asc);
 const desc = createOrderByHelper(native__namespace.desc);
 function createConnection(options) {
-    var _a;
-    const raw = nodeMssql.drizzle({ connection: options.url, relations: native.defineRelations(options.schema) });
+    const { url, schema, getTimestamp } = options, connectionOptions = __rest(options, ["url", "schema", "getTimestamp"]);
+    if (url && Object.keys(connectionOptions).some((key) => key !== 'options')) {
+        throw new TypeError('url cannot be combined with direct connection settings.');
+    }
+    const connectionConfig = url
+        ? nodeMssql.getMsSqlConnectionParams(url)
+        : connectionOptions;
+    const drizzleConnection = url && connectionOptions.options
+        ? Object.assign(Object.assign({}, (typeof connectionConfig === 'string'
+            ? mssql.ConnectionPool.parseConnectionString(connectionConfig)
+            : connectionConfig)), { options: connectionOptions.options }) : connectionConfig;
+    // 현재 Drizzle 구현은 config 객체를 지원하지만 공개 타입은 connection을 string으로만 선언한다.
+    const raw = nodeMssql.drizzle({ connection: drizzleConnection, relations: native.defineRelations(schema) });
     const context = new node_async_hooks.AsyncLocalStorage();
-    const getTimestamp = (_a = options.getTimestamp) !== null && _a !== void 0 ? _a : (() => {
-        const now = new Date();
-        const pad = (value, length = 2) => String(value).padStart(length, '0');
-        const localDateTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}.${pad(now.getMilliseconds(), 3)}`;
-        return native.sql `CONVERT(datetime2, ${localDateTime}, 126)`;
-    });
-    const current = Object.assign(() => { var _a; return (_a = context.getStore()) !== null && _a !== void 0 ? _a : raw; }, { getTimestamp });
+    const timestampFactory = getTimestamp !== null && getTimestamp !== void 0 ? getTimestamp : (() => new Date());
+    const current = Object.assign(() => { var _a; return (_a = context.getStore()) !== null && _a !== void 0 ? _a : raw; }, { getTimestamp: timestampFactory });
     const trans = (callback) => {
         const parent = context.getStore();
         const execute = (tx) => context.run(tx, callback);

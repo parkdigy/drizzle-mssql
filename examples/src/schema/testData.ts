@@ -5,6 +5,6 @@ export const testData = mssqlTable('test_data', {
   name: varchar({ length: 50 }).notNull(),
   email: varchar({ length: 100 }).notNull(),
   is_lock: bit().default(false).notNull().insertBlocked(),
-  insert_date: datetime().notNull().createdAt(),
+  create_date: datetime().notNull().createdAt(),
   update_date: datetime().notNull().updatedAt(),
 });
