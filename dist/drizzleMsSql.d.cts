@@ -11,6 +11,7 @@ export interface DrizzleMsSqlOptions<TSchema extends Record<string, MsSqlTable>>
     getTimestamp?: () => unknown;
 }
 type MsSqlConnection<TSchema extends Record<string, MsSqlTable>> = ReturnType<typeof createConnection<TSchema>>;
+type SelectTable<TSchema, TSource> = TSource extends MsSqlTable ? TSource : TSource extends keyof TSchema ? Extract<TSchema[TSource], MsSqlTable> : never;
 interface MsSqlDatabaseHelpers<TSchema extends Record<string, MsSqlTable>> extends MsSqlNativeHelpers {
     s: TSchema;
     a: MsSqlAliases<TSchema>;
@@ -24,8 +25,7 @@ interface MsSqlDatabaseHelpers<TSchema extends Record<string, MsSqlTable>> exten
     trans: MsSqlConnection<TSchema>['trans'];
     paginate: MsSqlConnection<TSchema>['paginate'];
     close: MsSqlConnection<TSchema>['close'];
-    select<K extends keyof TSchema & string, const TArgs extends readonly [fields?: SelectInput<TSchema[K]>]>(table: K, ...args: TArgs): SelectFrom<TSchema[K], ResolveSelectInput<TSchema[K], TArgs[0]>>;
-    select<TTable extends MsSqlTable, const TArgs extends readonly [fields?: SelectInput<TTable>]>(table: TTable, ...args: TArgs): SelectFrom<TTable, ResolveSelectInput<TTable, TArgs[0]>>;
+    select<TSource extends (keyof TSchema & string) | MsSqlTable, const TArgs extends readonly [fields?: SelectInput<SelectTable<TSchema, TSource>>]>(table: TSource, ...args: TArgs): SelectFrom<SelectTable<TSchema, TSource>, ResolveSelectInput<SelectTable<TSchema, TSource>, TArgs[0]>>;
     select<TSource extends Subquery, const TArgs extends readonly [fields?: SubquerySelectInput<TSource>]>(source: TSource, ...args: TArgs): SelectFrom<TSource, ResolveSubquerySelectInput<TSource, TArgs[0]>>;
     query<TTable extends MsSqlTable>(table: TTable): MsSqlQuery<TTable>;
 }

@@ -322,6 +322,14 @@ export class TestData extends MsSqlQuery<'testData'> {
     console.log(await mssql.paginate(builder, 1, 2));
     console.log(await mssql.paginate(builder, 2, 2));
   }
+
+  /********************************************************************************************************************
+   * otherTest
+   * ******************************************************************************************************************/
+  async otherTest() {
+    const td = mssql.a.testData('td');
+    mssql.select(td, ['id']);
+  }
 }
 
 export const testData = new TestData();
