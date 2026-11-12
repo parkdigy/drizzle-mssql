@@ -12,6 +12,7 @@ import {
   desc as drizzleDesc,
   min as drizzleMin,
   max as drizzleMax,
+  type Placeholder,
 } from 'drizzle-orm';
 import {
   MsSqlTable,
@@ -24,7 +25,12 @@ import type { SelectedFields } from 'drizzle-orm/operations';
 import type { SQLWrapper } from 'drizzle-orm';
 import type { TypedQueryBuilder } from 'drizzle-orm/query-builders/query-builder';
 import type { GetSelectTableName } from 'drizzle-orm/query-builders/select.types';
-import type { MsSqlJoin } from 'drizzle-orm/mssql-core/query-builders/select.types';
+import type {
+  GetMsSqlSetOperators,
+  MsSqlJoin,
+  MsSqlSetOperatorWithResult,
+  SetOperatorRightSelect,
+} from 'drizzle-orm/mssql-core/query-builders/select.types';
 import type { MsSqlViewBase } from 'drizzle-orm/mssql-core/view-base';
 import type {
   MsSqlColumnSelectionName,
@@ -1161,6 +1167,43 @@ type SelectOrderByQuery<TTable extends MsSqlTable | Subquery> = {
 type OrderByCallback<TTable extends MsSqlTable | Subquery> = (
   query: SelectOrderByQuery<TTable>
 ) => OrderByValue | OrderByValue[];
+type GroupByCallback<
+  TTable extends MsSqlTable | Subquery,
+  TSelection extends FieldSet | undefined,
+  TBranch extends 'from' | 'top',
+> = (
+  aliases: SelectQueryBase<TTable, TSelection, TBranch>['_']['selection']
+) => OrderByValue | OrderByValue[];
+type HavingCondition<
+  TTable extends MsSqlTable | Subquery,
+  TSelection extends FieldSet | undefined,
+  TBranch extends 'from' | 'top',
+> = SQL | undefined | ((aliases: SelectQueryBase<TTable, TSelection, TBranch>['_']['selection']) => SQL | undefined);
+type OrderByPreserved<TQuery, TTable extends MsSqlTable | Subquery> = Omit<TQuery, 'orderBy'> & {
+  orderBy(builder: OrderByCallback<TTable>): Omit<OrderByPreserved<TQuery, TTable>, 'orderBy'>;
+  orderBy(...columns: OrderByValue[]): Omit<OrderByPreserved<TQuery, TTable>, 'orderBy'>;
+};
+type SelectSetOperatorMethod<
+  TQuery extends { readonly _: { readonly result: any[] }; union: (...args: any[]) => any },
+  TTable extends MsSqlTable | Subquery,
+> = <TValue extends MsSqlSetOperatorWithResult<TQuery['_']['result']>>(
+  rightSelection:
+    | ((setOperators: GetMsSqlSetOperators) => SetOperatorRightSelect<TValue, TQuery['_']['result']>)
+    | SetOperatorRightSelect<TValue, TQuery['_']['result']>
+) => OrderByPreserved<ReturnType<TQuery['union']>, TTable>;
+type DynamicSelect<
+  TQuery extends { readonly _: { readonly selection: unknown }; $dynamic: (...args: any[]) => any },
+  TTable extends MsSqlTable | Subquery,
+> = Omit<ReturnType<TQuery['$dynamic']>, 'groupBy' | 'orderBy' | 'having' | 'offset' | 'fetch' | '$dynamic'> & {
+  groupBy(builder: (aliases: TQuery['_']['selection']) => OrderByValue | OrderByValue[]): DynamicSelect<TQuery, TTable>;
+  groupBy(...columns: OrderByValue[]): DynamicSelect<TQuery, TTable>;
+  orderBy(builder: OrderByCallback<TTable>): DynamicSelect<TQuery, TTable>;
+  orderBy(...columns: OrderByValue[]): DynamicSelect<TQuery, TTable>;
+  having(condition: SQL | undefined | ((aliases: TQuery['_']['selection']) => SQL | undefined)): DynamicSelect<TQuery, TTable>;
+  offset(value: number | Placeholder): DynamicSelect<TQuery, TTable>;
+  fetch(value: number | Placeholder): DynamicSelect<TQuery, TTable>;
+  $dynamic(): DynamicSelect<TQuery, TTable>;
+};
 
 type JoinConditionValues<TJoinedTable extends Joinable> = TJoinedTable extends MsSqlTable
   ? MsSqlCompareValues<TJoinedTable>
@@ -1190,16 +1233,24 @@ type JoinedSelect<
   TKind extends 'inner' | 'left' | 'right' | 'full' | 'cross',
 > = Omit<
   MsSqlJoin<SelectQueryBase<TTable, TSelection, TBranch>, false, TKind, TJoinedTable>,
-  'where' | 'orderBy' | keyof SelectJoinMethods<TTable, TSelection, TBranch>
+  | 'where' | 'having' | 'groupBy' | 'orderBy' | 'offset' | 'fetch'
+  | keyof SelectJoinMethods<TTable, TSelection, TBranch>
 > &
   SelectJoinMethods<TTable, TSelection, TBranch> & {
     where(condition: TableWhere<TTable>): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'where'>;
+    having(condition: HavingCondition<TTable, TSelection, TBranch>): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'having'>;
+    groupBy(
+      builder: GroupByCallback<TTable, TSelection, TBranch>
+    ): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'groupBy'>;
+    groupBy(...columns: OrderByValue[]): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'groupBy'>;
     orderBy(
       builder: OrderByCallback<TTable>
     ): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'orderBy'>;
     orderBy(
       ...columns: OrderByValue[]
     ): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'orderBy'>;
+    offset(value: number | Placeholder): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'offset'>;
+    fetch(value: number | Placeholder): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'fetch'>;
   };
 type SelectJoinMethods<
   TTable extends MsSqlTable | Subquery,
@@ -1218,6 +1269,7 @@ type SelectJoinMethods<
     table: TJoinedTable,
     on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>
   ): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'right'>;
+  crossJoin<TJoinedTable extends Joinable>(table: TJoinedTable): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'cross'>;
   fullJoin<TJoinedTable extends Joinable>(
     table: TJoinedTable,
     on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>
@@ -1234,22 +1286,48 @@ type SelectJoinMethods<
 
 type SelectTopFrom<TTable extends MsSqlTable | Subquery, TSelection extends FieldSet | undefined> = Omit<
   SelectQueryBase<TTable, TSelection, 'top'>,
-  'where' | 'orderBy' | keyof SelectJoinMethods<TTable, TSelection, 'top'>
+  'where' | 'having' | 'groupBy' | 'orderBy' | 'offset' | 'fetch' | '$dynamic' | 'union' | 'unionAll' | 'intersect' | 'except'
+  | keyof SelectJoinMethods<TTable, TSelection, 'top'>
 > &
   SelectJoinMethods<TTable, TSelection, 'top'> & {
+    $dynamic(): DynamicSelect<SelectQueryBase<TTable, TSelection, 'top'>, TTable>;
+    union: SelectSetOperatorMethod<SelectQueryBase<TTable, TSelection, 'top'>, TTable>;
+    unionAll: SelectSetOperatorMethod<SelectQueryBase<TTable, TSelection, 'top'>, TTable>;
+    intersect: SelectSetOperatorMethod<SelectQueryBase<TTable, TSelection, 'top'>, TTable>;
+    except: SelectSetOperatorMethod<SelectQueryBase<TTable, TSelection, 'top'>, TTable>;
     where(condition: TableWhere<TTable>): Omit<SelectTopFrom<TTable, TSelection>, 'where'>;
+    having(condition: HavingCondition<TTable, TSelection, 'top'>): Omit<SelectTopFrom<TTable, TSelection>, 'having'>;
+    groupBy(
+      builder: GroupByCallback<TTable, TSelection, 'top'>
+    ): Omit<SelectTopFrom<TTable, TSelection>, 'groupBy'>;
+    groupBy(...columns: OrderByValue[]): Omit<SelectTopFrom<TTable, TSelection>, 'groupBy'>;
     orderBy(builder: OrderByCallback<TTable>): Omit<SelectTopFrom<TTable, TSelection>, 'orderBy'>;
     orderBy(...columns: OrderByValue[]): Omit<SelectTopFrom<TTable, TSelection>, 'orderBy'>;
+    offset(value: number | Placeholder): Omit<SelectTopFrom<TTable, TSelection>, 'offset'>;
+    fetch(value: number | Placeholder): Omit<SelectTopFrom<TTable, TSelection>, 'fetch'>;
   };
 
 export type SelectFrom<TTable extends MsSqlTable | Subquery, TSelection extends FieldSet | undefined> = Omit<
   SelectQueryBase<TTable, TSelection, 'from'>,
-  'where' | 'orderBy' | keyof SelectJoinMethods<TTable, TSelection, 'from'>
+  'where' | 'having' | 'groupBy' | 'orderBy' | 'offset' | 'fetch' | '$dynamic' | 'union' | 'unionAll' | 'intersect' | 'except'
+  | keyof SelectJoinMethods<TTable, TSelection, 'from'>
 > &
   SelectJoinMethods<TTable, TSelection, 'from'> & {
+    $dynamic(): DynamicSelect<SelectQueryBase<TTable, TSelection, 'from'>, TTable>;
+    union: SelectSetOperatorMethod<SelectQueryBase<TTable, TSelection, 'from'>, TTable>;
+    unionAll: SelectSetOperatorMethod<SelectQueryBase<TTable, TSelection, 'from'>, TTable>;
+    intersect: SelectSetOperatorMethod<SelectQueryBase<TTable, TSelection, 'from'>, TTable>;
+    except: SelectSetOperatorMethod<SelectQueryBase<TTable, TSelection, 'from'>, TTable>;
     where(condition: TableWhere<TTable>): Omit<SelectFrom<TTable, TSelection>, 'where'>;
+    having(condition: HavingCondition<TTable, TSelection, 'from'>): Omit<SelectFrom<TTable, TSelection>, 'having'>;
+    groupBy(
+      builder: GroupByCallback<TTable, TSelection, 'from'>
+    ): Omit<SelectFrom<TTable, TSelection>, 'groupBy'>;
+    groupBy(...columns: OrderByValue[]): Omit<SelectFrom<TTable, TSelection>, 'groupBy'>;
     orderBy(builder: OrderByCallback<TTable>): Omit<SelectFrom<TTable, TSelection>, 'orderBy'>;
     orderBy(...columns: OrderByValue[]): Omit<SelectFrom<TTable, TSelection>, 'orderBy'>;
+    offset(value: number | Placeholder): Omit<SelectFrom<TTable, TSelection>, 'offset'>;
+    fetch(value: number | Placeholder): Omit<SelectFrom<TTable, TSelection>, 'fetch'>;
     top(count: number): SelectTopFrom<TTable, TSelection>;
   };
 

@@ -35,6 +35,74 @@ export class TestData extends MsSqlQuery<'testData'> {
 
     console.log(await this.select(['id']).orderBy((q) => q.desc('id')));
 
+    const td1 = mssql.a.testData('td1');
+    const td2 = mssql.a.testData('td2');
+    console.log(
+      await this.select(td1, ['id'])
+        .crossJoin(td2)
+        .orderBy((q) => q.desc('id'))
+        .groupBy((t) => [t.id])
+    );
+
+    console.log(
+      await this.select(['id'])
+        .having(this.eq('id', 1))
+        .orderBy((q) => q.desc('id'))
+        .groupBy((t) => [t.id])
+    );
+
+    console.log(
+      await this.select(['id'])
+        .orderBy((q) => q.desc('id'))
+        .offset(0)
+        .fetch(10)
+        .groupBy((t) => [t.id])
+        .orderBy((q) => q.desc('id'))
+    );
+
+    console.log(
+      await this.select(['id'])
+        .groupBy((t) => [t.id])
+        .orderBy((q) => q.desc('id'))
+    );
+
+    console.log(
+      await this.select(['id'])
+        .$dynamic()
+        .orderBy((q) => q.desc('id'))
+        .groupBy((t) => [t.id])
+    );
+
+    console.log(
+      await this.select(['id'])
+        .union(this.select(['id']))
+        .orderBy((q) => q.desc('id'))
+    );
+
+    console.log(
+      await this.select(['id'])
+        .unionAll(this.select(['id']))
+        .orderBy((q) => q.desc('id'))
+    );
+
+    console.log(
+      await this.select(['id'])
+        .intersect(this.select(['id']))
+        .orderBy((q) => q.desc('id'))
+    );
+
+    console.log(
+      await this.select(['id'])
+        .except(this.select(['id']))
+        .orderBy((q) => q.desc('id'))
+    );
+
+    console.log(
+      await this.select(['id'])
+        .groupBy((t) => [t.id])
+        .orderBy((q) => q.desc('id'))
+    );
+
     console.log(await this.select(['id']).orderBy((q) => q.asc('id')));
 
     console.log(await this.select(['id']).orderBy((q) => [q.asc('name'), q.asc('id')]));
@@ -184,6 +252,8 @@ export class TestData extends MsSqlQuery<'testData'> {
       eq: { id: 1, name: 'name' },
       like: { name: '%name%' },
     });
+
+    const td = mssql.a.testData('td');
 
     this.orGt({ id: 1, name: 'name' });
     this.orInArray({ id: [1, 2], name: ['name'] });
