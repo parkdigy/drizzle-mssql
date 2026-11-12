@@ -451,23 +451,23 @@ export class MsSqlQuery<
    * find
    * ******************************************************************************************************************/
 
-  async find(where: BaseWhere<this>): Promise<FindResult<TTable, undefined>>;
+  async find(where: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>): Promise<FindResult<TTable, undefined>>;
 
-  async find(fields: readonly [], where?: BaseWhere<this>): Promise<FindResult<TTable, {}>>;
+  async find(fields: readonly [], where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>): Promise<FindResult<TTable, {}>>;
 
   async find<N extends MsSqlColumnSelectionName<TTable>>(
     fields: readonly N[],
-    where?: BaseWhere<this>
+    where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>
   ): Promise<FindResult<TTable, MsSqlSelectedNamedColumns<TTable, readonly N[]>>>;
 
   async find<const T extends readonly FieldInput[]>(
     fields: (query: FieldsQuery<TTable>) => T,
-    where: BaseWhere<this>
+    where: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>
   ): Promise<FindResult<TTable, MergeFields<T>>>;
 
   async find<const T extends readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[]>(
     fields: T,
-    where: BaseWhere<this>
+    where: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>
   ): Promise<FindResult<TTable, MergeFields<NamedFields<TTable, T>>>>;
 
   async find<const TSelection extends StringColumnSelection<TTable>>(
@@ -477,7 +477,7 @@ export class MsSqlQuery<
 
   async find<const TSelection extends StringColumnSelection<TTable>>(
     fields: TSelection,
-    where?: BaseWhere<this>
+    where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>
   ): Promise<FindResult<TTable, StringColumnSelectionFields<TTable, TSelection>>>;
 
   async find<TSelection extends SelectedFields<MsSqlColumn, TTable>>(
@@ -487,24 +487,24 @@ export class MsSqlQuery<
 
   async find<TSelection extends SelectedFields<MsSqlColumn, TTable>>(
     fields: Fields<FieldsQuery<TTable>, TSelection>,
-    where?: BaseWhere<this>
+    where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>
   ): Promise<FindResult<TTable, TSelection>>;
 
   async find<TAlias extends string>(
     alias: MsSqlAliasTable<TTable, TAlias>,
-    where: BaseWhere<this>
+    where: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>
   ): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, undefined>>;
 
   async find<TAlias extends string>(
     alias: MsSqlAliasTable<TTable, TAlias>,
     fields: readonly [],
-    where?: BaseWhere<this>
+    where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>
   ): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, {}>>;
 
   async find<TAlias extends string, N extends MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>>(
     alias: MsSqlAliasTable<TTable, TAlias>,
     fields: readonly N[],
-    where?: BaseWhere<this>
+    where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>
   ): Promise<
     FindResult<
       MsSqlAliasTable<TTable, TAlias>,
@@ -515,7 +515,7 @@ export class MsSqlQuery<
   async find<TAlias extends string, const T extends readonly FieldInput[]>(
     alias: MsSqlAliasTable<TTable, TAlias>,
     fields: (query: FieldsQuery<MsSqlAliasTable<TTable, TAlias>>) => T,
-    where: BaseWhere<this>
+    where: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>
   ): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, MergeFields<T>>>;
 
   async find<
@@ -524,21 +524,26 @@ export class MsSqlQuery<
   >(
     alias: MsSqlAliasTable<TTable, TAlias>,
     fields: T,
-    where: BaseWhere<this>
+    where: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>
   ): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, MergeFields<NamedFields<MsSqlAliasTable<TTable, TAlias>, T>>>>;
 
   async find<TAlias extends string, TSelection extends SelectedFields<MsSqlColumn, MsSqlAliasTable<TTable, TAlias>>>(
     alias: MsSqlAliasTable<TTable, TAlias>,
     fields: Fields<FieldsQuery<MsSqlAliasTable<TTable, TAlias>>, TSelection>,
-    where: BaseWhere<this>
+    where: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>
   ): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, TSelection>>;
 
-  async find(aliasOrFieldsOrWhere: unknown, fieldsOrWhere?: unknown, where?: BaseWhere<this>): Promise<unknown> {
+  async find(
+    aliasOrFieldsOrWhere: unknown,
+    fieldsOrWhere?: unknown,
+    where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>
+  ): Promise<unknown> {
     const hasAlias = isTable(aliasOrFieldsOrWhere);
     const fieldsOrCondition = hasAlias ? fieldsOrWhere : aliasOrFieldsOrWhere;
     const hasFields = arguments.length === (hasAlias ? 3 : 2);
 
-    const isCondition = (value: unknown): value is BaseWhere<this> => is(value, SQL) || typeof value === 'function';
+    const isCondition = (value: unknown): value is BaseWhere<MsSqlQuery<TTable, AV, EV, AR>> =>
+      is(value, SQL) || typeof value === 'function';
 
     const table = hasAlias ? (aliasOrFieldsOrWhere as MsSqlTable) : this.t;
     const selectedFields = this.resolveFields(
@@ -694,7 +699,7 @@ export class MsSqlQuery<
   /********************************************************************************************************************
    * exists
    * ******************************************************************************************************************/
-  async exists(where?: BaseWhere<this>): Promise<boolean> {
+  async exists(where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>): Promise<boolean> {
     const condition = typeof where === 'function' ? where(this) : where;
 
     if (condition !== undefined && !is(condition, SQL)) {
@@ -722,7 +727,7 @@ export class MsSqlQuery<
   /********************************************************************************************************************
    * notExists
    * ******************************************************************************************************************/
-  async notExists(where?: BaseWhere<this>): Promise<boolean> {
+  async notExists(where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>): Promise<boolean> {
     return !(await this.exists(where));
   }
 
@@ -736,7 +741,7 @@ export class MsSqlQuery<
   /********************************************************************************************************************
    * count
    * ******************************************************************************************************************/
-  async count(where?: BaseWhere<this>): Promise<number> {
+  async count(where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>): Promise<number> {
     const condition = typeof where === 'function' ? where(this) : where;
 
     if (condition !== undefined && !is(condition, SQL)) {
@@ -909,7 +914,7 @@ export class MsSqlQuery<
   edit(
     this: this & (TableMutationPolicy<TTable> extends { updateBlocked: true } ? never : unknown),
     set: EV,
-    where: BaseWhere<this>
+    where: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>
   ) {
     this.assertMutationAllowed('update', 'edit');
     const condition = typeof where === 'function' ? where(this) : where;
@@ -943,7 +948,7 @@ export class MsSqlQuery<
    * ******************************************************************************************************************/
   remove(
     this: this & (TableMutationPolicy<TTable> extends { deleteBlocked: true } ? never : unknown),
-    where: BaseWhere<this>
+    where: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>
   ) {
     this.assertMutationAllowed('delete', 'remove');
     const condition = typeof where === 'function' ? where(this) : where;

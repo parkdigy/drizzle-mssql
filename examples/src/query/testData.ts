@@ -406,6 +406,8 @@ export class TestData extends MsSqlQuery<'testData'> {
     console.log('::::: TestData::editTest() :::::');
 
     console.log(await this.edit({ is_lock: true }, this.eq({ id: 1 })));
+
+    console.log(await this.edit({ is_lock: true }, (q) => q.eq({ id: 1 })));
   }
 
   /********************************************************************************************************************
