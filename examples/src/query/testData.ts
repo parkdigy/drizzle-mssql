@@ -462,7 +462,7 @@ export class TestData extends MsSqlQuery<'testData'> {
    * otherTest
    * ******************************************************************************************************************/
   async otherTest() {
-    //
+    console.log('::::: TestData::otherTest() :::::');
   }
 }
 

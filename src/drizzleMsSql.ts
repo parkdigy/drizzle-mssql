@@ -149,9 +149,9 @@ function createConnection<TSchema extends Record<string, MsSqlTable>>(options: D
   const timestampFactory = getTimestamp ?? (() => new Date());
   const current = Object.assign(() => context.getStore() ?? raw, { getTimestamp: timestampFactory });
   const trans = <T>(callback: () => Promise<T>): Promise<T> => {
-    const parent = context.getStore();
     const execute = (tx: Transaction) => context.run(tx, callback);
-    return parent ? parent.transaction(execute) : raw.transaction(execute);
+    // 중첩 호출도 별도 연결의 독립 트랜잭션으로 실행한다.
+    return raw.transaction(execute);
   };
   const paginate = async <TResult extends unknown[]>(
     builder: {

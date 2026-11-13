@@ -1118,9 +1118,9 @@ function createConnection(options) {
     const timestampFactory = getTimestamp !== null && getTimestamp !== void 0 ? getTimestamp : (() => new Date());
     const current = Object.assign(() => { var _a; return (_a = context.getStore()) !== null && _a !== void 0 ? _a : raw; }, { getTimestamp: timestampFactory });
     const trans = (callback) => {
-        const parent = context.getStore();
         const execute = (tx) => context.run(tx, callback);
-        return parent ? parent.transaction(execute) : raw.transaction(execute);
+        // 중첩 호출도 별도 연결의 독립 트랜잭션으로 실행한다.
+        return raw.transaction(execute);
     };
     const paginate = async (builder, page, limit) => {
         var _a, _b, _c;
