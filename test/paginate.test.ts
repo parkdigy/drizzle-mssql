@@ -25,16 +25,16 @@ test.each([false, true])('정렬 지정 여부 %s에서 SQL Server 집계와 페
   try {
     const result = await database.paginate(query, 2, 10);
     expect(result.paging).toMatchObject({ total: 25, current_page: 2, from: 10, to: 11 });
-    expect(captured[0].sql).toContain(ordered ? 'order by [users].[id] offset' : 'order by (select 0) offset');
-    expect(captured[0].sql).not.toContain('fetch next');
-    expect(captured[0].params).toEqual(['홍길동', 0]);
-    expect(captured[1].sql).toContain(ordered ? 'order by [users].[id] offset' : 'order by (select 0) offset');
-    expect(captured[1].sql).toContain('fetch next');
-    expect(captured[1].params).toEqual(['홍길동', 10, 10]);
+    expect(captured[0]?.sql).toContain(ordered ? 'order by [users].[id] offset' : 'order by (select 0) offset');
+    expect(captured[0]?.sql).not.toContain('fetch next');
+    expect(captured[0]?.params).toEqual(['홍길동', 0]);
+    expect(captured[1]?.sql).toContain(ordered ? 'order by [users].[id] offset' : 'order by (select 0) offset');
+    expect(captured[1]?.sql).toContain('fetch next');
+    expect(captured[1]?.params).toEqual(['홍길동', 10, 10]);
     await database.paginate(query, 3, 10);
-    expect(captured[2].sql).not.toContain('fetch next');
-    expect(captured[2].params).toEqual(['홍길동', 0]);
-    expect(captured[3].params).toEqual(['홍길동', 20, 10]);
+    expect(captured[2]?.sql).not.toContain('fetch next');
+    expect(captured[2]?.params).toEqual(['홍길동', 0]);
+    expect(captured[3]?.params).toEqual(['홍길동', 20, 10]);
   } finally {
     select.mockRestore();
     fetch.mockRestore();

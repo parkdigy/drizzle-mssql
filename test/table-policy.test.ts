@@ -180,7 +180,7 @@ test('등록·배열 등록·조회와 인덱스 설정을 유지한다', async 
     expect(query.select()).toBe('select builder');
     expect(from).toHaveBeenLastCalledWith(table);
   }
-  expect(getTableConfig(indexedLogs).indexes[0].config.name).toBe('logs_name_idx');
+  expect(getTableConfig(indexedLogs).indexes[0]?.config.name).toBe('logs_name_idx');
 });
 
 test('생략·false·일부 정책과 기존 설정 콜백을 유지한다', async () => {
@@ -210,7 +210,7 @@ test('생략·false·일부 정책과 기존 설정 콜백을 유지한다', asy
   expect(() => new MsSqlQuery<MsSqlTable>(updateOnly, current).remove(sql`1 = 1`)).toThrow('delete is blocked');
   expect(update).toHaveBeenCalledTimes(7);
   expect(remove).toHaveBeenCalledTimes(7);
-  expect(getTableConfig(oldConfig).indexes[0].config.name).toBe('old_name_idx');
+  expect(getTableConfig(oldConfig).indexes[0]?.config.name).toBe('old_name_idx');
 });
 
 test('기본 키 편의 메서드는 기존처럼 edit과 remove에 위임한다', async () => {

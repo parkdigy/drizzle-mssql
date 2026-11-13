@@ -199,11 +199,12 @@ export function TableColumns(
       const match = /^(.+?)\s+as\s+(.+)$/i.exec(selection.trim());
       const name = (match?.[1] ?? selection).trim();
       const alias = match?.[2]?.trim();
-      if (!Object.hasOwn(tableColumns, name)) {
+      const column = tableColumns[name];
+      if (!Object.hasOwn(tableColumns, name) || column === undefined) {
         throw new Error(`columns: unknown column "${name}".`);
       }
-      if (alias) selected[alias] = sql`${tableColumns[name]}`.as(alias);
-      else selected[tableColumns[name].name] = tableColumns[name];
+      if (alias) selected[alias] = sql`${column}`.as(alias);
+      else selected[column.name] = column;
     }
     return selected;
   }

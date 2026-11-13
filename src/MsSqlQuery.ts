@@ -274,13 +274,13 @@ export class MsSqlQuery<
         (operator: string, conditionTable: MsSqlTable | Subquery = table) =>
         (input: unknown): SQL | undefined => {
           const orGroup = operator.startsWith('or') && operator !== 'or';
-          const baseOperator = orGroup ? operator[2].toLowerCase() + operator.slice(3) : operator;
+          const baseOperator = orGroup ? operator.charAt(2).toLowerCase() + operator.slice(3) : operator;
           const join = orGroup || operator === 'or' ? drizzleOr : drizzleAnd;
           const conditionOperator = (this.drizzle as unknown as Record<string, (...args: unknown[]) => unknown>)[
             operator
           ];
           if (isTable(conditionTable)) {
-            return Reflect.apply(conditionOperator, undefined, [conditionTable, input]) as SQL | undefined;
+            return Reflect.apply(conditionOperator!, undefined, [conditionTable, input]) as SQL | undefined;
           }
 
           if (baseOperator === 'isNull' || baseOperator === 'isNotNull') {
@@ -392,7 +392,7 @@ export class MsSqlQuery<
       const whereQuery = conditionQuery(table, table);
       const orderByColumns = (direction: typeof drizzleAsc | typeof drizzleDesc, name: string, ...names: string[]) => {
         const orders = [name, ...names].map((columnName) => direction(this.resolveOrderColumn(columnName, table)));
-        return orders.length === 1 ? orders[0] : orders;
+        return orders.length === 1 ? orders[0]! : orders;
       };
       const orderByQuery: SelectOrderByQuery<MsSqlTable | Subquery> = {
         t: table,
@@ -751,9 +751,9 @@ export class MsSqlQuery<
       throw new Error('count: the where callback must return SQL or undefined.');
     }
 
-    const [{ cnt }] = await this.select({ cnt: count() }).where(condition);
+    const [row] = await this.select({ cnt: count() }).where(condition);
 
-    return cnt;
+    return row?.cnt ?? 0;
   }
 
   private prepareValues(input: object, operation: 'insert' | 'update'): Record<string, unknown> {

@@ -48,17 +48,19 @@ typeof SuppressedError === "function" ? SuppressedError : function (error, suppr
     const resolveTable = (table) => {
         if (typeof table !== 'string')
             return table;
-        if (!Object.hasOwn(schema, table)) {
+        const resolved = schema[table];
+        if (!Object.hasOwn(schema, table) || resolved === undefined) {
             throw new Error(`Condition: unknown table "${table}".`);
         }
-        return schema[table];
+        return resolved;
     };
     const getColumn = (table, name) => {
         const columns = native__namespace.getTableColumns(table);
-        if (!Object.hasOwn(columns, name)) {
+        const column = columns[name];
+        if (!Object.hasOwn(columns, name) || column === undefined) {
             throw new Error(`Condition: unknown column "${name}".`);
         }
-        return columns[name];
+        return column;
     };
     const recordEntries = (values) => {
         if (typeof values !== 'object' || values === null || Array.isArray(values)) {
@@ -244,13 +246,14 @@ typeof SuppressedError === "function" ? SuppressedError : function (error, suppr
             const match = /^(.+?)\s+as\s+(.+)$/i.exec(selection.trim());
             const name = ((_c = match === null || match === void 0 ? void 0 : match[1]) !== null && _c !== void 0 ? _c : selection).trim();
             const alias = (_d = match === null || match === void 0 ? void 0 : match[2]) === null || _d === void 0 ? void 0 : _d.trim();
-            if (!Object.hasOwn(tableColumns, name)) {
+            const column = tableColumns[name];
+            if (!Object.hasOwn(tableColumns, name) || column === undefined) {
                 throw new Error(`columns: unknown column "${name}".`);
             }
             if (alias)
-                selected[alias] = native.sql `${tableColumns[name]}`.as(alias);
+                selected[alias] = native.sql `${column}`.as(alias);
             else
-                selected[tableColumns[name].name] = tableColumns[name];
+                selected[column.name] = column;
         }
         return selected;
     }
@@ -405,7 +408,7 @@ class MsSqlQuery {
             const originalOrderBy = typeof orderBy === 'function' ? orderBy.bind(query) : undefined;
             const bindCondition = (operator, conditionTable = table) => (input) => {
                 const orGroup = operator.startsWith('or') && operator !== 'or';
-                const baseOperator = orGroup ? operator[2].toLowerCase() + operator.slice(3) : operator;
+                const baseOperator = orGroup ? operator.charAt(2).toLowerCase() + operator.slice(3) : operator;
                 const join = orGroup || operator === 'or' ? native.or : native.and;
                 const conditionOperator = this.drizzle[operator];
                 if (native.isTable(conditionTable)) {
@@ -687,12 +690,13 @@ class MsSqlQuery {
      * count
      * ******************************************************************************************************************/
     async count(where) {
+        var _a;
         const condition = typeof where === 'function' ? where(this) : where;
         if (condition !== undefined && !native.is(condition, native.SQL)) {
             throw new Error('count: the where callback must return SQL or undefined.');
         }
-        const [{ cnt }] = await this.select({ cnt: native.count() }).where(condition);
-        return cnt;
+        const [row] = await this.select({ cnt: native.count() }).where(condition);
+        return (_a = row === null || row === void 0 ? void 0 : row.cnt) !== null && _a !== void 0 ? _a : 0;
     }
     prepareValues(input, operation) {
         var _a, _b;
@@ -1119,7 +1123,7 @@ function createConnection(options) {
         return parent ? parent.transaction(execute) : raw.transaction(execute);
     };
     const paginate = async (builder, page, limit) => {
-        var _a;
+        var _a, _b, _c;
         if (!Number.isInteger(page) || page < 1 || !Number.isInteger(limit) || limit < 1) {
             throw new RangeError('page and limit must be positive integers');
         }
@@ -1127,13 +1131,14 @@ function createConnection(options) {
         // Drizzle의 SQL Server 빌더는 offset/fetch가 호출된 빌더의 설정을 직접 변경한다.
         // 집계와 데이터 조회 모두 SQL Server 2012의 ORDER BY ... OFFSET 문법을 따라야 한다.
         const config = builder.config;
-        const tail = config.setOperators.length ? config.setOperators[config.setOperators.length - 1] : config;
-        if (!((_a = tail.orderBy) === null || _a === void 0 ? void 0 : _a.length)) {
+        const tail = (_a = config.setOperators[config.setOperators.length - 1]) !== null && _a !== void 0 ? _a : config;
+        if (!((_b = tail.orderBy) === null || _b === void 0 ? void 0 : _b.length)) {
             builder.orderBy(native.sql `(select 0)`);
         }
         // 같은 빌더로 재호출할 때 이전 페이지의 FETCH가 전체 건수에 섞이지 않도록 한다.
         tail.fetch = undefined;
-        const [{ total }] = await current().select({ total: native.count() }).from(builder.offset(0).as('a'));
+        const [countRow] = await current().select({ total: native.count() }).from(builder.offset(0).as('a'));
+        const total = (_c = countRow === null || countRow === void 0 ? void 0 : countRow.total) !== null && _c !== void 0 ? _c : 0;
         const data = await builder.offset(offset).fetch(limit);
         return {
             data,

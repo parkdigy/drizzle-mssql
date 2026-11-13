@@ -177,13 +177,14 @@ function createConnection<TSchema extends Record<string, MsSqlTable>>(options: D
         orderBy(value: SQL): unknown;
       }
     ).config;
-    const tail = config.setOperators.length ? config.setOperators[config.setOperators.length - 1] : config;
+    const tail = config.setOperators[config.setOperators.length - 1] ?? config;
     if (!tail.orderBy?.length) {
       (builder as unknown as { orderBy(value: SQL): unknown }).orderBy(sql`(select 0)`);
     }
     // 같은 빌더로 재호출할 때 이전 페이지의 FETCH가 전체 건수에 섞이지 않도록 한다.
     tail.fetch = undefined;
-    const [{ total }] = await current().select({ total: count() }).from(builder.offset(0).as('a'));
+    const [countRow] = await current().select({ total: count() }).from(builder.offset(0).as('a'));
+    const total = countRow?.total ?? 0;
     const data = await builder.offset(offset).fetch(limit);
     return {
       data,

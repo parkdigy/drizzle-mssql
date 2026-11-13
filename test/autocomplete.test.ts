@@ -162,7 +162,7 @@ test.each(['../src/index', '../dist/index'])('%s: 200개 테이블에서도 자�
     void [merged, aliased, found, foundByKey, row, invalidRow, idOnlyRow, invalidIdOnlyRow];
     const fields = db.columns(a, 'id', 'name as displayName');
     db.current().select(fields).from(a).then(rows => {
-      const row: {id: number; displayName: string | null} = rows[0];
+      const row: {id: number; displayName: string | null} = rows[0]!;
       void row;
     });
     // @ts-expect-error 존재하지 않는 컬럼은 허용하지 않는다
@@ -180,6 +180,7 @@ test.each(['../src/index', '../dist/index'])('%s: 200개 테이블에서도 자�
     module: ts.ModuleKind.ESNext,
     moduleResolution: ts.ModuleResolutionKind.Bundler,
     strict: true,
+    noUncheckedIndexedAccess: true,
     skipLibCheck: true,
     noEmit: true,
   };
@@ -222,7 +223,7 @@ test.each(['../src/index', '../dist/index'])('%s: 200개 테이블에서도 자�
       connectionOption: ['server', 'port', 'user', 'password', 'database', 'options'],
       mssqlOption: ['encrypt', 'trustServerCertificate', 'useUTC'],
     })) {
-      const entries = service.getCompletionsAtPosition(file, positions[name], {})?.entries.map((entry) => entry.name);
+      const entries = service.getCompletionsAtPosition(file, positions[name]!, {})?.entries.map((entry) => entry.name);
       expect({ name, entries }).toEqual({ name, entries: expect.arrayContaining(expected) });
     }
     const diagnostics = service.getSemanticDiagnostics(file);

@@ -528,9 +528,9 @@ test('모든 OR 조건은 기존 비교 규칙을 유지하고 컬럼 사이만 
     isNotNull: ['id', 'name'],
   };
   for (const [base, values] of Object.entries(cases)) {
-    const operator = `or${base[0].toUpperCase()}${base.slice(1)}`;
+    const operator = `or${base.charAt(0).toUpperCase()}${base.slice(1)}`;
     const call = (target: object, method: string, ...args: unknown[]) =>
-      Reflect.apply((target as Record<string, (...args: unknown[]) => SQL | undefined>)[method], target, args);
+      Reflect.apply((target as Record<string, (...args: unknown[]) => SQL | undefined>)[method]!, target, args);
     for (const table of [users, alias, 'users'] as const) {
       const oldSql = db
         .select()

@@ -19,18 +19,20 @@ export function createConditions<TSchema extends Record<string, MsSqlTable>>(sch
 
   const resolveTable = (table: TableInput): MsSqlTable => {
     if (typeof table !== 'string') return table;
-    if (!Object.hasOwn(schema, table)) {
+    const resolved = schema[table];
+    if (!Object.hasOwn(schema, table) || resolved === undefined) {
       throw new Error(`Condition: unknown table "${table}".`);
     }
-    return schema[table];
+    return resolved;
   };
 
   const getColumn = (table: MsSqlTable, name: string): Column => {
     const columns = native.getTableColumns<MsSqlTable>(table);
-    if (!Object.hasOwn(columns, name)) {
+    const column = columns[name];
+    if (!Object.hasOwn(columns, name) || column === undefined) {
       throw new Error(`Condition: unknown column "${name}".`);
     }
-    return columns[name];
+    return column;
   };
 
   const recordEntries = (values: unknown): [string, unknown][] => {
