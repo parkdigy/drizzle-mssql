@@ -1,7 +1,7 @@
 import ts from 'typescript';
 import path from 'node:path';
 
-test('200개 테이블과 200개 추가 컬럼에서도 공개 API의 자동완성과 선택 결과 타입을 유지한다', () => {
+test.each(['../src/index', '../dist/index'])('%s: 200개 테이블에서도 자동완성과 JOIN 결과 타입을 유지한다', (entry) => {
   const file = path.resolve('test/__autocomplete_fixture.ts');
   const wideColumns = Array.from({ length: 200 }, (_, i) => `extra${i}: int()`).join(',');
   const tables = Array.from(
@@ -10,7 +10,7 @@ test('200개 테이블과 200개 추가 컬럼에서도 공개 API의 자동완�
       `const table${i} = mssqlTable('table${i}', { id: int().notNull(), name: varchar({length: 100}), ${i === 199 ? wideColumns : ''} });`
   ).join('\n');
   const marked = `
-    import { drizzleMsSql, mssqlTable, int, varchar } from '../src/index';
+    import { drizzleMsSql, mssqlTable, int, varchar } from '${entry}';
     ${tables}
     const db = drizzleMsSql({ url: '', getTimestamp: () => 0, schema: {
       ${Array.from({ length: 200 }, (_, i) => `table${i}`).join(',')}
@@ -53,6 +53,35 @@ test('200개 테이블과 200개 추가 컬럼에서도 공개 API의 자동완�
     // @ts-expect-error 선택하지 않은 컬럼은 포함하지 않는다
     ({} as Awaited<typeof directSelected>[number]).extra0;
     void [directRow, directAliasRow];
+
+    const b = db.a.table199('b');
+    const c = db.a.table199('c');
+    const d = db.a.table199('d');
+    const e = db.a.table199('e');
+    const joined = db.query(table199).select(a, [
+      db.columns(b, 'id'), { second: c.id }, { third: d.id }, { fourth: e.id },
+    ]).innerJoin(b, db.eq(a.id, b.id))
+      .innerJoin(c, db.eq(b.id, c.id))
+      .innerJoin(d, db.eq(c.id, d.id))
+      .innerJoin(e, db.eq(d.id, e.id))
+      .where(db.eq(a.id, 0));
+    type JoinedRow = Awaited<typeof joined>[number];
+    const joinedRow: JoinedRow = { id: 1, second: 2, third: 3, fourth: 4 };
+    // @ts-expect-error JOIN 후에도 컬럼 타입을 유지한다
+    const invalidJoinedRow: JoinedRow = { id: 'wrong', second: 2, third: 3, fourth: 4 };
+    const outer = db.query(table199).select(a, [{ base: a.id }, { left: b.id }, { inner: c.id }])
+      .leftJoin(b, db.eq(a.id, b.id)).innerJoin(c, db.eq(a.id, c.id));
+    type OuterRow = Awaited<typeof outer>[number];
+    const outerRow: OuterRow = { base: 1, left: null, inner: 3 };
+    // @ts-expect-error INNER JOIN은 앞선 LEFT JOIN의 null 허용 상태를 유지한다
+    const invalidOuterRow: OuterRow = { base: null, left: 2, inner: 3 };
+    const right = db.query(table199).select(a, [{ base: a.id }, { first: b.id }, { last: c.id }])
+      .innerJoin(b, db.eq(a.id, b.id)).rightJoin(c, db.eq(a.id, c.id));
+    const rightRow: Awaited<typeof right>[number] = { base: null, first: null, last: 1 };
+    const full = db.query(table199).select(a, [{ base: a.id }, { first: b.id }, { last: c.id }]).top(1)
+      .innerJoin(b, db.eq(a.id, b.id)).fullJoin(c, db.eq(a.id, c.id));
+    const fullRow: Awaited<typeof full>[number] = { base: null, first: null, last: null };
+    void [joinedRow, invalidJoinedRow, outerRow, invalidOuterRow, rightRow, fullRow];
     const query = db.query(table199);
     // @ts-expect-error 자동완성용 미완성 컬럼명
     query.select(['id', '/*nextColumn*/']);

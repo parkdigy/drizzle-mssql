@@ -4,7 +4,7 @@ import type { SelectedFields } from 'drizzle-orm/operations';
 import type { SQLWrapper } from 'drizzle-orm';
 import type { TypedQueryBuilder } from 'drizzle-orm/query-builders/query-builder';
 import type { GetSelectTableName } from 'drizzle-orm/query-builders/select.types';
-import type { GetMsSqlSetOperators, MsSqlJoin, MsSqlSetOperatorWithResult, SetOperatorRightSelect } from 'drizzle-orm/mssql-core/query-builders/select.types';
+import type { AnyMsSqlSelectQueryBuilder, MsSqlSelectKind, MsSqlSelectHKT, GetMsSqlSetOperators, MsSqlJoin, MsSqlSetOperatorWithResult, SetOperatorRightSelect } from 'drizzle-orm/mssql-core/query-builders/select.types';
 import type { MsSqlViewBase } from 'drizzle-orm/mssql-core/view-base';
 import type { MsSqlColumnSelectionName, MsSqlSelectedNamedColumnUnion, MsSqlSelectedNamedColumns, MsSqlSelectedTableColumns, MsSqlAliasTable } from './columns.cjs';
 import { type TableMutationPolicy } from './mssqlTable.cjs';
@@ -323,24 +323,30 @@ type JoinConditionQuery<TTable extends MsSqlTable | Subquery, TJoinedTable exten
 };
 type Joinable = MsSqlTable | Subquery | MsSqlViewBase | SQL;
 type JoinCondition<TTable extends MsSqlTable | Subquery, TSelection extends FieldSet | undefined, TBranch extends 'from' | 'top', TJoinedTable extends Joinable> = TJoinedTable extends MsSqlTable | Subquery ? SQL | undefined | ((query: JoinConditionQuery<TTable, TJoinedTable>) => SQL | undefined) : SQL | undefined | ((aliases: SelectQueryBase<TTable, TSelection, TBranch>['_']['selection']) => SQL | undefined);
-type JoinedSelect<TTable extends MsSqlTable | Subquery, TSelection extends FieldSet | undefined, TBranch extends 'from' | 'top', TJoinedTable extends Joinable, TKind extends 'inner' | 'left' | 'right' | 'full' | 'cross'> = Omit<MsSqlJoin<SelectQueryBase<TTable, TSelection, TBranch>, false, TKind, TJoinedTable>, 'where' | 'having' | 'groupBy' | 'orderBy' | 'offset' | 'fetch' | keyof SelectJoinMethods<TTable, TSelection, TBranch>> & SelectJoinMethods<TTable, TSelection, TBranch> & {
-    where(condition: TableWhere<TTable>): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'where'>;
-    having(condition: HavingCondition<TTable, TSelection, TBranch>): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'having'>;
-    groupBy(builder: GroupByCallback<TTable, TSelection, TBranch>): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'groupBy'>;
-    groupBy(...columns: OrderByValue[]): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'groupBy'>;
-    orderBy(builder: OrderByCallback<TTable>): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'orderBy'>;
-    orderBy(...columns: OrderByInput[]): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'orderBy'>;
-    offset(value: number | Placeholder): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'offset'>;
-    fetch(value: number | Placeholder): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind>, 'fetch'>;
+type RestoreSelect<T extends {
+    readonly _: AnyMsSqlSelectQueryBuilder['_'];
+}> = MsSqlSelectKind<MsSqlSelectHKT, T['_']['tableName'], T['_']['selection'], T['_']['selectMode'], T['_']['preparedQueryHKT'], T['_']['branch'], T['_']['nullabilityMap'], false, T['_']['excludedMethods'], T['_']['result'], T['_']['selectedFields']>;
+type JoinedQuery<TQuery extends AnyMsSqlSelectQueryBuilder, TKind extends 'inner' | 'left' | 'right' | 'full' | 'cross', TJoinedTable extends Joinable> = MsSqlJoin<TQuery, false, TKind, TJoinedTable> extends infer TNext extends {
+    readonly _: AnyMsSqlSelectQueryBuilder['_'];
+} ? RestoreSelect<TNext> : never;
+type JoinedSelect<TTable extends MsSqlTable | Subquery, TSelection extends FieldSet | undefined, TBranch extends 'from' | 'top', TJoinedTable extends Joinable, TKind extends 'inner' | 'left' | 'right' | 'full' | 'cross', TQuery extends AnyMsSqlSelectQueryBuilder> = Omit<MsSqlJoin<TQuery, false, TKind, TJoinedTable>, 'where' | 'having' | 'groupBy' | 'orderBy' | 'offset' | 'fetch' | keyof SelectJoinMethods<TTable, TSelection, TBranch, JoinedQuery<TQuery, TKind, TJoinedTable>>> & SelectJoinMethods<TTable, TSelection, TBranch, JoinedQuery<TQuery, TKind, TJoinedTable>> & {
+    where(condition: TableWhere<TTable>): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind, TQuery>, 'where'>;
+    having(condition: HavingCondition<TTable, TSelection, TBranch>): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind, TQuery>, 'having'>;
+    groupBy(builder: GroupByCallback<TTable, TSelection, TBranch>): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind, TQuery>, 'groupBy'>;
+    groupBy(...columns: OrderByValue[]): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind, TQuery>, 'groupBy'>;
+    orderBy(builder: OrderByCallback<TTable>): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind, TQuery>, 'orderBy'>;
+    orderBy(...columns: OrderByInput[]): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind, TQuery>, 'orderBy'>;
+    offset(value: number | Placeholder): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind, TQuery>, 'offset'>;
+    fetch(value: number | Placeholder): Omit<JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, TKind, TQuery>, 'fetch'>;
 };
-type SelectJoinMethods<TTable extends MsSqlTable | Subquery, TSelection extends FieldSet | undefined, TBranch extends 'from' | 'top'> = {
-    innerJoin<TJoinedTable extends Joinable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'inner'>;
-    leftJoin<TJoinedTable extends Joinable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'left'>;
-    rightJoin<TJoinedTable extends Joinable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'right'>;
-    crossJoin<TJoinedTable extends Joinable>(table: TJoinedTable): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'cross'>;
-    fullJoin<TJoinedTable extends Joinable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'full'>;
-    outerApply<TJoinedTable extends MsSqlTable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'left'>;
-    crossApply<TJoinedTable extends MsSqlTable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'cross'>;
+type SelectJoinMethods<TTable extends MsSqlTable | Subquery, TSelection extends FieldSet | undefined, TBranch extends 'from' | 'top', TQuery extends AnyMsSqlSelectQueryBuilder = SelectQueryBase<TTable, TSelection, TBranch>> = {
+    innerJoin<TJoinedTable extends Joinable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'inner', TQuery>;
+    leftJoin<TJoinedTable extends Joinable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'left', TQuery>;
+    rightJoin<TJoinedTable extends Joinable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'right', TQuery>;
+    crossJoin<TJoinedTable extends Joinable>(table: TJoinedTable): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'cross', TQuery>;
+    fullJoin<TJoinedTable extends Joinable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'full', TQuery>;
+    outerApply<TJoinedTable extends MsSqlTable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'left', TQuery>;
+    crossApply<TJoinedTable extends MsSqlTable>(table: TJoinedTable, on: JoinCondition<TTable, TSelection, TBranch, TJoinedTable>): JoinedSelect<TTable, TSelection, TBranch, TJoinedTable, 'cross', TQuery>;
 };
 type SelectTopFrom<TTable extends MsSqlTable | Subquery, TSelection extends FieldSet | undefined> = Omit<SelectQueryBase<TTable, TSelection, 'top'>, 'where' | 'having' | 'groupBy' | 'orderBy' | 'offset' | 'fetch' | '$dynamic' | 'union' | 'unionAll' | 'intersect' | 'except' | keyof SelectJoinMethods<TTable, TSelection, 'top'>> & SelectJoinMethods<TTable, TSelection, 'top'> & {
     $dynamic(): DynamicSelect<SelectQueryBase<TTable, TSelection, 'top'>, TTable>;
