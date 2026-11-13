@@ -1,4 +1,4 @@
-import { type config as MsSqlConfig } from 'mssql';
+import mssql, { type config as MsSqlConfig } from 'mssql';
 import { SQL, sql, type Subquery } from 'drizzle-orm';
 import { alias, type MsSqlTable } from 'drizzle-orm/mssql-core';
 import * as native from 'drizzle-orm';
@@ -15,6 +15,10 @@ export type DrizzleMsSqlOptions<TSchema extends Record<string, MsSqlTable>> = {
 } & Omit<MsSqlConfig, 'server' | 'port' | 'user' | 'password' | 'database'>) | (MsSqlConfig & {
     url?: never;
 }));
+export interface MsSqlTransactionHandle {
+    /** 롤백 완료를 await한 뒤 후속 쿼리를 실행한다. */
+    rollback(): Promise<void>;
+}
 type MsSqlConnection<TSchema extends Record<string, MsSqlTable>> = ReturnType<typeof createConnection<TSchema>>;
 type SelectTable<TSchema, TSource> = TSource extends MsSqlTable ? TSource : TSource extends keyof TSchema ? Extract<TSchema[TSource], MsSqlTable> : never;
 interface MsSqlDatabaseHelpers<TSchema extends Record<string, MsSqlTable>> extends MsSqlNativeHelpers {
@@ -51,10 +55,12 @@ export type DrizzleMsSql<TSchema extends Record<string, MsSqlTable>> = MsSqlData
 declare function createConnection<TSchema extends Record<string, MsSqlTable>>(options: DrizzleMsSqlOptions<TSchema>): {
     current: (() => (import("drizzle-orm/node-mssql").NodeMsSqlDatabase<native.ExtractTablesWithRelations<{}, native.ExtractTablesFromSchema<TSchema>>> & {
         $client: import("drizzle-orm/node-mssql/pool").AutoPool;
-    }) | import("drizzle-orm/mssql-core").MsSqlTransaction<import("drizzle-orm/node-mssql").NodeMsSqlQueryResultHKT, import("drizzle-orm/node-mssql").NodeMsSqlPreparedQueryHKT, native.ExtractTablesWithRelations<{}, native.ExtractTablesFromSchema<TSchema>>>) & {
+    }) | (import("drizzle-orm/node-mssql").NodeMsSqlDatabase<native.ExtractTablesWithRelations<{}, native.ExtractTablesFromSchema<TSchema>>> & {
+        $client: mssql.Transaction;
+    })) & {
         getTimestamp: () => unknown;
     };
-    trans: <T>(callback: () => Promise<T>) => Promise<T>;
+    trans: <T>(callback: (trx: MsSqlTransactionHandle) => Promise<T>) => Promise<T>;
     paginate: <TResult extends unknown[]>(builder: {
         offset(offset: number): {
             fetch(limit: number): PromiseLike<TResult>;

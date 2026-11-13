@@ -1,6 +1,6 @@
-import { drizzleMsSql, mssqlTable, nvarchar } from '../src';
+import { drizzleMsSql, int, mssqlTable, nvarchar } from '../src';
 
-const table1 = mssqlTable('table1', { name: nvarchar({ length: 50 }).notNull() });
+const table1 = mssqlTable('table1', { id: int().primaryKey().default(2), name: nvarchar({ length: 50 }).notNull() });
 const table2 = mssqlTable('table2', { name: nvarchar({ length: 50 }).notNull() });
 
 // DB 커밋 자체가 아닌 트랜잭션 생성, 쿼리 연결, 문맥 복원을 검증하는 모의 실행기다.
@@ -10,29 +10,39 @@ function setup() {
   const events: string[] = [];
   const committed: unknown[] = [];
   let sequence = 0;
-  const transaction = jest.spyOn(raw, 'transaction').mockImplementation((async (
-    callback: (tx: unknown) => Promise<unknown>
-  ) => {
-    const id = ++sequence;
-    const pending: unknown[] = [];
-    const tx = {
-      insert: (table: unknown) => ({
-        values: async (value: unknown) => {
-          pending.push({ table, value });
+  if (!('$instance' in raw.$client)) throw new Error('Expected connection pool');
+  const transaction = jest.spyOn(raw.$client, '$instance').mockResolvedValue({
+    transaction: () => {
+      const id = ++sequence;
+      const pending: unknown[] = [];
+      return {
+        begin: async () => {
+          events.push(`begin:${id}`);
         },
-      }),
-    };
-    events.push(`begin:${id}`);
-    try {
-      const result = await callback(tx);
-      committed.push(...pending);
-      events.push(`commit:${id}`);
-      return result;
-    } catch (error) {
-      events.push(`rollback:${id}`);
-      throw error;
-    }
-  }) as never);
+        commit: async () => {
+          committed.push(...pending);
+          events.push(`commit:${id}`);
+        },
+        rollback: async () => {
+          events.push(`rollback:${id}`);
+        },
+        on: jest.fn(),
+        removeListener: jest.fn(),
+        request: () => {
+          const params: unknown[] = [];
+          return {
+            input: (_name: string, value: unknown) => {
+              params.push(value);
+            },
+            query: async (sql: string) => {
+              pending.push({ table: sql.includes('[table1]') ? table1 : table2, value: { name: params[0] } });
+              return { recordset: [] };
+            },
+          };
+        },
+      };
+    },
+  } as never);
   return { db, raw, events, committed, transaction };
 }
 
@@ -81,6 +91,30 @@ test.each([true, false])('안쪽 오류를 처리하는지(%s)에 따라 바깥 
     else await expect(run).rejects.toThrow('inner');
     expect(events).toEqual(['begin:1', 'begin:2', 'rollback:2', caught ? 'commit:1' : 'rollback:1']);
     expect(committed).toEqual(caught ? [{ table: table1, value: { name: 'name-1' } }] : []);
+    expect(db.current()).toBe(raw);
+  } finally {
+    transaction.mockRestore();
+  }
+});
+
+test.each([true, false])('명시적 바깥 롤백 후 안쪽은 커밋하고 중복 종료하지 않는다 (throw: %s)', async (throws) => {
+  const { db, raw, events, committed, transaction } = setup();
+  try {
+    const result = db.trans(async (outer) => {
+      await db.query(table1).editByPrimaryKey({ name: 'name-outer' }, 2);
+      await db.trans(async () => {
+        await outer.rollback();
+        await outer.rollback();
+        await db.query(table1).editByPrimaryKey({ name: 'name-inner' }, 2);
+      });
+      expect(() => db.current()).toThrow('Transaction has already ended');
+      if (throws) throw new Error('outer error');
+      return 42;
+    });
+    if (throws) await expect(result).rejects.toThrow('outer error');
+    else await expect(result).resolves.toBe(42);
+    expect(events).toEqual(['begin:1', 'begin:2', 'rollback:1', 'commit:2']);
+    expect(committed).toEqual([{ table: table1, value: { name: 'name-inner' } }]);
     expect(db.current()).toBe(raw);
   } finally {
     transaction.mockRestore();

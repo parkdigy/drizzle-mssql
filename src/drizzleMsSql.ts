@@ -25,6 +25,11 @@ export type DrizzleMsSqlOptions<TSchema extends Record<string, MsSqlTable>> = {
   | (MsSqlConfig & { url?: never })
 );
 
+export interface MsSqlTransactionHandle {
+  /** 롤백 완료를 await한 뒤 후속 쿼리를 실행한다. */
+  rollback(): Promise<void>;
+}
+
 type MsSqlConnection<TSchema extends Record<string, MsSqlTable>> = ReturnType<typeof createConnection<TSchema>>;
 
 type SelectTable<TSchema, TSource> = TSource extends MsSqlTable
@@ -144,14 +149,46 @@ function createConnection<TSchema extends Record<string, MsSqlTable>>(options: D
       : connectionConfig;
   // 현재 Drizzle 구현은 config 객체를 지원하지만 공개 타입은 connection을 string으로만 선언한다.
   const raw = drizzle({ connection: drizzleConnection as string, relations: defineRelations(schema) });
-  type Transaction = Parameters<Parameters<typeof raw.transaction>[0]>[0];
-  const context = new AsyncLocalStorage<Transaction>();
+  const transactionDatabase = (client: mssql.Transaction) => drizzle({ client, relations: defineRelations(schema) });
+  type TransactionContext = { database: ReturnType<typeof transactionDatabase>; active: boolean };
+  const context = new AsyncLocalStorage<TransactionContext>();
   const timestampFactory = getTimestamp ?? (() => new Date());
-  const current = Object.assign(() => context.getStore() ?? raw, { getTimestamp: timestampFactory });
-  const trans = <T>(callback: () => Promise<T>): Promise<T> => {
-    const execute = (tx: Transaction) => context.run(tx, callback);
-    // 중첩 호출도 별도 연결의 독립 트랜잭션으로 실행한다.
-    return raw.transaction(execute);
+  const current = Object.assign(() => {
+    const tx = context.getStore();
+    if (tx && !tx.active) throw new Error('Transaction has already ended.');
+    return tx?.database ?? raw;
+  }, { getTimestamp: timestampFactory });
+  const trans = async <T>(callback: (trx: MsSqlTransactionHandle) => Promise<T>): Promise<T> => {
+    const pool = await raw.$client.$instance();
+    const transaction = pool.transaction();
+    await transaction.begin();
+    const frame = { database: transactionDatabase(transaction), active: true };
+    let rollbackPromise: Promise<void> | undefined;
+    const onRollback = () => { frame.active = false; };
+    transaction.on('rollback', onRollback);
+    const handle: MsSqlTransactionHandle = {
+      rollback: () => {
+        if (rollbackPromise) return rollbackPromise;
+        if (!frame.active) return Promise.resolve();
+        frame.active = false;
+        rollbackPromise = transaction.rollback().then(() => undefined);
+        return rollbackPromise;
+      },
+    };
+    try {
+      const result = await context.run(frame, () => callback(handle));
+      if (rollbackPromise) await rollbackPromise;
+      if (frame.active) {
+        await transaction.commit();
+        frame.active = false;
+      }
+      return result;
+    } catch (error) {
+      await handle.rollback().catch(() => {});
+      throw error;
+    } finally {
+      transaction.removeListener('rollback', onRollback);
+    }
   };
   const paginate = async <TResult extends unknown[]>(
     builder: {

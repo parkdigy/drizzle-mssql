@@ -1114,13 +1114,52 @@ function createConnection(options) {
             : connectionConfig)), { options: connectionOptions.options }) : connectionConfig;
     // 현재 Drizzle 구현은 config 객체를 지원하지만 공개 타입은 connection을 string으로만 선언한다.
     const raw = drizzle({ connection: drizzleConnection, relations: defineRelations(schema) });
+    const transactionDatabase = (client) => drizzle({ client, relations: defineRelations(schema) });
     const context = new AsyncLocalStorage();
     const timestampFactory = getTimestamp !== null && getTimestamp !== void 0 ? getTimestamp : (() => new Date());
-    const current = Object.assign(() => { var _a; return (_a = context.getStore()) !== null && _a !== void 0 ? _a : raw; }, { getTimestamp: timestampFactory });
-    const trans = (callback) => {
-        const execute = (tx) => context.run(tx, callback);
-        // 중첩 호출도 별도 연결의 독립 트랜잭션으로 실행한다.
-        return raw.transaction(execute);
+    const current = Object.assign(() => {
+        var _a;
+        const tx = context.getStore();
+        if (tx && !tx.active)
+            throw new Error('Transaction has already ended.');
+        return (_a = tx === null || tx === void 0 ? void 0 : tx.database) !== null && _a !== void 0 ? _a : raw;
+    }, { getTimestamp: timestampFactory });
+    const trans = async (callback) => {
+        const pool = await raw.$client.$instance();
+        const transaction = pool.transaction();
+        await transaction.begin();
+        const frame = { database: transactionDatabase(transaction), active: true };
+        let rollbackPromise;
+        const onRollback = () => { frame.active = false; };
+        transaction.on('rollback', onRollback);
+        const handle = {
+            rollback: () => {
+                if (rollbackPromise)
+                    return rollbackPromise;
+                if (!frame.active)
+                    return Promise.resolve();
+                frame.active = false;
+                rollbackPromise = transaction.rollback().then(() => undefined);
+                return rollbackPromise;
+            },
+        };
+        try {
+            const result = await context.run(frame, () => callback(handle));
+            if (rollbackPromise)
+                await rollbackPromise;
+            if (frame.active) {
+                await transaction.commit();
+                frame.active = false;
+            }
+            return result;
+        }
+        catch (error) {
+            await handle.rollback().catch(() => { });
+            throw error;
+        }
+        finally {
+            transaction.removeListener('rollback', onRollback);
+        }
     };
     const paginate = async (builder, page, limit) => {
         var _a, _b, _c;
