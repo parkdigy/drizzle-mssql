@@ -263,8 +263,12 @@ export class MsSqlQuery<
     const selectBuilder = distinct
       ? tx.selectDistinct(selectedFields ?? sourceColumns(table))
       : tx.select(selectedFields ?? sourceColumns(table));
+    const enhancedQueries = new WeakSet<object>();
     const enhance = (query: unknown): unknown => {
       if (typeof query !== 'object' || query === null) return query;
+      // JOIN은 같은 빌더를 반환하므로 기존 래퍼를 다시 감싸지 않는다.
+      if (enhancedQueries.has(query)) return query;
+      enhancedQueries.add(query);
 
       const builder = query as { where: (condition: unknown) => unknown };
       const originalWhere = builder.where.bind(query);
