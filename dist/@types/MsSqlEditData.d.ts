@@ -1,7 +1,7 @@
 import type { MsSqlTable } from 'drizzle-orm/mssql-core/table';
 import type { MsSqlUpdateSetSource } from 'drizzle-orm/mssql-core/query-builders/update';
 import type { GetColumnData, Placeholder, SQL } from 'drizzle-orm';
-import type { TablePolicies } from '../mssqlTable.cjs';
+import type { TablePolicies } from '../mssqlTable.js';
 type UpdateSource<T extends MsSqlTable> = MsSqlUpdateSetSource<T> & {
     [K in Exclude<keyof T['_']['columns'], keyof MsSqlUpdateSetSource<T>> as K extends keyof TablePolicies<T> ? TablePolicies<T>[K] extends {
         update: 'allowed' | 'required';
@@ -28,7 +28,7 @@ type RequiredKeys<T extends MsSqlTable> = {
         timestamp: 'updated';
     } ? never : K : never : never;
 }[keyof UpdateSource<T>] & keyof UpdateSource<T>;
-export type MsSqlEditValues<T extends MsSqlTable, B extends keyof UpdateSource<T> = never, R extends Exclude<keyof UpdateSource<T>, B | Blocked<T>> = never> = Omit<UpdateSource<T>, B | Blocked<T> | R | RequiredKeys<T>> & {
+export type MsSqlEditData<T extends MsSqlTable, B extends keyof UpdateSource<T> = never, R extends Exclude<keyof UpdateSource<T>, B | Blocked<T>> = never> = Omit<UpdateSource<T>, B | Blocked<T> | R | RequiredKeys<T>> & {
     [K in Exclude<R | RequiredKeys<T>, B | Blocked<T>>]-?: Exclude<UpdateSource<T>[K], undefined>;
 };
 export {};

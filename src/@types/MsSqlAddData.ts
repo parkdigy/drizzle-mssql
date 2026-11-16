@@ -9,12 +9,28 @@ type Blocked<T extends MsSqlTable> = {
       : TablePolicies<T>[K] extends { insert: 'allowed' }
         ? never
         : K extends keyof T['_']['columns']
-          ? (T['_']['columns'][K]['_'] extends { generated: infer G } ? undefined extends G ? false : keyof G extends never ? true : false : false) extends true
+          ? (
+              T['_']['columns'][K]['_'] extends { generated: infer G }
+                ? undefined extends G
+                  ? false
+                  : keyof G extends never
+                    ? true
+                    : false
+                : false
+            ) extends true
             ? K
             : never
           : never
     : K extends keyof T['_']['columns']
-      ? (T['_']['columns'][K]['_'] extends { generated: infer G } ? undefined extends G ? false : keyof G extends never ? true : false : false) extends true
+      ? (
+          T['_']['columns'][K]['_'] extends { generated: infer G }
+            ? undefined extends G
+              ? false
+              : keyof G extends never
+                ? true
+                : false
+            : false
+        ) extends true
         ? K
         : never
       : never;
@@ -29,7 +45,7 @@ type TimestampKeys<T extends MsSqlTable> = {
 }[keyof InsertValue<T>] &
   keyof InsertValue<T>;
 
-export type MsSqlAddValues<T extends MsSqlTable, B extends keyof InsertValue<T> = never> = Omit<
+export type MsSqlAddData<T extends MsSqlTable, B extends keyof InsertValue<T> = never> = Omit<
   InsertValue<T>,
   B | Blocked<T> | TimestampKeys<T>
 > &

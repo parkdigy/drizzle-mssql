@@ -48,8 +48,8 @@ import { TableColumns } from './columns';
 import { getColumnPolicies, getTablePolicy, type TableMutationPolicy } from './mssqlTable';
 import type { MsSqlInsertValue } from 'drizzle-orm/mssql-core/query-builders/insert';
 import type {
-  MsSqlAddValues,
-  MsSqlEditValues,
+  MsSqlAddData,
+  MsSqlEditData,
   MsSqlCompareValues,
   MsSqlColumnName,
   MsSqlArrayCompareValues,
@@ -67,8 +67,8 @@ import type { NodeMsSqlDatabase, NodeMsSqlPreparedQueryHKT } from 'drizzle-orm/n
  * ******************************************************************************************************************/
 export class MsSqlQuery<
   TTable extends MsSqlTable,
-  AV extends MsSqlAddValues<TTable> = MsSqlAddValues<TTable>,
-  EV extends MsSqlEditValues<TTable> = MsSqlEditValues<TTable>,
+  AD extends MsSqlAddData<TTable> = MsSqlAddData<TTable>,
+  ED extends MsSqlEditData<TTable> = MsSqlEditData<TTable>,
   AR = AddResult<TTable>,
 > {
   // Table
@@ -454,60 +454,60 @@ export class MsSqlQuery<
    * find
    * ******************************************************************************************************************/
 
-  async find(where: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>): Promise<FindResult<TTable, undefined>>;
+  async find(where: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>): Promise<FindResult<TTable, undefined>>;
 
-  async find(fields: readonly [], where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>): Promise<FindResult<TTable, {}>>;
+  async find(fields: readonly [], where?: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>): Promise<FindResult<TTable, {}>>;
 
   async find<N extends MsSqlColumnSelectionName<TTable>>(
     fields: readonly N[],
-    where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>
+    where?: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>
   ): Promise<FindResult<TTable, MsSqlSelectedNamedColumns<TTable, readonly N[]>>>;
 
   async find<const T extends readonly FieldInput[]>(
     fields: (query: FieldsQuery<TTable>) => T,
-    where: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>
+    where: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>
   ): Promise<FindResult<TTable, MergeFields<T>>>;
 
   async find<const T extends readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[]>(
     fields: T,
-    where: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>
+    where: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>
   ): Promise<FindResult<TTable, MergeFields<NamedFields<TTable, T>>>>;
 
   async find<const TSelection extends StringColumnSelection<TTable>>(
     fields: TSelection,
-    where: (query: WhereQuery<MsSqlQuery<TTable, AV, EV, AR>>) => SQL | undefined
+    where: (query: WhereQuery<MsSqlQuery<TTable, AD, ED, AR>>) => SQL | undefined
   ): Promise<FindResult<TTable, StringColumnSelectionFields<TTable, TSelection>>>;
 
   async find<const TSelection extends StringColumnSelection<TTable>>(
     fields: TSelection,
-    where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>
+    where?: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>
   ): Promise<FindResult<TTable, StringColumnSelectionFields<TTable, TSelection>>>;
 
   async find<TSelection extends SelectedFields<MsSqlColumn, TTable>>(
     fields: Fields<FieldsQuery<TTable>, TSelection>,
-    where: (query: WhereQuery<MsSqlQuery<TTable, AV, EV, AR>>) => SQL | undefined
+    where: (query: WhereQuery<MsSqlQuery<TTable, AD, ED, AR>>) => SQL | undefined
   ): Promise<FindResult<TTable, TSelection>>;
 
   async find<TSelection extends SelectedFields<MsSqlColumn, TTable>>(
     fields: Fields<FieldsQuery<TTable>, TSelection>,
-    where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>
+    where?: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>
   ): Promise<FindResult<TTable, TSelection>>;
 
   async find<TAlias extends string>(
     alias: MsSqlAliasTable<TTable, TAlias>,
-    where: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>
+    where: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>
   ): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, undefined>>;
 
   async find<TAlias extends string>(
     alias: MsSqlAliasTable<TTable, TAlias>,
     fields: readonly [],
-    where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>
+    where?: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>
   ): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, {}>>;
 
   async find<TAlias extends string, N extends MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>>(
     alias: MsSqlAliasTable<TTable, TAlias>,
     fields: readonly N[],
-    where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>
+    where?: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>
   ): Promise<
     FindResult<
       MsSqlAliasTable<TTable, TAlias>,
@@ -518,7 +518,7 @@ export class MsSqlQuery<
   async find<TAlias extends string, const T extends readonly FieldInput[]>(
     alias: MsSqlAliasTable<TTable, TAlias>,
     fields: (query: FieldsQuery<MsSqlAliasTable<TTable, TAlias>>) => T,
-    where: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>
+    where: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>
   ): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, MergeFields<T>>>;
 
   async find<
@@ -527,25 +527,25 @@ export class MsSqlQuery<
   >(
     alias: MsSqlAliasTable<TTable, TAlias>,
     fields: T,
-    where: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>
+    where: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>
   ): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, MergeFields<NamedFields<MsSqlAliasTable<TTable, TAlias>, T>>>>;
 
   async find<TAlias extends string, TSelection extends SelectedFields<MsSqlColumn, MsSqlAliasTable<TTable, TAlias>>>(
     alias: MsSqlAliasTable<TTable, TAlias>,
     fields: Fields<FieldsQuery<MsSqlAliasTable<TTable, TAlias>>, TSelection>,
-    where: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>
+    where: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>
   ): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, TSelection>>;
 
   async find(
     aliasOrFieldsOrWhere: unknown,
     fieldsOrWhere?: unknown,
-    where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>
+    where?: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>
   ): Promise<unknown> {
     const hasAlias = isTable(aliasOrFieldsOrWhere);
     const fieldsOrCondition = hasAlias ? fieldsOrWhere : aliasOrFieldsOrWhere;
     const hasFields = arguments.length === (hasAlias ? 3 : 2);
 
-    const isCondition = (value: unknown): value is BaseWhere<MsSqlQuery<TTable, AV, EV, AR>> =>
+    const isCondition = (value: unknown): value is BaseWhere<MsSqlQuery<TTable, AD, ED, AR>> =>
       is(value, SQL) || typeof value === 'function';
 
     const table = hasAlias ? (aliasOrFieldsOrWhere as MsSqlTable) : this.t;
@@ -702,7 +702,7 @@ export class MsSqlQuery<
   /********************************************************************************************************************
    * exists
    * ******************************************************************************************************************/
-  async exists(where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>): Promise<boolean> {
+  async exists(where?: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>): Promise<boolean> {
     const condition = typeof where === 'function' ? where(this) : where;
 
     if (condition !== undefined && !is(condition, SQL)) {
@@ -730,7 +730,7 @@ export class MsSqlQuery<
   /********************************************************************************************************************
    * notExists
    * ******************************************************************************************************************/
-  async notExists(where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>): Promise<boolean> {
+  async notExists(where?: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>): Promise<boolean> {
     return !(await this.exists(where));
   }
 
@@ -744,7 +744,7 @@ export class MsSqlQuery<
   /********************************************************************************************************************
    * count
    * ******************************************************************************************************************/
-  async count(where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>): Promise<number> {
+  async count(where?: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>): Promise<number> {
     const condition = typeof where === 'function' ? where(this) : where;
 
     if (condition !== undefined && !is(condition, SQL)) {
@@ -756,6 +756,9 @@ export class MsSqlQuery<
     return row?.cnt ?? 0;
   }
 
+  /********************************************************************************************************************
+   * (PRIVATE) prepareValues
+   * ******************************************************************************************************************/
   private prepareValues(input: object, operation: 'insert' | 'update'): Record<string, unknown> {
     const values = { ...input } as Record<string, unknown>;
     const columns = getTableColumns(this.t);
@@ -829,31 +832,31 @@ export class MsSqlQuery<
   }
 
   /********************************************************************************************************************
-   * addValues
+   * addData
    * ******************************************************************************************************************/
-  addValues(values: AV[]): AV[];
-  addValues(values: AV): AV;
-  addValues(values: AV | AV[]): AV | AV[] {
+  addData(values: AD[]): AD[];
+  addData(values: AD): AD;
+  addData(values: AD | AD[]): AD | AD[] {
     return values;
   }
 
   /********************************************************************************************************************
-   * editValues
+   * editData
    * ******************************************************************************************************************/
-  editValues(values: EV): EV {
+  editData(values: ED): ED {
     return values;
   }
 
   /********************************************************************************************************************
    * add
    * ******************************************************************************************************************/
-  add(value: AV[]): Promise<AR[]>;
+  add(value: AD[]): Promise<AR[]>;
 
   add<TSelection extends Record<string, unknown>>(value: TypedQueryBuilder<TSelection>): Promise<AR[]>;
 
-  add(value: AV): Promise<AR>;
+  add(value: AD): Promise<AR>;
 
-  add(value: AV | AV[] | TypedQueryBuilder<Record<string, unknown>>) {
+  add(value: AD | AD[] | TypedQueryBuilder<Record<string, unknown>>) {
     if (is(value, MsSqlSelectBase)) {
       return this.executeInsertSelect(value as TypedQueryBuilder<Record<string, unknown>>);
     }
@@ -916,8 +919,8 @@ export class MsSqlQuery<
    * ******************************************************************************************************************/
   edit(
     this: this & (TableMutationPolicy<TTable> extends { updateBlocked: true } ? never : unknown),
-    set: EV,
-    where: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>
+    set: ED,
+    where: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>
   ) {
     this.assertMutationAllowed('update', 'edit');
     const condition = typeof where === 'function' ? where(this) : where;
@@ -939,7 +942,7 @@ export class MsSqlQuery<
    * ******************************************************************************************************************/
   editByPrimaryKey(
     this: this & (TableMutationPolicy<TTable> extends { updateBlocked: true } ? never : unknown),
-    set: EV,
+    set: ED,
     key: PrimaryKeyInput<TTable>
   ) {
     this.assertMutationAllowed('update', 'editByPrimaryKey');
@@ -951,7 +954,7 @@ export class MsSqlQuery<
    * ******************************************************************************************************************/
   remove(
     this: this & (TableMutationPolicy<TTable> extends { deleteBlocked: true } ? never : unknown),
-    where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>
+    where?: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>
   ) {
     this.assertMutationAllowed('delete', 'remove');
     const tx = this.getTx();
@@ -1201,7 +1204,9 @@ export class MsSqlQuery<
     if (typeof options === 'object' && options !== null && !('getSQL' in options)) {
       return this.drizzle.and(this.t, options as MsSqlAndConditions<TTable>);
     }
-    return drizzleAnd(...[options, ...conditions].filter((condition): condition is SQLWrapper | undefined => condition !== false));
+    return drizzleAnd(
+      ...[options, ...conditions].filter((condition): condition is SQLWrapper | undefined => condition !== false)
+    );
   }
 
   /********************************************************************************************************************
@@ -1216,7 +1221,9 @@ export class MsSqlQuery<
     if (typeof options === 'object' && options !== null && !('getSQL' in options)) {
       return this.drizzle.or(this.t, options as MsSqlOrConditions<TTable>);
     }
-    return drizzleOr(...[options, ...conditions].filter((condition): condition is SQLWrapper | undefined => condition !== false));
+    return drizzleOr(
+      ...[options, ...conditions].filter((condition): condition is SQLWrapper | undefined => condition !== false)
+    );
   }
 }
 
@@ -1259,9 +1266,7 @@ type GroupByCallback<
   TTable extends MsSqlTable | Subquery,
   TSelection extends FieldSet | undefined,
   TBranch extends 'from' | 'top',
-> = (
-  aliases: SelectQueryBase<TTable, TSelection, TBranch>['_']['selection']
-) => OrderByValue | OrderByValue[];
+> = (aliases: SelectQueryBase<TTable, TSelection, TBranch>['_']['selection']) => OrderByValue | OrderByValue[];
 type HavingCondition<
   TTable extends MsSqlTable | Subquery,
   TSelection extends FieldSet | undefined,
@@ -1287,7 +1292,9 @@ type DynamicSelect<
   groupBy(...columns: OrderByValue[]): DynamicSelect<TQuery, TTable>;
   orderBy(builder: OrderByCallback<TTable>): DynamicSelect<TQuery, TTable>;
   orderBy(...columns: OrderByInput[]): DynamicSelect<TQuery, TTable>;
-  having(condition: SQL | undefined | ((aliases: TQuery['_']['selection']) => SQL | undefined)): DynamicSelect<TQuery, TTable>;
+  having(
+    condition: SQL | undefined | ((aliases: TQuery['_']['selection']) => SQL | undefined)
+  ): DynamicSelect<TQuery, TTable>;
   offset(value: number | Placeholder): DynamicSelect<TQuery, TTable>;
   fetch(value: number | Placeholder): DynamicSelect<TQuery, TTable>;
   $dynamic(): DynamicSelect<TQuery, TTable>;
@@ -1417,7 +1424,17 @@ type SelectJoinMethods<
 
 type SelectTopFrom<TTable extends MsSqlTable | Subquery, TSelection extends FieldSet | undefined> = Omit<
   SelectQueryBase<TTable, TSelection, 'top'>,
-  'where' | 'having' | 'groupBy' | 'orderBy' | 'offset' | 'fetch' | '$dynamic' | 'union' | 'unionAll' | 'intersect' | 'except'
+  | 'where'
+  | 'having'
+  | 'groupBy'
+  | 'orderBy'
+  | 'offset'
+  | 'fetch'
+  | '$dynamic'
+  | 'union'
+  | 'unionAll'
+  | 'intersect'
+  | 'except'
   | keyof SelectJoinMethods<TTable, TSelection, 'top'>
 > &
   SelectJoinMethods<TTable, TSelection, 'top'> & {
@@ -1428,9 +1445,7 @@ type SelectTopFrom<TTable extends MsSqlTable | Subquery, TSelection extends Fiel
     except: SelectSetOperatorMethod<SelectQueryBase<TTable, TSelection, 'top'>, TTable>;
     where(condition: TableWhere<TTable>): Omit<SelectTopFrom<TTable, TSelection>, 'where'>;
     having(condition: HavingCondition<TTable, TSelection, 'top'>): Omit<SelectTopFrom<TTable, TSelection>, 'having'>;
-    groupBy(
-      builder: GroupByCallback<TTable, TSelection, 'top'>
-    ): Omit<SelectTopFrom<TTable, TSelection>, 'groupBy'>;
+    groupBy(builder: GroupByCallback<TTable, TSelection, 'top'>): Omit<SelectTopFrom<TTable, TSelection>, 'groupBy'>;
     groupBy(...columns: OrderByValue[]): Omit<SelectTopFrom<TTable, TSelection>, 'groupBy'>;
     orderBy(builder: OrderByCallback<TTable>): Omit<SelectTopFrom<TTable, TSelection>, 'orderBy'>;
     orderBy(...columns: OrderByInput[]): Omit<SelectTopFrom<TTable, TSelection>, 'orderBy'>;
@@ -1440,7 +1455,17 @@ type SelectTopFrom<TTable extends MsSqlTable | Subquery, TSelection extends Fiel
 
 export type SelectFrom<TTable extends MsSqlTable | Subquery, TSelection extends FieldSet | undefined> = Omit<
   SelectQueryBase<TTable, TSelection, 'from'>,
-  'where' | 'having' | 'groupBy' | 'orderBy' | 'offset' | 'fetch' | '$dynamic' | 'union' | 'unionAll' | 'intersect' | 'except'
+  | 'where'
+  | 'having'
+  | 'groupBy'
+  | 'orderBy'
+  | 'offset'
+  | 'fetch'
+  | '$dynamic'
+  | 'union'
+  | 'unionAll'
+  | 'intersect'
+  | 'except'
   | keyof SelectJoinMethods<TTable, TSelection, 'from'>
 > &
   SelectJoinMethods<TTable, TSelection, 'from'> & {
@@ -1451,9 +1476,7 @@ export type SelectFrom<TTable extends MsSqlTable | Subquery, TSelection extends 
     except: SelectSetOperatorMethod<SelectQueryBase<TTable, TSelection, 'from'>, TTable>;
     where(condition: TableWhere<TTable>): Omit<SelectFrom<TTable, TSelection>, 'where'>;
     having(condition: HavingCondition<TTable, TSelection, 'from'>): Omit<SelectFrom<TTable, TSelection>, 'having'>;
-    groupBy(
-      builder: GroupByCallback<TTable, TSelection, 'from'>
-    ): Omit<SelectFrom<TTable, TSelection>, 'groupBy'>;
+    groupBy(builder: GroupByCallback<TTable, TSelection, 'from'>): Omit<SelectFrom<TTable, TSelection>, 'groupBy'>;
     groupBy(...columns: OrderByValue[]): Omit<SelectFrom<TTable, TSelection>, 'groupBy'>;
     orderBy(builder: OrderByCallback<TTable>): Omit<SelectFrom<TTable, TSelection>, 'orderBy'>;
     orderBy(...columns: OrderByInput[]): Omit<SelectFrom<TTable, TSelection>, 'orderBy'>;
@@ -1479,45 +1502,45 @@ type QueryTable<TQuery> = TQuery extends { readonly t: infer TTable extends MsSq
 
 type WhereQuery<TQuery> = Omit<
   Pick<
-  TQuery,
-  Extract<
-    keyof TQuery,
-    | 't'
-    | 'eq'
-    | 'ne'
-    | 'orEq'
-    | 'orNe'
-    | 'orIsNotNull'
-    | 'orIsNull'
-    | 'orNotIlike'
-    | 'orIlike'
-    | 'orNotLike'
-    | 'orLike'
-    | 'orNotBetween'
-    | 'orBetween'
-    | 'orNotInArray'
-    | 'orInArray'
-    | 'orLte'
-    | 'orLt'
-    | 'orGte'
-    | 'orGt'
-    | 'gt'
-    | 'gte'
-    | 'lt'
-    | 'lte'
-    | 'inArray'
-    | 'notInArray'
-    | 'between'
-    | 'notBetween'
-    | 'like'
-    | 'notLike'
-    | 'ilike'
-    | 'notIlike'
-    | 'isNull'
-    | 'isNotNull'
-    | 'and'
-    | 'or'
-  >
+    TQuery,
+    Extract<
+      keyof TQuery,
+      | 't'
+      | 'eq'
+      | 'ne'
+      | 'orEq'
+      | 'orNe'
+      | 'orIsNotNull'
+      | 'orIsNull'
+      | 'orNotIlike'
+      | 'orIlike'
+      | 'orNotLike'
+      | 'orLike'
+      | 'orNotBetween'
+      | 'orBetween'
+      | 'orNotInArray'
+      | 'orInArray'
+      | 'orLte'
+      | 'orLt'
+      | 'orGte'
+      | 'orGt'
+      | 'gt'
+      | 'gte'
+      | 'lt'
+      | 'lte'
+      | 'inArray'
+      | 'notInArray'
+      | 'between'
+      | 'notBetween'
+      | 'like'
+      | 'notLike'
+      | 'ilike'
+      | 'notIlike'
+      | 'isNull'
+      | 'isNotNull'
+      | 'and'
+      | 'or'
+    >
   >,
   'eq'
 > & {

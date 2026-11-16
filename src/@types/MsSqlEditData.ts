@@ -4,17 +4,27 @@ import type { GetColumnData, Placeholder, SQL } from 'drizzle-orm';
 import type { TablePolicies } from '../mssqlTable';
 
 type UpdateSource<T extends MsSqlTable> = MsSqlUpdateSetSource<T> & {
-  [K in Exclude<keyof T['_']['columns'], keyof MsSqlUpdateSetSource<T>> as K extends keyof TablePolicies<T>
-    ? TablePolicies<T>[K] extends { update: 'allowed' | 'required' }
-      ? K
+  [
+    K in Exclude<keyof T['_']['columns'], keyof MsSqlUpdateSetSource<T>> as K extends keyof TablePolicies<T>
+      ? TablePolicies<T>[K] extends { update: 'allowed' | 'required' }
+        ? K
+        : never
       : never
-    : never]?: GetColumnData<T['_']['columns'][K], 'query'> | Placeholder | SQL;
+  ]?: GetColumnData<T['_']['columns'][K], 'query'> | Placeholder | SQL;
 };
 
 type DefaultBlocked<T extends MsSqlTable, K> = K extends keyof T['_']['columns']
   ? T['_']['columns'][K]['_']['isPrimaryKey'] extends true
     ? K
-    : (T['_']['columns'][K]['_'] extends { generated: infer G } ? undefined extends G ? false : keyof G extends never ? true : false : false) extends true
+    : (
+          T['_']['columns'][K]['_'] extends { generated: infer G }
+            ? undefined extends G
+              ? false
+              : keyof G extends never
+                ? true
+                : false
+            : false
+        ) extends true
       ? K
       : never
   : never;
@@ -26,13 +36,13 @@ type Blocked<T extends MsSqlTable> = {
         ? never
         : TablePolicies<T>[K] extends { timestamp: 'created' }
           ? K
-        : K extends keyof T['_']['columns']
-          ? T['_']['columns'][K]['_']['isPrimaryKey'] extends true
-            ? K
-            : TablePolicies<T>[K] extends { update: 'required' }
-              ? never
-              : DefaultBlocked<T, K>
-          : never
+          : K extends keyof T['_']['columns']
+            ? T['_']['columns'][K]['_']['isPrimaryKey'] extends true
+              ? K
+              : TablePolicies<T>[K] extends { update: 'required' }
+                ? never
+                : DefaultBlocked<T, K>
+            : never
     : DefaultBlocked<T, K>;
 }[keyof UpdateSource<T>] &
   keyof UpdateSource<T>;
@@ -47,7 +57,7 @@ type RequiredKeys<T extends MsSqlTable> = {
 }[keyof UpdateSource<T>] &
   keyof UpdateSource<T>;
 
-export type MsSqlEditValues<
+export type MsSqlEditData<
   T extends MsSqlTable,
   B extends keyof UpdateSource<T> = never,
   R extends Exclude<keyof UpdateSource<T>, B | Blocked<T>> = never,

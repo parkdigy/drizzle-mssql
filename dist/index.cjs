@@ -698,6 +698,9 @@ class MsSqlQuery {
         const [row] = await this.select({ cnt: native.count() }).where(condition);
         return (_a = row === null || row === void 0 ? void 0 : row.cnt) !== null && _a !== void 0 ? _a : 0;
     }
+    /********************************************************************************************************************
+     * (PRIVATE) prepareValues
+     * ******************************************************************************************************************/
     prepareValues(input, operation) {
         var _a, _b;
         const values = Object.assign({}, input);
@@ -766,13 +769,13 @@ class MsSqlQuery {
             }
         }
     }
-    addValues(values) {
+    addData(values) {
         return values;
     }
     /********************************************************************************************************************
-     * editValues
+     * editData
      * ******************************************************************************************************************/
-    editValues(values) {
+    editData(values) {
         return values;
     }
     add(value) {

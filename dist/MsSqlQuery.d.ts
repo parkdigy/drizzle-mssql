@@ -8,12 +8,12 @@ import type { AnyMsSqlSelectQueryBuilder, MsSqlSelectKind, MsSqlSelectHKT, GetMs
 import type { MsSqlViewBase } from 'drizzle-orm/mssql-core/view-base';
 import type { MsSqlColumnSelectionName, MsSqlSelectedNamedColumnUnion, MsSqlSelectedNamedColumns, MsSqlSelectedTableColumns, MsSqlAliasTable } from './columns.js';
 import { type TableMutationPolicy } from './mssqlTable.js';
-import type { MsSqlAddValues, MsSqlEditValues, MsSqlCompareValues, MsSqlColumnName, MsSqlArrayCompareValues, MsSqlRangeCompareValues, MsSqlPatternCompareValues, MsSqlNullConditionInput, MsSqlAndConditions, MsSqlOrConditions } from './@types/index.js';
+import type { MsSqlAddData, MsSqlEditData, MsSqlCompareValues, MsSqlColumnName, MsSqlArrayCompareValues, MsSqlRangeCompareValues, MsSqlPatternCompareValues, MsSqlNullConditionInput, MsSqlAndConditions, MsSqlOrConditions } from './@types/index.js';
 import type { NodeMsSqlDatabase, NodeMsSqlPreparedQueryHKT } from 'drizzle-orm/node-mssql';
 /********************************************************************************************************************
  * MsSqlQuery
  * ******************************************************************************************************************/
-export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddValues<TTable> = MsSqlAddValues<TTable>, EV extends MsSqlEditValues<TTable> = MsSqlEditValues<TTable>, AR = AddResult<TTable>> {
+export declare class MsSqlQuery<TTable extends MsSqlTable, AD extends MsSqlAddData<TTable> = MsSqlAddData<TTable>, ED extends MsSqlEditData<TTable> = MsSqlEditData<TTable>, AR = AddResult<TTable>> {
     private readonly current;
     private readonly getTimestamp?;
     readonly t: TTable;
@@ -77,21 +77,21 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddVa
     /********************************************************************************************************************
      * find
      * ******************************************************************************************************************/
-    find(where: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>): Promise<FindResult<TTable, undefined>>;
-    find(fields: readonly [], where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>): Promise<FindResult<TTable, {}>>;
-    find<N extends MsSqlColumnSelectionName<TTable>>(fields: readonly N[], where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>): Promise<FindResult<TTable, MsSqlSelectedNamedColumns<TTable, readonly N[]>>>;
-    find<const T extends readonly FieldInput[]>(fields: (query: FieldsQuery<TTable>) => T, where: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>): Promise<FindResult<TTable, MergeFields<T>>>;
-    find<const T extends readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[]>(fields: T, where: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>): Promise<FindResult<TTable, MergeFields<NamedFields<TTable, T>>>>;
-    find<const TSelection extends StringColumnSelection<TTable>>(fields: TSelection, where: (query: WhereQuery<MsSqlQuery<TTable, AV, EV, AR>>) => SQL | undefined): Promise<FindResult<TTable, StringColumnSelectionFields<TTable, TSelection>>>;
-    find<const TSelection extends StringColumnSelection<TTable>>(fields: TSelection, where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>): Promise<FindResult<TTable, StringColumnSelectionFields<TTable, TSelection>>>;
-    find<TSelection extends SelectedFields<MsSqlColumn, TTable>>(fields: Fields<FieldsQuery<TTable>, TSelection>, where: (query: WhereQuery<MsSqlQuery<TTable, AV, EV, AR>>) => SQL | undefined): Promise<FindResult<TTable, TSelection>>;
-    find<TSelection extends SelectedFields<MsSqlColumn, TTable>>(fields: Fields<FieldsQuery<TTable>, TSelection>, where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>): Promise<FindResult<TTable, TSelection>>;
-    find<TAlias extends string>(alias: MsSqlAliasTable<TTable, TAlias>, where: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, undefined>>;
-    find<TAlias extends string>(alias: MsSqlAliasTable<TTable, TAlias>, fields: readonly [], where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, {}>>;
-    find<TAlias extends string, N extends MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>>(alias: MsSqlAliasTable<TTable, TAlias>, fields: readonly N[], where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, MsSqlSelectedNamedColumns<MsSqlAliasTable<TTable, TAlias>, readonly N[]>>>;
-    find<TAlias extends string, const T extends readonly FieldInput[]>(alias: MsSqlAliasTable<TTable, TAlias>, fields: (query: FieldsQuery<MsSqlAliasTable<TTable, TAlias>>) => T, where: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, MergeFields<T>>>;
-    find<TAlias extends string, const T extends readonly (FieldInput | MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>)[]>(alias: MsSqlAliasTable<TTable, TAlias>, fields: T, where: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, MergeFields<NamedFields<MsSqlAliasTable<TTable, TAlias>, T>>>>;
-    find<TAlias extends string, TSelection extends SelectedFields<MsSqlColumn, MsSqlAliasTable<TTable, TAlias>>>(alias: MsSqlAliasTable<TTable, TAlias>, fields: Fields<FieldsQuery<MsSqlAliasTable<TTable, TAlias>>, TSelection>, where: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, TSelection>>;
+    find(where: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>): Promise<FindResult<TTable, undefined>>;
+    find(fields: readonly [], where?: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>): Promise<FindResult<TTable, {}>>;
+    find<N extends MsSqlColumnSelectionName<TTable>>(fields: readonly N[], where?: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>): Promise<FindResult<TTable, MsSqlSelectedNamedColumns<TTable, readonly N[]>>>;
+    find<const T extends readonly FieldInput[]>(fields: (query: FieldsQuery<TTable>) => T, where: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>): Promise<FindResult<TTable, MergeFields<T>>>;
+    find<const T extends readonly (FieldInput | MsSqlColumnSelectionName<TTable>)[]>(fields: T, where: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>): Promise<FindResult<TTable, MergeFields<NamedFields<TTable, T>>>>;
+    find<const TSelection extends StringColumnSelection<TTable>>(fields: TSelection, where: (query: WhereQuery<MsSqlQuery<TTable, AD, ED, AR>>) => SQL | undefined): Promise<FindResult<TTable, StringColumnSelectionFields<TTable, TSelection>>>;
+    find<const TSelection extends StringColumnSelection<TTable>>(fields: TSelection, where?: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>): Promise<FindResult<TTable, StringColumnSelectionFields<TTable, TSelection>>>;
+    find<TSelection extends SelectedFields<MsSqlColumn, TTable>>(fields: Fields<FieldsQuery<TTable>, TSelection>, where: (query: WhereQuery<MsSqlQuery<TTable, AD, ED, AR>>) => SQL | undefined): Promise<FindResult<TTable, TSelection>>;
+    find<TSelection extends SelectedFields<MsSqlColumn, TTable>>(fields: Fields<FieldsQuery<TTable>, TSelection>, where?: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>): Promise<FindResult<TTable, TSelection>>;
+    find<TAlias extends string>(alias: MsSqlAliasTable<TTable, TAlias>, where: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, undefined>>;
+    find<TAlias extends string>(alias: MsSqlAliasTable<TTable, TAlias>, fields: readonly [], where?: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, {}>>;
+    find<TAlias extends string, N extends MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>>(alias: MsSqlAliasTable<TTable, TAlias>, fields: readonly N[], where?: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, MsSqlSelectedNamedColumns<MsSqlAliasTable<TTable, TAlias>, readonly N[]>>>;
+    find<TAlias extends string, const T extends readonly FieldInput[]>(alias: MsSqlAliasTable<TTable, TAlias>, fields: (query: FieldsQuery<MsSqlAliasTable<TTable, TAlias>>) => T, where: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, MergeFields<T>>>;
+    find<TAlias extends string, const T extends readonly (FieldInput | MsSqlColumnSelectionName<MsSqlAliasTable<TTable, TAlias>>)[]>(alias: MsSqlAliasTable<TTable, TAlias>, fields: T, where: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, MergeFields<NamedFields<MsSqlAliasTable<TTable, TAlias>, T>>>>;
+    find<TAlias extends string, TSelection extends SelectedFields<MsSqlColumn, MsSqlAliasTable<TTable, TAlias>>>(alias: MsSqlAliasTable<TTable, TAlias>, fields: Fields<FieldsQuery<MsSqlAliasTable<TTable, TAlias>>, TSelection>, where: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>): Promise<FindResult<MsSqlAliasTable<TTable, TAlias>, TSelection>>;
     /********************************************************************************************************************
      * findByPrimaryKey
      * ******************************************************************************************************************/
@@ -109,7 +109,7 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddVa
     /********************************************************************************************************************
      * exists
      * ******************************************************************************************************************/
-    exists(where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>): Promise<boolean>;
+    exists(where?: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>): Promise<boolean>;
     /********************************************************************************************************************
      * existsByPrimarykey
      * ******************************************************************************************************************/
@@ -117,7 +117,7 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddVa
     /********************************************************************************************************************
      * notExists
      * ******************************************************************************************************************/
-    notExists(where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>): Promise<boolean>;
+    notExists(where?: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>): Promise<boolean>;
     /********************************************************************************************************************
      * notExistsByPrimaryKey
      * ******************************************************************************************************************/
@@ -125,46 +125,49 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AV extends MsSqlAddVa
     /********************************************************************************************************************
      * count
      * ******************************************************************************************************************/
-    count(where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>): Promise<number>;
+    count(where?: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>): Promise<number>;
+    /********************************************************************************************************************
+     * (PRIVATE) prepareValues
+     * ******************************************************************************************************************/
     private prepareValues;
     /********************************************************************************************************************
      * (PRIVATE) executeInsert
      * ******************************************************************************************************************/
     private executeInsert;
     /********************************************************************************************************************
-     * addValues
+     * addData
      * ******************************************************************************************************************/
-    addValues(values: AV[]): AV[];
-    addValues(values: AV): AV;
+    addData(values: AD[]): AD[];
+    addData(values: AD): AD;
     /********************************************************************************************************************
-     * editValues
+     * editData
      * ******************************************************************************************************************/
-    editValues(values: EV): EV;
+    editData(values: ED): ED;
     /********************************************************************************************************************
      * add
      * ******************************************************************************************************************/
-    add(value: AV[]): Promise<AR[]>;
+    add(value: AD[]): Promise<AR[]>;
     add<TSelection extends Record<string, unknown>>(value: TypedQueryBuilder<TSelection>): Promise<AR[]>;
-    add(value: AV): Promise<AR>;
+    add(value: AD): Promise<AR>;
     private executeInsertSelect;
     /********************************************************************************************************************
      * edit
      * ******************************************************************************************************************/
     edit(this: this & (TableMutationPolicy<TTable> extends {
         updateBlocked: true;
-    } ? never : unknown), set: EV, where: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>): Omit<import("drizzle-orm/mssql-core").MsSqlUpdateBase<TTable, import("drizzle-orm/node-mssql").NodeMsSqlQueryResultHKT, NodeMsSqlPreparedQueryHKT, undefined, false, "where">, "where">;
+    } ? never : unknown), set: ED, where: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>): Omit<import("drizzle-orm/mssql-core").MsSqlUpdateBase<TTable, import("drizzle-orm/node-mssql").NodeMsSqlQueryResultHKT, NodeMsSqlPreparedQueryHKT, undefined, false, "where">, "where">;
     /********************************************************************************************************************
      * editByPrimaryKey
      * ******************************************************************************************************************/
     editByPrimaryKey(this: this & (TableMutationPolicy<TTable> extends {
         updateBlocked: true;
-    } ? never : unknown), set: EV, key: PrimaryKeyInput<TTable>): Omit<import("drizzle-orm/mssql-core").MsSqlUpdateBase<TTable, import("drizzle-orm/node-mssql").NodeMsSqlQueryResultHKT, NodeMsSqlPreparedQueryHKT, undefined, false, "where">, "where">;
+    } ? never : unknown), set: ED, key: PrimaryKeyInput<TTable>): Omit<import("drizzle-orm/mssql-core").MsSqlUpdateBase<TTable, import("drizzle-orm/node-mssql").NodeMsSqlQueryResultHKT, NodeMsSqlPreparedQueryHKT, undefined, false, "where">, "where">;
     /********************************************************************************************************************
      * remove
      * ******************************************************************************************************************/
     remove(this: this & (TableMutationPolicy<TTable> extends {
         deleteBlocked: true;
-    } ? never : unknown), where?: BaseWhere<MsSqlQuery<TTable, AV, EV, AR>>): Omit<import("drizzle-orm/mssql-core").MsSqlDeleteBase<TTable, import("drizzle-orm/node-mssql").NodeMsSqlQueryResultHKT, NodeMsSqlPreparedQueryHKT, undefined, false, "where">, "where">;
+    } ? never : unknown), where?: BaseWhere<MsSqlQuery<TTable, AD, ED, AR>>): Omit<import("drizzle-orm/mssql-core").MsSqlDeleteBase<TTable, import("drizzle-orm/node-mssql").NodeMsSqlQueryResultHKT, NodeMsSqlPreparedQueryHKT, undefined, false, "where">, "where">;
     /********************************************************************************************************************
      * removeByPrimaryKey
      * ******************************************************************************************************************/
