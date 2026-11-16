@@ -281,13 +281,14 @@ type AliasedSelection<T extends FieldSet> = {
 type SelectQueryBase<TTable extends MsSqlTable | Subquery, TSelection extends FieldSet | undefined, TBranch extends 'from' | 'top'> = MsSqlSelectBase<GetSelectTableName<TTable>, TSelection extends undefined ? SourceSelection<TTable> : AliasedSelection<NonNullable<TSelection>>, 'partial', NodeMsSqlPreparedQueryHKT, TBranch>;
 type TableWhere<TTable extends MsSqlTable | Subquery> = SQL | undefined | ((query: SelectConditionQuery<TTable>) => SQL | undefined);
 type OrderByValue = MsSqlColumn | SQL | SQL.Aliased;
-type OrderByInput = OrderByValue | readonly OrderByValue[];
+type OptionalOrderByValue = OrderByValue | false | undefined;
+type OrderByInput = OptionalOrderByValue | readonly OptionalOrderByValue[];
 type SelectOrderByQuery<TTable extends MsSqlTable | Subquery> = {
     readonly t: TTable;
     asc(name: SourceColumnName<TTable>, ...names: SourceColumnName<TTable>[]): SQL | SQL[];
     desc(name: SourceColumnName<TTable>, ...names: SourceColumnName<TTable>[]): SQL | SQL[];
 };
-type OrderByCallback<TTable extends MsSqlTable | Subquery> = (query: SelectOrderByQuery<TTable>) => OrderByInput | OrderByInput[];
+type OrderByCallback<TTable extends MsSqlTable | Subquery> = (query: SelectOrderByQuery<TTable>) => OrderByInput | readonly OrderByInput[];
 type GroupByCallback<TTable extends MsSqlTable | Subquery, TSelection extends FieldSet | undefined, TBranch extends 'from' | 'top'> = (aliases: SelectQueryBase<TTable, TSelection, TBranch>['_']['selection']) => OrderByValue | OrderByValue[];
 type HavingCondition<TTable extends MsSqlTable | Subquery, TSelection extends FieldSet | undefined, TBranch extends 'from' | 'top'> = SQL | undefined | ((aliases: SelectQueryBase<TTable, TSelection, TBranch>['_']['selection']) => SQL | undefined);
 type OrderByPreserved<TQuery, TTable extends MsSqlTable | Subquery> = Omit<TQuery, 'orderBy'> & {

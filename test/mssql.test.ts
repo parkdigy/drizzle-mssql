@@ -600,3 +600,45 @@ test('OR 패턴·NULL 조건과 서브쿼리 콜백에서도 여러 컬럼을 �
     .toSQL();
   expect(nulls.sql).toContain(' or ');
 });
+
+test.each([false, true])('orderBy는 직접 인자와 콜백에서 조건부 정렬(%s)을 제외하거나 유지한다', (enabled) => {
+  const expected = usersQuery
+    .select()
+    .orderBy(usersQuery.desc('id'), ...(enabled ? [usersQuery.asc('name'), usersQuery.asc('name')] : []))
+    .toSQL();
+  const direct = usersQuery
+    .select()
+    .orderBy(usersQuery.desc('id'), enabled && usersQuery.asc('name'), enabled ? usersQuery.asc('name') : undefined)
+    .toSQL();
+  const callback = usersQuery
+    .select()
+    .orderBy((q) => [q.desc('id'), enabled && q.asc('name'), enabled ? q.asc('name') : undefined])
+    .toSQL();
+  expect(direct).toEqual(expected);
+  expect(callback).toEqual(expected);
+  const grouped = usersQuery
+    .select()
+    .orderBy([false, usersQuery.desc('id'), undefined], false, undefined)
+    .toSQL();
+  expect(grouped).toEqual(usersQuery.select().orderBy(usersQuery.desc('id')).toSQL());
+});
+
+test('정렬 조건이 전부 제외되면 ORDER BY를 생성하지 않는다', () => {
+  for (const query of [
+    usersQuery.select().orderBy(false, undefined),
+    usersQuery.select().orderBy(() => [false, undefined]),
+    usersQuery.select().orderBy(() => false),
+    usersQuery.select().orderBy(() => undefined),
+    usersQuery.select().top(1).orderBy(false, undefined),
+    usersQuery
+      .select()
+      .$dynamic()
+      .orderBy((q) => [q.desc('id'), false, undefined])
+      .orderBy(false, undefined),
+    usersQuery
+      .select(['id'])
+      .union(usersQuery.select(['id']))
+      .orderBy(false, undefined),
+  ])
+    expect(query.toSQL().sql).not.toMatch(/order by/i);
+});

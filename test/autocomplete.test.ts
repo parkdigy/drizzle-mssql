@@ -83,6 +83,14 @@ test.each(['../src/index', '../dist/index'])('%s: 200개 테이블에서도 자�
     const fullRow: Awaited<typeof full>[number] = { base: null, first: null, last: null };
     void [joinedRow, invalidJoinedRow, outerRow, invalidOuterRow, rightRow, fullRow];
     const query = db.query(table199);
+    const isOrderByName = false;
+    query.select().orderBy(query.desc('id'), isOrderByName && query.asc('name'), isOrderByName ? query.asc('name') : undefined);
+    query.select().orderBy(q => [q.desc('id'), isOrderByName && q.asc('name'), isOrderByName ? q.asc('name') : undefined]);
+    query.select().innerJoin(b, db.eq(table199.id, b.id)).orderBy(q => [q.desc('id'), false, undefined]);
+    query.select().top(1).orderBy(false, undefined);
+    query.select().$dynamic().orderBy(q => [q.desc('id'), false, undefined]);
+    query.select(['id']).union(query.select(['id'])).orderBy(q => [q.desc('id'), false, undefined]);
+
     // @ts-expect-error 자동완성용 미완성 컬럼명
     query.select(['id', '/*nextColumn*/']);
     // @ts-expect-error 별칭 선택의 자동완성용 미완성 컬럼명

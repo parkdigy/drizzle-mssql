@@ -123,6 +123,22 @@ const count = await user.count(user.isNotNull('email'));
 const exists = await user.exists(user.eq({ email: 'hong@example.com' }));
 ```
 
+`orderBy`는 직접 인자와 콜백 반환값에서 `false`, `undefined`를 제외합니다. 배열 안의 값에도 동일하게 적용하며, 모두 제외되면 `ORDER BY`를 생성하지 않습니다.
+
+```ts
+const isOrderByName = false;
+await user.select().orderBy(
+  user.desc('id'),
+  isOrderByName && user.asc('name'),
+  isOrderByName ? user.asc('name') : undefined,
+);
+await user.select().orderBy(q => [
+  q.desc('id'),
+  isOrderByName && q.asc('name'),
+  isOrderByName ? q.asc('name') : undefined,
+]);
+```
+
 연결 객체의 `select(table, fields?)`에서도 같은 선택 기능을 사용할 수 있습니다. 첫 인자는 등록된 스키마의 테이블명 또는 alias 테이블이며, 이후 선택 인자와 반환 빌더는 `MsSqlQuery.select`와 동일합니다.
 
 ```ts
