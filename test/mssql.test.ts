@@ -522,8 +522,6 @@ test('모든 OR 조건은 기존 비교 규칙을 유지하고 컬럼 사이만 
     notBetween: { id: [1, 2], name: ['A', 'Z'] },
     like: { name: 'A%' },
     notLike: { name: 'A%' },
-    ilike: { name: 'A%' },
-    notIlike: { name: 'A%' },
     isNull: ['id', 'name'],
     isNotNull: ['id', 'name'],
   };
@@ -575,7 +573,7 @@ test('OR 패턴·NULL 조건과 서브쿼리 콜백에서도 여러 컬럼을 �
     email: nvarchar('email', { length: 100 }),
   });
   const conditions = createConditions({ contacts });
-  for (const op of ['orLike', 'orNotLike', 'orIlike', 'orNotIlike'] as const) {
+  for (const op of ['orLike', 'orNotLike'] as const) {
     const generated = db
       .select()
       .from(contacts)
@@ -641,4 +639,34 @@ test('정렬 조건이 전부 제외되면 ORDER BY를 생성하지 않는다', 
       .orderBy(false, undefined),
   ])
     expect(query.toSQL().sql).not.toMatch(/order by/i);
+});
+
+test('MSSQL 조건 API에서 ILIKE 계열을 제공하지 않는다', () => {
+  const conditions = createConditions({ users });
+  const removed = ['ilike', 'notIlike', 'orIlike', 'orNotIlike'] as const;
+  const check = (target: object) => {
+    for (const name of removed) expect(name in target).toBe(false);
+  };
+  check(conditions);
+  check(usersQuery);
+  usersQuery
+    .select()
+    .where((q) => {
+      check(q);
+      return q.like({ name: 'A%' });
+    })
+    .toSQL();
+  const subquery = usersQuery.select(['id', 'name']).as('sq');
+  usersQuery
+    .select()
+    .innerJoin(subquery, (q) => {
+      check(q);
+      return q.eq({ id: users.id });
+    })
+    .toSQL();
+  for (const name of removed) {
+    expect(() => Reflect.apply(conditions.and, undefined, [users, { [name]: { name: 'A%' } }])).toThrow(
+      `unknown operator "${name}"`
+    );
+  }
 });

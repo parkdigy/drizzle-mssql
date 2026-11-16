@@ -13,8 +13,6 @@ type BaseConditions<T extends MsSqlTable> = {
     notBetween?: MsSqlRangeCompareValues<T>;
     like?: MsSqlPatternCompareValues<T>;
     notLike?: MsSqlPatternCompareValues<T>;
-    ilike?: MsSqlPatternCompareValues<T>;
-    notIlike?: MsSqlPatternCompareValues<T>;
     isNull?: MsSqlNullConditionInput<T>;
     isNotNull?: MsSqlNullConditionInput<T>;
 };

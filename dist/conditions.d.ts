@@ -83,14 +83,6 @@ export declare function createConditions<TSchema extends Record<string, MsSqlTab
         <T extends MsSqlTable>(table: T, values: import("./index.js").MsSqlPatternCompareValues<T> | undefined): SQL | undefined;
         <K extends keyof TSchema & string>(table: K, values: import("./index.js").MsSqlPatternCompareValues<TSchema[K]> | undefined): SQL | undefined;
     } & typeof native.notLike;
-    ilike: {
-        <T extends MsSqlTable>(table: T, values: import("./index.js").MsSqlPatternCompareValues<T> | undefined): SQL | undefined;
-        <K extends keyof TSchema & string>(table: K, values: import("./index.js").MsSqlPatternCompareValues<TSchema[K]> | undefined): SQL | undefined;
-    } & typeof native.ilike;
-    notIlike: {
-        <T extends MsSqlTable>(table: T, values: import("./index.js").MsSqlPatternCompareValues<T> | undefined): SQL | undefined;
-        <K extends keyof TSchema & string>(table: K, values: import("./index.js").MsSqlPatternCompareValues<TSchema[K]> | undefined): SQL | undefined;
-    } & typeof native.notIlike;
     isNull: {
         <T extends MsSqlTable>(table: T, name: MsSqlColumnName<T>): SQL;
         <T extends MsSqlTable>(table: T, names: MsSqlNullConditionInput<T>): SQL | undefined;
@@ -140,14 +132,6 @@ export declare function createConditions<TSchema extends Record<string, MsSqlTab
         <K extends keyof TSchema & string>(table: K, values: import("./index.js").MsSqlPatternCompareValues<TSchema[K]> | undefined): SQL | undefined;
     };
     orNotLike: {
-        <T extends MsSqlTable>(table: T, values: import("./index.js").MsSqlPatternCompareValues<T> | undefined): SQL | undefined;
-        <K extends keyof TSchema & string>(table: K, values: import("./index.js").MsSqlPatternCompareValues<TSchema[K]> | undefined): SQL | undefined;
-    };
-    orIlike: {
-        <T extends MsSqlTable>(table: T, values: import("./index.js").MsSqlPatternCompareValues<T> | undefined): SQL | undefined;
-        <K extends keyof TSchema & string>(table: K, values: import("./index.js").MsSqlPatternCompareValues<TSchema[K]> | undefined): SQL | undefined;
-    };
-    orNotIlike: {
         <T extends MsSqlTable>(table: T, values: import("./index.js").MsSqlPatternCompareValues<T> | undefined): SQL | undefined;
         <K extends keyof TSchema & string>(table: K, values: import("./index.js").MsSqlPatternCompareValues<TSchema[K]> | undefined): SQL | undefined;
     };

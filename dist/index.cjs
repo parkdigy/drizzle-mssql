@@ -179,8 +179,6 @@ typeof SuppressedError === "function" ? SuppressedError : function (error, suppr
         notBetween: extendOperator(native__namespace.notBetween, objectOperator('notBetween')),
         like: extendOperator(native__namespace.like, objectOperator('like')),
         notLike: extendOperator(native__namespace.notLike, objectOperator('notLike')),
-        ilike: extendOperator(native__namespace.ilike, objectOperator('ilike')),
-        notIlike: extendOperator(native__namespace.notIlike, objectOperator('notIlike')),
         isNull: extendOperator(native__namespace.isNull, nullOperator('isNull')),
         isNotNull: extendOperator(native__namespace.isNotNull, nullOperator('isNotNull')),
         orGt: objectOperator('gt', 'or'),
@@ -193,8 +191,6 @@ typeof SuppressedError === "function" ? SuppressedError : function (error, suppr
         orNotBetween: objectOperator('notBetween', 'or'),
         orLike: objectOperator('like', 'or'),
         orNotLike: objectOperator('notLike', 'or'),
-        orIlike: objectOperator('ilike', 'or'),
-        orNotIlike: objectOperator('notIlike', 'or'),
         orIsNull: nullOperator('isNull', 'or'),
         orIsNotNull: nullOperator('isNotNull', 'or'),
         and: logicalOperator('and'),
@@ -489,8 +485,6 @@ class MsSqlQuery {
                 notBetween: bindCondition('notBetween', conditionTable),
                 like: bindCondition('like', conditionTable),
                 notLike: bindCondition('notLike', conditionTable),
-                ilike: bindCondition('ilike', conditionTable),
-                notIlike: bindCondition('notIlike', conditionTable),
                 isNull: bindCondition('isNull', conditionTable),
                 isNotNull: bindCondition('isNotNull', conditionTable),
                 and: (...conditions) => combineCallbackConditions('and', conditionTable, conditions),
@@ -499,8 +493,6 @@ class MsSqlQuery {
                 orNe: bindCondition('orNe', conditionTable),
                 orIsNotNull: bindCondition('orIsNotNull', conditionTable),
                 orIsNull: bindCondition('orIsNull', conditionTable),
-                orNotIlike: bindCondition('orNotIlike', conditionTable),
-                orIlike: bindCondition('orIlike', conditionTable),
                 orNotLike: bindCondition('orNotLike', conditionTable),
                 orLike: bindCondition('orLike', conditionTable),
                 orNotBetween: bindCondition('orNotBetween', conditionTable),
@@ -911,12 +903,6 @@ class MsSqlQuery {
     orNotLike(values) {
         return this.drizzle.orNotLike(this.t, values);
     }
-    orIlike(values) {
-        return this.drizzle.orIlike(this.t, values);
-    }
-    orNotIlike(values) {
-        return this.drizzle.orNotIlike(this.t, values);
-    }
     orIsNull(values) {
         return this.drizzle.orIsNull(this.t, values);
     }
@@ -996,18 +982,6 @@ class MsSqlQuery {
      * ******************************************************************************************************************/
     notLike(values) {
         return this.drizzle.notLike(this.t, values);
-    }
-    /********************************************************************************************************************
-     * ilike
-     * ******************************************************************************************************************/
-    ilike(values) {
-        return this.drizzle.ilike(this.t, values);
-    }
-    /********************************************************************************************************************
-     * notIlike
-     * ******************************************************************************************************************/
-    notIlike(values) {
-        return this.drizzle.notIlike(this.t, values);
     }
     isNull(names) {
         return this.drizzle.isNull(this.t, names);

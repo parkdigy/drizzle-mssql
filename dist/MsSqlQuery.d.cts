@@ -191,8 +191,6 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AD extends MsSqlAddDa
     orNotBetween(values: MsSqlRangeCompareValues<TTable>): SQL | undefined;
     orLike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
     orNotLike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
-    orIlike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
-    orNotIlike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
     orIsNull(values: MsSqlNullConditionInput<TTable>): SQL | undefined;
     orIsNotNull(values: MsSqlNullConditionInput<TTable>): SQL | undefined;
     /** 객체의 컬럼별 동등 비교를 OR로 결합한다. */
@@ -243,14 +241,6 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AD extends MsSqlAddDa
      * notLike
      * ******************************************************************************************************************/
     notLike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
-    /********************************************************************************************************************
-     * ilike
-     * ******************************************************************************************************************/
-    ilike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
-    /********************************************************************************************************************
-     * notIlike
-     * ******************************************************************************************************************/
-    notIlike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
     /********************************************************************************************************************
      * isNull
      * ******************************************************************************************************************/
@@ -392,7 +382,7 @@ type WhereQueryEq<TTable extends MsSqlTable> = {
 type QueryTable<TQuery> = TQuery extends {
     readonly t: infer TTable extends MsSqlTable;
 } ? TTable : never;
-type WhereQuery<TQuery> = Omit<Pick<TQuery, Extract<keyof TQuery, 't' | 'eq' | 'ne' | 'orEq' | 'orNe' | 'orIsNotNull' | 'orIsNull' | 'orNotIlike' | 'orIlike' | 'orNotLike' | 'orLike' | 'orNotBetween' | 'orBetween' | 'orNotInArray' | 'orInArray' | 'orLte' | 'orLt' | 'orGte' | 'orGt' | 'gt' | 'gte' | 'lt' | 'lte' | 'inArray' | 'notInArray' | 'between' | 'notBetween' | 'like' | 'notLike' | 'ilike' | 'notIlike' | 'isNull' | 'isNotNull' | 'and' | 'or'>>, 'eq'> & {
+type WhereQuery<TQuery> = Omit<Pick<TQuery, Extract<keyof TQuery, 't' | 'eq' | 'ne' | 'orEq' | 'orNe' | 'orIsNotNull' | 'orIsNull' | 'orNotLike' | 'orLike' | 'orNotBetween' | 'orBetween' | 'orNotInArray' | 'orInArray' | 'orLte' | 'orLt' | 'orGte' | 'orGt' | 'gt' | 'gte' | 'lt' | 'lte' | 'inArray' | 'notInArray' | 'between' | 'notBetween' | 'like' | 'notLike' | 'isNull' | 'isNotNull' | 'and' | 'or'>>, 'eq'> & {
     eq: WhereQueryEq<QueryTable<TQuery>>;
 };
 type SelectConditionQuery<TSource extends MsSqlTable | Subquery> = TSource extends MsSqlTable ? TableConditionQuery<TSource> : TSource extends Subquery ? SubqueryConditionQuery<TSource> : never;
@@ -404,8 +394,6 @@ type TableConditionQuery<TTable extends MsSqlTable> = {
     orNe(values: MsSqlCompareValues<TTable>): SQL | undefined;
     orIsNotNull(values: MsSqlNullConditionInput<TTable>): SQL | undefined;
     orIsNull(values: MsSqlNullConditionInput<TTable>): SQL | undefined;
-    orNotIlike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
-    orIlike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
     orNotLike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
     orLike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
     orNotBetween(values: MsSqlRangeCompareValues<TTable>): SQL | undefined;
@@ -426,8 +414,6 @@ type TableConditionQuery<TTable extends MsSqlTable> = {
     notBetween(values: MsSqlRangeCompareValues<TTable>): SQL | undefined;
     like(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
     notLike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
-    ilike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
-    notIlike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
     isNull(names: MsSqlNullConditionInput<TTable>): SQL | undefined;
     isNotNull(names: MsSqlNullConditionInput<TTable>): SQL | undefined;
     and(options: MsSqlAndConditions<TTable>): SQL | undefined;
@@ -548,11 +534,11 @@ type SubqueryAtomicMethods<T extends Subquery> = Pick<{
 } & {
     [K in 'between' | 'notBetween']: (values: SubqueryRangeValues<T>) => SQL | undefined;
 } & {
-    [K in 'like' | 'notLike' | 'ilike' | 'notIlike']: (values: SubqueryPatternValues<T>) => SQL | undefined;
+    [K in 'like' | 'notLike']: (values: SubqueryPatternValues<T>) => SQL | undefined;
 } & {
     isNull(names: SourceColumnName<T> | undefined | readonly (SourceColumnName<T> | undefined)[]): SQL | undefined;
     isNotNull(names: SourceColumnName<T> | undefined | readonly (SourceColumnName<T> | undefined)[]): SQL | undefined;
-}, 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'inArray' | 'notInArray' | 'between' | 'notBetween' | 'like' | 'notLike' | 'ilike' | 'notIlike' | 'isNull' | 'isNotNull'>;
+}, 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'inArray' | 'notInArray' | 'between' | 'notBetween' | 'like' | 'notLike' | 'isNull' | 'isNotNull'>;
 type SubqueryAtomicConditions<T extends Subquery> = {
     [K in keyof SubqueryAtomicMethods<T>]?: Parameters<SubqueryAtomicMethods<T>[K]>[0];
 } & {
@@ -573,7 +559,7 @@ type BaseSubqueryConditionQuery<T extends Subquery> = {
 } & {
     [K in 'between' | 'notBetween']: (values: SubqueryRangeValues<T>) => SQL | undefined;
 } & {
-    [K in 'like' | 'notLike' | 'ilike' | 'notIlike']: (values: SubqueryPatternValues<T>) => SQL | undefined;
+    [K in 'like' | 'notLike']: (values: SubqueryPatternValues<T>) => SQL | undefined;
 } & {
     isNull(names: SourceColumnName<T> | undefined | readonly (SourceColumnName<T> | undefined)[]): SQL | undefined;
     isNotNull(names: SourceColumnName<T> | undefined | readonly (SourceColumnName<T> | undefined)[]): SQL | undefined;

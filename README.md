@@ -241,7 +241,7 @@ db.orEq(u, { id: 1, name: '홍길동' });
 db.orNe('users', { id: 1, name: '홍길동' });
 ```
 
-모든 비교 조건에는 컬럼 사이를 `OR`로 결합하는 대응 함수가 있습니다: `orGt`, `orGte`, `orLt`, `orLte`, `orInArray`, `orNotInArray`, `orBetween`, `orNotBetween`, `orLike`, `orNotLike`, `orIlike`, `orNotIlike`, `orIsNull`, `orIsNotNull`. 원래 함수와 같은 입력 타입과 검증 규칙을 사용합니다. `orIsNull`·`orIsNotNull`은 컬럼명 또는 컬럼명 배열을 받으며, `orBetween`은 각 컬럼의 범위 내부 `AND`를 유지합니다. `orIlike`·`orNotIlike`도 SQL Server의 ILIKE 실행 제한을 그대로 가집니다.
+모든 비교 조건에는 컬럼 사이를 `OR`로 결합하는 대응 함수가 있습니다: `orGt`, `orGte`, `orLt`, `orLte`, `orInArray`, `orNotInArray`, `orBetween`, `orNotBetween`, `orLike`, `orNotLike`, `orIsNull`, `orIsNotNull`. 원래 함수와 같은 입력 타입과 검증 규칙을 사용합니다. `orIsNull`·`orIsNotNull`은 컬럼명 또는 컬럼명 배열을 받으며, `orBetween`은 각 컬럼의 범위 내부 `AND`를 유지합니다.
 
 ```ts
 user.orGt({ id: 10, age: 20 });
@@ -279,7 +279,7 @@ const recentIds = await user
 
 #### 문자열 패턴
 
-`like`, `notLike`, `ilike`, `notIlike`는 문자열 컬럼에 SQL 패턴을 적용합니다. `%`는 임의 길이 문자열, `_`는 한 문자에 대응합니다. `ilike` 계열은 대소문자를 구분하지 않는 `ILIKE` 연산자를 생성하지만, SQL Server는 `ILIKE` 문법을 지원하지 않으므로 SQL Server 쿼리에서는 사용하지 마세요. SQL Server의 `LIKE` 대소문자 구분 여부는 컬럼 collation 설정에 따릅니다.
+`like`, `notLike`는 문자열 컬럼에 SQL 패턴을 적용합니다. `%`는 임의 길이 문자열, `_`는 한 문자에 대응합니다. SQL Server의 `LIKE` 대소문자 구분 여부는 컬럼 collation 설정에 따릅니다.
 
 ```ts
 const matchingUsers = await user.find((query) =>
@@ -294,7 +294,7 @@ const excludedNames = await user
   .where(user.notLike({ name: '테스트_%' }));
 ```
 
-패턴 연산은 문자열 컬럼에만 사용할 수 있으며, 값은 `%홍길동%`처럼 SQL 패턴 문자열로 전달합니다. `ilike` / `notIlike`는 패키지의 조건 함수 목록에는 있지만 SQL Server에서는 실행할 수 없습니다.
+패턴 연산은 문자열 컬럼에만 사용할 수 있으며, 값은 `%홍길동%`처럼 SQL 패턴 문자열로 전달합니다.
 
 #### NULL 검사
 
@@ -367,7 +367,7 @@ const rows = await user.select().where(columnCondition);
 const count = await user.count(columnCondition);
 ```
 
-지원하는 객체 조건 함수는 `eq`, `ne`, `orEq`, `orNe`, `gt`, `gte`, `lt`, `lte`, `inArray`, `notInArray`, `between`, `notBetween`, `like`, `notLike`, `ilike`, `notIlike`, `isNull`, `isNotNull`, `and`, `or`입니다. 존재하지 않는 스키마 키나 컬럼, 잘못된 값 형식은 조건을 조용히 생략하지 않고 오류로 처리합니다.
+지원하는 객체 조건 함수는 `eq`, `ne`, `orEq`, `orNe`, `gt`, `gte`, `lt`, `lte`, `inArray`, `notInArray`, `between`, `notBetween`, `like`, `notLike`, `isNull`, `isNotNull`, `and`, `or`입니다. 존재하지 않는 스키마 키나 컬럼, 잘못된 값 형식은 조건을 조용히 생략하지 않고 오류로 처리합니다.
 
 ### 별칭과 조인
 
