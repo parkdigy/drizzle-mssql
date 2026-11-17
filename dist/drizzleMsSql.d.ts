@@ -1,3 +1,4 @@
+import { sqlNumber, sqlString, sqlBoolean } from './mappedSql.js';
 import { coalesce } from './coalesce.js';
 import mssql, { type config as MsSqlConfig } from 'mssql';
 import { SQL, sql, type Subquery } from 'drizzle-orm';
@@ -30,9 +31,9 @@ interface MsSqlDatabaseHelpers<TSchema extends Record<string, MsSqlTable>> exten
     alias: typeof alias;
     coalesce: typeof coalesce;
     sql: typeof sql;
-    sqlNumber(value: SQL | number): SQL<number>;
-    sqlString(value: SQL | string): SQL<string>;
-    sqlBoolean(value: SQL | boolean): SQL<boolean>;
+    sqlNumber: typeof sqlNumber;
+    sqlString: typeof sqlString;
+    sqlBoolean: typeof sqlBoolean;
     current: MsSqlConnection<TSchema>['current'];
     trans: MsSqlConnection<TSchema>['trans'];
     paginate: MsSqlConnection<TSchema>['paginate'];

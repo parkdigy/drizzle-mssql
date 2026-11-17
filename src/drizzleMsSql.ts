@@ -1,3 +1,4 @@
+import { sqlNumber, sqlString, sqlBoolean } from './mappedSql';
 import { coalesce } from './coalesce';
 import { drizzle, getMsSqlConnectionParams } from 'drizzle-orm/node-mssql';
 import mssql, { type config as MsSqlConfig } from 'mssql';
@@ -47,9 +48,9 @@ interface MsSqlDatabaseHelpers<TSchema extends Record<string, MsSqlTable>> exten
   alias: typeof alias;
   coalesce: typeof coalesce;
   sql: typeof sql;
-  sqlNumber(value: SQL | number): SQL<number>;
-  sqlString(value: SQL | string): SQL<string>;
-  sqlBoolean(value: SQL | boolean): SQL<boolean>;
+  sqlNumber: typeof sqlNumber;
+  sqlString: typeof sqlString;
+  sqlBoolean: typeof sqlBoolean;
   current: MsSqlConnection<TSchema>['current'];
   trans: MsSqlConnection<TSchema>['trans'];
   paginate: MsSqlConnection<TSchema>['paginate'];
@@ -282,10 +283,9 @@ export function drizzleMsSql<TSchema extends Record<string, MsSqlTable>>(
     alias,
     sql,
     coalesce,
-    sqlNumber: (value: SQL | number) => (is(value, SQL) ? value : sql`${value}`).mapWith(Number),
-    sqlString: (value: SQL | string) => (is(value, SQL) ? value : sql`${value}`).mapWith(String),
-    sqlBoolean: (value: SQL | boolean) =>
-      (is(value, SQL) ? value : sql`${value}`).mapWith((v) => v === true || v === 1),
+    sqlNumber,
+    sqlString,
+    sqlBoolean,
     ...connection,
     query: <TTable extends MsSqlTable>(table: TTable): MsSqlQuery<TTable> => new MsSqlQuery(table, connection.current),
   };

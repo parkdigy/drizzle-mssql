@@ -493,7 +493,7 @@ await user.editByPrimaryKey(user.editValues({ name: '수정' }), id);
 
 ### 집계·SQL 표현식
 
-`db` 인스턴스는 `asc`, `desc`, `count`, `countDistinct`, `avg`, `avgDistinct`, `sum`, `sumDistinct`, `max`, `min`, `not`, `exists`, `notExists`, `arrayContains`, `arrayContained`, `arrayOverlaps` 등 Drizzle 함수를 제공합니다. `arrayContains`, `arrayContained`, `arrayOverlaps`는 Drizzle 함수로 노출되지만 SQL Server에서 사용할 수 있는 배열 연산을 보장하지 않습니다. `db.sqlNumber`, `db.sqlString`, `db.sqlBoolean`은 SQL 표현식 또는 기본 값을 해당 타입으로 매핑하는 표현식을 만듭니다.
+`db` 인스턴스는 `asc`, `desc`, `count`, `countDistinct`, `avg`, `avgDistinct`, `sum`, `sumDistinct`, `max`, `min`, `not`, `exists`, `notExists`, `arrayContains`, `arrayContained`, `arrayOverlaps` 등 Drizzle 함수를 제공합니다. `arrayContains`, `arrayContained`, `arrayOverlaps`는 Drizzle 함수로 노출되지만 SQL Server에서 사용할 수 있는 배열 연산을 보장하지 않습니다. `db.sqlNumber`, `db.sqlString`, `db.sqlBoolean`은 태그드 템플릿으로 SQL을 작성하고 결과를 각각 `number`, `string`, `boolean`으로 매핑합니다. 보간 값은 `db.sql`과 동일하게 처리합니다. 기존 SQL 표현식·기본 값을 받는 함수 호출도 사용할 수 있습니다.
 
 ```ts
 const [summary] = await db.current()
@@ -507,7 +507,9 @@ const [totals] = await db.current().select({
   distinctAverage: db.avgDistinct(users.id, Number),
 }).from(users);
 
-const numericExpression = db.sqlNumber(db.sql`1`);
+const numericExpression = db.sqlNumber`${users.id} + 1`;
+const booleanExpression = db.sqlBoolean`${users.id}`;
+const stringExpression = db.sqlString`${users.id}`;
 ```
 
 `sum(expression, decoder)`, `sumDistinct(expression, decoder)`, `avg(expression, decoder)`, `avgDistinct(expression, decoder)`는 두 번째 인자가 필수입니다. `decoder`는 Drizzle의 `mapWith`와 동일하게 변환 함수(`Number`, `BigInt` 등) 또는 `mapFromDriverValue`를 가진 객체를 받습니다. 패키지에서 직접 가져온 함수와 `db` 메서드 모두 동일합니다. 예를 들어 `sum(users.id, Number)`의 결과 타입은 `number | null`이며, 집계 결과가 SQL `NULL`이면 그대로 `null`을 유지합니다. 기존 `sum`, `sumDistinct`, `avg`, `avgDistinct`의 단일 인자 호출에는 변환기를 추가해야 합니다.
