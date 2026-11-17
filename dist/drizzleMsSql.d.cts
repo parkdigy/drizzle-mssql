@@ -1,3 +1,4 @@
+import { coalesce } from './coalesce.cjs';
 import mssql, { type config as MsSqlConfig } from 'mssql';
 import { SQL, sql, type Subquery } from 'drizzle-orm';
 import { alias, type MsSqlTable } from 'drizzle-orm/mssql-core';
@@ -27,6 +28,7 @@ interface MsSqlDatabaseHelpers<TSchema extends Record<string, MsSqlTable>> exten
     a: MsSqlAliases<TSchema>;
     columns: typeof TableColumns;
     alias: typeof alias;
+    coalesce: typeof coalesce;
     sql: typeof sql;
     sqlNumber(value: SQL | number): SQL<number>;
     sqlString(value: SQL | string): SQL<string>;

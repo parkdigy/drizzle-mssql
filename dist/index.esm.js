@@ -1,4 +1,4 @@
-import {getMsSqlConnectionParams,drizzle}from'drizzle-orm/node-mssql';import mssql from'mssql';import*as native from'drizzle-orm';import {avg as avg$1,avgDistinct as avgDistinct$1,sum as sum$1,sumDistinct as sumDistinct$1,isTable,is,Subquery,sql,getTableColumns,min,max,asc as asc$1,desc as desc$1,SQL,eq,and,count,or,defineRelations}from'drizzle-orm';export{asc,count,countDistinct,desc,exists,max,min,not,notExists}from'drizzle-orm';import {MsSqlTable,mssqlTable as mssqlTable$1,getTableConfig,MsSqlSelectBase,MsSqlColumn,alias as alias$1}from'drizzle-orm/mssql-core';export{bigint,binary,bit,char,check,customType,date,datetime,datetime2,datetimeoffset,decimal,float,foreignKey,index,int,mssqlSchema,mssqlTableCreator,mssqlView,nchar,ntext,numeric,nvarchar,primaryKey,real,smallint,text,time,tinyint,unique,uniqueIndex,varbinary,varchar}from'drizzle-orm/mssql-core';import {AsyncLocalStorage}from'node:async_hooks';import {alias}from'drizzle-orm/mssql-core/alias';import {MsSqlColumnBuilder}from'drizzle-orm/mssql-core/columns/common';/******************************************************************************
+import*as native from'drizzle-orm';import {sql,avg as avg$1,avgDistinct as avgDistinct$1,sum as sum$1,sumDistinct as sumDistinct$1,isTable,is,Subquery,getTableColumns,min,max,asc as asc$1,desc as desc$1,SQL,eq,and,count,or,defineRelations}from'drizzle-orm';export{asc,count,countDistinct,desc,exists,max,min,not,notExists}from'drizzle-orm';import {getMsSqlConnectionParams,drizzle}from'drizzle-orm/node-mssql';import mssql from'mssql';import {MsSqlTable,mssqlTable as mssqlTable$1,getTableConfig,MsSqlSelectBase,MsSqlColumn,alias as alias$1}from'drizzle-orm/mssql-core';export{bigint,binary,bit,char,check,customType,date,datetime,datetime2,datetimeoffset,decimal,float,foreignKey,index,int,mssqlSchema,mssqlTableCreator,mssqlView,nchar,ntext,numeric,nvarchar,primaryKey,real,smallint,text,time,tinyint,unique,uniqueIndex,varbinary,varchar}from'drizzle-orm/mssql-core';import {AsyncLocalStorage}from'node:async_hooks';import {alias}from'drizzle-orm/mssql-core/alias';import {MsSqlColumnBuilder}from'drizzle-orm/mssql-core/columns/common';/******************************************************************************
 Copyright (c) Microsoft Corporation.
 
 Permission to use, copy, modify, and/or distribute this software for any
@@ -30,7 +30,10 @@ function __rest(s, e) {
 typeof SuppressedError === "function" ? SuppressedError : function (error, suppressed, message) {
     var e = new Error(message);
     return e.name = "SuppressedError", e.error = error, e.suppressed = suppressed, e;
-};function sum(expression, decoder) {
+};function coalesce(first, second, decoder) {
+    const expression = sql `coalesce(${first}, ${second})`;
+    return (decoder === undefined ? expression : expression.mapWith(decoder));
+}function sum(expression, decoder) {
     return sum$1(expression).mapWith(decoder);
 }
 function sumDistinct(expression, decoder) {
@@ -320,6 +323,16 @@ class MsSqlQuery {
         this.getTimestamp = getTimestamp;
         this.drizzle = Object.assign(Object.assign({}, createConditions({})), { sqlNumber: (value) => sql `${value}`.mapWith(Number) });
         this.t = table;
+    }
+    coalesce(first, fallback, decoder) {
+        if (typeof first !== 'string')
+            return coalesce(first, fallback, decoder);
+        const columns = getTableColumns(this.t);
+        const column = columns[first];
+        if (!Object.hasOwn(columns, first) || column === undefined) {
+            throw new Error(`coalesce: unknown column "${first}".`);
+        }
+        return coalesce(column, fallback, decoder);
     }
     /********************************************************************************************************************
      * alias
@@ -1203,5 +1216,6 @@ function drizzleMsSql(options) {
         avgDistinct,
         sum,
         sumDistinct, max: native.max, min: native.min, not: native.not, exists: native.exists, notExists: native.notExists, arrayContains: native.arrayContains, arrayContained: native.arrayContained, arrayOverlaps: native.arrayOverlaps, s: options.schema, a: createAlias(options.schema) }, createConditions(options.schema)), { columns: TableColumns, alias: alias$1,
-        sql, sqlNumber: (value) => (is(value, SQL) ? value : sql `${value}`).mapWith(Number), sqlString: (value) => (is(value, SQL) ? value : sql `${value}`).mapWith(String), sqlBoolean: (value) => (is(value, SQL) ? value : sql `${value}`).mapWith((v) => v === true || v === 1) }), connection), { query: (table) => new MsSqlQuery(table, connection.current) });
-}export{MsSqlQuery,TableColumns,avg,avgDistinct,createConditions,drizzleMsSql as default,drizzleMsSql,mssqlTable,sum,sumDistinct};
+        sql,
+        coalesce, sqlNumber: (value) => (is(value, SQL) ? value : sql `${value}`).mapWith(Number), sqlString: (value) => (is(value, SQL) ? value : sql `${value}`).mapWith(String), sqlBoolean: (value) => (is(value, SQL) ? value : sql `${value}`).mapWith((v) => v === true || v === 1) }), connection), { query: (table) => new MsSqlQuery(table, connection.current) });
+}export{MsSqlQuery,TableColumns,avg,avgDistinct,coalesce,createConditions,drizzleMsSql as default,drizzleMsSql,mssqlTable,sum,sumDistinct};

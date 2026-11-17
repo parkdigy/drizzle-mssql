@@ -3,6 +3,7 @@ export default drizzleMsSql;
 export * from './@types/index.cjs';
 export * from './columns.cjs';
 export * from './conditions.cjs';
+export { coalesce } from './coalesce.cjs';
 export { sum, sumDistinct, avg, avgDistinct } from './aggregate.cjs';
 export * from './drizzleMsSql.cjs';
 export * from './MsSqlQuery.cjs';

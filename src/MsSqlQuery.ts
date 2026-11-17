@@ -1,3 +1,4 @@
+import { coalesce, type CoalesceOutput, type CoalesceDecoder } from './coalesce';
 import {
   SQL,
   isTable,
@@ -83,6 +84,28 @@ export class MsSqlQuery<
     private readonly getTimestamp?: () => unknown
   ) {
     this.t = table;
+  }
+
+  coalesce<N extends MsSqlColumnName<TTable>, TSecond extends Parameters<typeof coalesce>[1], TDecoder extends CoalesceDecoder | undefined = undefined>(
+    name: N,
+    fallback: TSecond,
+    decoder?: TDecoder
+  ): SQL<CoalesceOutput<TTable['_']['columns'][N], TSecond, TDecoder>>;
+
+  coalesce<TFirst extends SQLWrapper, TSecond extends Parameters<typeof coalesce>[1], TDecoder extends CoalesceDecoder | undefined = undefined>(
+    expression: TFirst,
+    fallback: TSecond,
+    decoder?: TDecoder
+  ): SQL<CoalesceOutput<TFirst, TSecond, TDecoder>>;
+
+  coalesce(first: string | SQLWrapper, fallback: Parameters<typeof coalesce>[1], decoder?: CoalesceDecoder): SQL {
+    if (typeof first !== 'string') return coalesce(first, fallback, decoder);
+    const columns = getTableColumns(this.t);
+    const column = columns[first];
+    if (!Object.hasOwn(columns, first) || column === undefined) {
+      throw new Error(`coalesce: unknown column "${first}".`);
+    }
+    return coalesce(column, fallback, decoder);
   }
 
   private readonly drizzle = { ...createConditions({}), sqlNumber: (value: number) => sql`${value}`.mapWith(Number) };

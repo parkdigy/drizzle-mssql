@@ -5,6 +5,7 @@ export default drizzleMsSql;
 export * from './@types/index';
 export * from './columns';
 export * from './conditions';
+export { coalesce } from './coalesce';
 export { sum, sumDistinct, avg, avgDistinct } from './aggregate';
 export * from './drizzleMsSql';
 export * from './MsSqlQuery';

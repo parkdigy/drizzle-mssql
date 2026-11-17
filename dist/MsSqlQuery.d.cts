@@ -1,3 +1,4 @@
+import { coalesce, type CoalesceOutput, type CoalesceDecoder } from './coalesce.cjs';
 import { SQL, Subquery, min as drizzleMin, max as drizzleMax, type Placeholder } from 'drizzle-orm';
 import { MsSqlTable, MsSqlColumn, MsSqlSelectBase } from 'drizzle-orm/mssql-core';
 import type { SelectedFields } from 'drizzle-orm/operations';
@@ -23,6 +24,8 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AD extends MsSqlAddDa
     constructor(table: TTable, current: (() => NodeMsSqlDatabase) & {
         getTimestamp?: () => unknown;
     }, getTimestamp?: (() => unknown) | undefined);
+    coalesce<N extends MsSqlColumnName<TTable>, TSecond extends Parameters<typeof coalesce>[1], TDecoder extends CoalesceDecoder | undefined = undefined>(name: N, fallback: TSecond, decoder?: TDecoder): SQL<CoalesceOutput<TTable['_']['columns'][N], TSecond, TDecoder>>;
+    coalesce<TFirst extends SQLWrapper, TSecond extends Parameters<typeof coalesce>[1], TDecoder extends CoalesceDecoder | undefined = undefined>(expression: TFirst, fallback: TSecond, decoder?: TDecoder): SQL<CoalesceOutput<TFirst, TSecond, TDecoder>>;
     private readonly drizzle;
     /********************************************************************************************************************
      * alias

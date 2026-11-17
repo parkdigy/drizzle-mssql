@@ -1,3 +1,4 @@
+import { coalesce } from './coalesce';
 import { drizzle, getMsSqlConnectionParams } from 'drizzle-orm/node-mssql';
 import mssql, { type config as MsSqlConfig } from 'mssql';
 import { count, defineRelations, getTableColumns, is, isTable, SQL, sql, type Subquery } from 'drizzle-orm';
@@ -44,6 +45,7 @@ interface MsSqlDatabaseHelpers<TSchema extends Record<string, MsSqlTable>> exten
   a: MsSqlAliases<TSchema>;
   columns: typeof TableColumns;
   alias: typeof alias;
+  coalesce: typeof coalesce;
   sql: typeof sql;
   sqlNumber(value: SQL | number): SQL<number>;
   sqlString(value: SQL | string): SQL<string>;
@@ -279,6 +281,7 @@ export function drizzleMsSql<TSchema extends Record<string, MsSqlTable>>(
     columns: TableColumns,
     alias,
     sql,
+    coalesce,
     sqlNumber: (value: SQL | number) => (is(value, SQL) ? value : sql`${value}`).mapWith(Number),
     sqlString: (value: SQL | string) => (is(value, SQL) ? value : sql`${value}`).mapWith(String),
     sqlBoolean: (value: SQL | boolean) =>
