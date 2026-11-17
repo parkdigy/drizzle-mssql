@@ -1,10 +1,10 @@
 import { sqlNumber, sqlString, sqlBoolean } from './mappedSql';
-import { coalesce } from './coalesce';
+import { coalesce, coalesceNumber, coalesceString, coalesceBoolean } from './coalesce';
 import { drizzle, getMsSqlConnectionParams } from 'drizzle-orm/node-mssql';
 import mssql, { type config as MsSqlConfig } from 'mssql';
 import { count, defineRelations, getTableColumns, is, isTable, SQL, sql, type Subquery } from 'drizzle-orm';
 import { alias, type MsSqlTable } from 'drizzle-orm/mssql-core';
-import { sum, sumDistinct, avg, avgDistinct } from './aggregate';
+import { sum, sumDistinct, avg, avgDistinct, sumNumber, sumBoolean, sumString, sumDistinctNumber, sumDistinctBoolean, sumDistinctString } from './aggregate';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import * as native from 'drizzle-orm';
 import { createAlias, type MsSqlAliases } from './alias';
@@ -47,6 +47,10 @@ interface MsSqlDatabaseHelpers<TSchema extends Record<string, MsSqlTable>> exten
   columns: typeof TableColumns;
   alias: typeof alias;
   coalesce: typeof coalesce;
+  coalesceNumber: typeof coalesceNumber;
+  coalesceString: typeof coalesceString;
+  coalesceBoolean: typeof coalesceBoolean;
+
   sql: typeof sql;
   sqlNumber: typeof sqlNumber;
   sqlString: typeof sqlString;
@@ -122,6 +126,12 @@ type MsSqlNativeHelpers = Omit<
 > & {
   avg: typeof avg;
   avgDistinct: typeof avgDistinct;
+  sumDistinctNumber: typeof sumDistinctNumber;
+  sumDistinctBoolean: typeof sumDistinctBoolean;
+  sumDistinctString: typeof sumDistinctString;
+  sumNumber: typeof sumNumber;
+  sumBoolean: typeof sumBoolean;
+  sumString: typeof sumString;
   sum: typeof sum;
   sumDistinct: typeof sumDistinct;
   asc: MultiColumnOrderHelper;
@@ -268,6 +278,12 @@ export function drizzleMsSql<TSchema extends Record<string, MsSqlTable>>(
     avgDistinct,
     sum,
     sumDistinct,
+    sumDistinctNumber,
+    sumDistinctBoolean,
+    sumDistinctString,
+    sumNumber,
+    sumBoolean,
+    sumString,
     max: native.max,
     min: native.min,
     not: native.not,
@@ -283,6 +299,9 @@ export function drizzleMsSql<TSchema extends Record<string, MsSqlTable>>(
     alias,
     sql,
     coalesce,
+    coalesceNumber,
+    coalesceString,
+    coalesceBoolean,
     sqlNumber,
     sqlString,
     sqlBoolean,

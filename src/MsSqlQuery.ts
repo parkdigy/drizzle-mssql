@@ -116,6 +116,36 @@ export class MsSqlQuery<
     return coalesce(column, fallback, decoder);
   }
 
+  coalesceNumber<TFirst extends MsSqlColumnName<TTable> | SQLWrapper, TSecond extends Parameters<typeof coalesce>[1]>(
+    first: TFirst, fallback: TSecond
+  ): SQL<CoalesceOutput<TFirst extends MsSqlColumnName<TTable> ? TTable['_']['columns'][TFirst] : TFirst, TSecond, NumberConstructor>>;
+
+  coalesceNumber<TResult>(first: MsSqlColumnName<TTable> | SQLWrapper, fallback: Parameters<typeof coalesce>[1]): SQL<TResult>;
+
+  coalesceNumber(first: MsSqlColumnName<TTable> | SQLWrapper, fallback: Parameters<typeof coalesce>[1]): SQL {
+    return this.coalesce<unknown>(first, fallback, Number);
+  }
+
+  coalesceString<TFirst extends MsSqlColumnName<TTable> | SQLWrapper, TSecond extends Parameters<typeof coalesce>[1]>(
+    first: TFirst, fallback: TSecond
+  ): SQL<CoalesceOutput<TFirst extends MsSqlColumnName<TTable> ? TTable['_']['columns'][TFirst] : TFirst, TSecond, StringConstructor>>;
+
+  coalesceString<TResult>(first: MsSqlColumnName<TTable> | SQLWrapper, fallback: Parameters<typeof coalesce>[1]): SQL<TResult>;
+
+  coalesceString(first: MsSqlColumnName<TTable> | SQLWrapper, fallback: Parameters<typeof coalesce>[1]): SQL {
+    return this.coalesce<unknown>(first, fallback, String);
+  }
+
+  coalesceBoolean<TFirst extends MsSqlColumnName<TTable> | SQLWrapper, TSecond extends Parameters<typeof coalesce>[1]>(
+    first: TFirst, fallback: TSecond
+  ): SQL<CoalesceOutput<TFirst extends MsSqlColumnName<TTable> ? TTable['_']['columns'][TFirst] : TFirst, TSecond, BooleanConstructor>>;
+
+  coalesceBoolean<TResult>(first: MsSqlColumnName<TTable> | SQLWrapper, fallback: Parameters<typeof coalesce>[1]): SQL<TResult>;
+
+  coalesceBoolean(first: MsSqlColumnName<TTable> | SQLWrapper, fallback: Parameters<typeof coalesce>[1]): SQL {
+    return this.coalesce<unknown>(first, fallback, Boolean);
+  }
+
   sum<TDecoder extends AggregateDecoder>(
     columnOrName: MsSqlColumnName<TTable> | SQLWrapper,
     decoder: TDecoder
@@ -138,6 +168,54 @@ export class MsSqlQuery<
   sumDistinct(columnOrName: string | SQLWrapper, decoder: AggregateDecoder): SQL {
     const expression = typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName;
     return sumDistinct(expression, decoder);
+  }
+
+  sumNumber(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<number | null>;
+
+  sumNumber<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
+
+  sumNumber(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL {
+    return this.sum(columnOrName, Number);
+  }
+
+  sumBoolean(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<boolean | null>;
+
+  sumBoolean<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
+
+  sumBoolean(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL {
+    return this.sum(columnOrName, Boolean);
+  }
+
+  sumString(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<string | null>;
+
+  sumString<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
+
+  sumString(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL {
+    return this.sum(columnOrName, String);
+  }
+
+  sumDistinctNumber(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<number | null>;
+
+  sumDistinctNumber<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
+
+  sumDistinctNumber(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL {
+    return this.sumDistinct(columnOrName, Number);
+  }
+
+  sumDistinctBoolean(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<boolean | null>;
+
+  sumDistinctBoolean<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
+
+  sumDistinctBoolean(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL {
+    return this.sumDistinct(columnOrName, Boolean);
+  }
+
+  sumDistinctString(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<string | null>;
+
+  sumDistinctString<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
+
+  sumDistinctString(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL {
+    return this.sumDistinct(columnOrName, String);
   }
 
   private readonly drizzle = { ...createConditions({}), sqlNumber: (value: number) => sql`${value}`.mapWith(Number) };

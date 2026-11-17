@@ -45,6 +45,15 @@ const sqlString = createMappedSql(String);
 const sqlBoolean = createMappedSql((value) => value === true || value === 1);function coalesce(first, second, decoder) {
     const expression = native.sql `coalesce(${first}, ${second})`;
     return decoder === undefined ? expression : expression.mapWith(decoder);
+}
+function coalesceNumber(first, second) {
+    return coalesce(first, second, Number);
+}
+function coalesceString(first, second) {
+    return coalesce(first, second, String);
+}
+function coalesceBoolean(first, second) {
+    return coalesce(first, second, Boolean);
 }function sum(expression, decoder) {
     return native.sum(expression).mapWith(decoder);
 }
@@ -56,6 +65,24 @@ function avg(expression, decoder) {
 }
 function avgDistinct(expression, decoder) {
     return native.avgDistinct(expression).mapWith(decoder);
+}
+function sumNumber(expression) {
+    return sum(expression, Number);
+}
+function sumBoolean(expression) {
+    return sum(expression, Boolean);
+}
+function sumString(expression) {
+    return sum(expression, String);
+}
+function sumDistinctNumber(expression) {
+    return sumDistinct(expression, Number);
+}
+function sumDistinctBoolean(expression) {
+    return sumDistinct(expression, Boolean);
+}
+function sumDistinctString(expression) {
+    return sumDistinct(expression, String);
 }function createAlias(schema) {
     /********************************************************************************************************************
      * getDefaultAlias
@@ -346,6 +373,15 @@ class MsSqlQuery {
         }
         return coalesce(column, fallback, decoder);
     }
+    coalesceNumber(first, fallback) {
+        return this.coalesce(first, fallback, Number);
+    }
+    coalesceString(first, fallback) {
+        return this.coalesce(first, fallback, String);
+    }
+    coalesceBoolean(first, fallback) {
+        return this.coalesce(first, fallback, Boolean);
+    }
     sum(columnOrName, decoder) {
         const expression = typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName;
         return sum(expression, decoder);
@@ -353,6 +389,24 @@ class MsSqlQuery {
     sumDistinct(columnOrName, decoder) {
         const expression = typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName;
         return sumDistinct(expression, decoder);
+    }
+    sumNumber(columnOrName) {
+        return this.sum(columnOrName, Number);
+    }
+    sumBoolean(columnOrName) {
+        return this.sum(columnOrName, Boolean);
+    }
+    sumString(columnOrName) {
+        return this.sum(columnOrName, String);
+    }
+    sumDistinctNumber(columnOrName) {
+        return this.sumDistinct(columnOrName, Number);
+    }
+    sumDistinctBoolean(columnOrName) {
+        return this.sumDistinct(columnOrName, Boolean);
+    }
+    sumDistinctString(columnOrName) {
+        return this.sumDistinct(columnOrName, String);
     }
     /********************************************************************************************************************
      * alias
@@ -1235,10 +1289,19 @@ function drizzleMsSql(options) {
         desc, count: native__namespace.count, countDistinct: native__namespace.countDistinct, avg,
         avgDistinct,
         sum,
-        sumDistinct, max: native__namespace.max, min: native__namespace.min, not: native__namespace.not, exists: native__namespace.exists, notExists: native__namespace.notExists, arrayContains: native__namespace.arrayContains, arrayContained: native__namespace.arrayContained, arrayOverlaps: native__namespace.arrayOverlaps, s: options.schema, a: createAlias(options.schema) }, createConditions(options.schema)), { columns: TableColumns, alias: mssqlCore.alias,
+        sumDistinct,
+        sumDistinctNumber,
+        sumDistinctBoolean,
+        sumDistinctString,
+        sumNumber,
+        sumBoolean,
+        sumString, max: native__namespace.max, min: native__namespace.min, not: native__namespace.not, exists: native__namespace.exists, notExists: native__namespace.notExists, arrayContains: native__namespace.arrayContains, arrayContained: native__namespace.arrayContained, arrayOverlaps: native__namespace.arrayOverlaps, s: options.schema, a: createAlias(options.schema) }, createConditions(options.schema)), { columns: TableColumns, alias: mssqlCore.alias,
         sql: native.sql,
         coalesce,
+        coalesceNumber,
+        coalesceString,
+        coalesceBoolean,
         sqlNumber,
         sqlString,
         sqlBoolean }), connection), { query: (table) => new MsSqlQuery(table, connection.current) });
-}Object.defineProperty(exports,"asc",{enumerable:true,get:function(){return native.asc}});Object.defineProperty(exports,"count",{enumerable:true,get:function(){return native.count}});Object.defineProperty(exports,"countDistinct",{enumerable:true,get:function(){return native.countDistinct}});Object.defineProperty(exports,"desc",{enumerable:true,get:function(){return native.desc}});Object.defineProperty(exports,"exists",{enumerable:true,get:function(){return native.exists}});Object.defineProperty(exports,"max",{enumerable:true,get:function(){return native.max}});Object.defineProperty(exports,"min",{enumerable:true,get:function(){return native.min}});Object.defineProperty(exports,"not",{enumerable:true,get:function(){return native.not}});Object.defineProperty(exports,"notExists",{enumerable:true,get:function(){return native.notExists}});Object.defineProperty(exports,"bigint",{enumerable:true,get:function(){return mssqlCore.bigint}});Object.defineProperty(exports,"binary",{enumerable:true,get:function(){return mssqlCore.binary}});Object.defineProperty(exports,"bit",{enumerable:true,get:function(){return mssqlCore.bit}});Object.defineProperty(exports,"char",{enumerable:true,get:function(){return mssqlCore.char}});Object.defineProperty(exports,"check",{enumerable:true,get:function(){return mssqlCore.check}});Object.defineProperty(exports,"customType",{enumerable:true,get:function(){return mssqlCore.customType}});Object.defineProperty(exports,"date",{enumerable:true,get:function(){return mssqlCore.date}});Object.defineProperty(exports,"datetime",{enumerable:true,get:function(){return mssqlCore.datetime}});Object.defineProperty(exports,"datetime2",{enumerable:true,get:function(){return mssqlCore.datetime2}});Object.defineProperty(exports,"datetimeoffset",{enumerable:true,get:function(){return mssqlCore.datetimeoffset}});Object.defineProperty(exports,"decimal",{enumerable:true,get:function(){return mssqlCore.decimal}});Object.defineProperty(exports,"float",{enumerable:true,get:function(){return mssqlCore.float}});Object.defineProperty(exports,"foreignKey",{enumerable:true,get:function(){return mssqlCore.foreignKey}});Object.defineProperty(exports,"index",{enumerable:true,get:function(){return mssqlCore.index}});Object.defineProperty(exports,"int",{enumerable:true,get:function(){return mssqlCore.int}});Object.defineProperty(exports,"mssqlSchema",{enumerable:true,get:function(){return mssqlCore.mssqlSchema}});Object.defineProperty(exports,"mssqlTableCreator",{enumerable:true,get:function(){return mssqlCore.mssqlTableCreator}});Object.defineProperty(exports,"mssqlView",{enumerable:true,get:function(){return mssqlCore.mssqlView}});Object.defineProperty(exports,"nchar",{enumerable:true,get:function(){return mssqlCore.nchar}});Object.defineProperty(exports,"ntext",{enumerable:true,get:function(){return mssqlCore.ntext}});Object.defineProperty(exports,"numeric",{enumerable:true,get:function(){return mssqlCore.numeric}});Object.defineProperty(exports,"nvarchar",{enumerable:true,get:function(){return mssqlCore.nvarchar}});Object.defineProperty(exports,"primaryKey",{enumerable:true,get:function(){return mssqlCore.primaryKey}});Object.defineProperty(exports,"real",{enumerable:true,get:function(){return mssqlCore.real}});Object.defineProperty(exports,"smallint",{enumerable:true,get:function(){return mssqlCore.smallint}});Object.defineProperty(exports,"text",{enumerable:true,get:function(){return mssqlCore.text}});Object.defineProperty(exports,"time",{enumerable:true,get:function(){return mssqlCore.time}});Object.defineProperty(exports,"tinyint",{enumerable:true,get:function(){return mssqlCore.tinyint}});Object.defineProperty(exports,"unique",{enumerable:true,get:function(){return mssqlCore.unique}});Object.defineProperty(exports,"uniqueIndex",{enumerable:true,get:function(){return mssqlCore.uniqueIndex}});Object.defineProperty(exports,"varbinary",{enumerable:true,get:function(){return mssqlCore.varbinary}});Object.defineProperty(exports,"varchar",{enumerable:true,get:function(){return mssqlCore.varchar}});exports.MsSqlQuery=MsSqlQuery;exports.TableColumns=TableColumns;exports.avg=avg;exports.avgDistinct=avgDistinct;exports.coalesce=coalesce;exports.createConditions=createConditions;exports.default=drizzleMsSql;exports.drizzleMsSql=drizzleMsSql;exports.mssqlTable=mssqlTable;exports.sum=sum;exports.sumDistinct=sumDistinct;
+}Object.defineProperty(exports,"asc",{enumerable:true,get:function(){return native.asc}});Object.defineProperty(exports,"count",{enumerable:true,get:function(){return native.count}});Object.defineProperty(exports,"countDistinct",{enumerable:true,get:function(){return native.countDistinct}});Object.defineProperty(exports,"desc",{enumerable:true,get:function(){return native.desc}});Object.defineProperty(exports,"exists",{enumerable:true,get:function(){return native.exists}});Object.defineProperty(exports,"max",{enumerable:true,get:function(){return native.max}});Object.defineProperty(exports,"min",{enumerable:true,get:function(){return native.min}});Object.defineProperty(exports,"not",{enumerable:true,get:function(){return native.not}});Object.defineProperty(exports,"notExists",{enumerable:true,get:function(){return native.notExists}});Object.defineProperty(exports,"bigint",{enumerable:true,get:function(){return mssqlCore.bigint}});Object.defineProperty(exports,"binary",{enumerable:true,get:function(){return mssqlCore.binary}});Object.defineProperty(exports,"bit",{enumerable:true,get:function(){return mssqlCore.bit}});Object.defineProperty(exports,"char",{enumerable:true,get:function(){return mssqlCore.char}});Object.defineProperty(exports,"check",{enumerable:true,get:function(){return mssqlCore.check}});Object.defineProperty(exports,"customType",{enumerable:true,get:function(){return mssqlCore.customType}});Object.defineProperty(exports,"date",{enumerable:true,get:function(){return mssqlCore.date}});Object.defineProperty(exports,"datetime",{enumerable:true,get:function(){return mssqlCore.datetime}});Object.defineProperty(exports,"datetime2",{enumerable:true,get:function(){return mssqlCore.datetime2}});Object.defineProperty(exports,"datetimeoffset",{enumerable:true,get:function(){return mssqlCore.datetimeoffset}});Object.defineProperty(exports,"decimal",{enumerable:true,get:function(){return mssqlCore.decimal}});Object.defineProperty(exports,"float",{enumerable:true,get:function(){return mssqlCore.float}});Object.defineProperty(exports,"foreignKey",{enumerable:true,get:function(){return mssqlCore.foreignKey}});Object.defineProperty(exports,"index",{enumerable:true,get:function(){return mssqlCore.index}});Object.defineProperty(exports,"int",{enumerable:true,get:function(){return mssqlCore.int}});Object.defineProperty(exports,"mssqlSchema",{enumerable:true,get:function(){return mssqlCore.mssqlSchema}});Object.defineProperty(exports,"mssqlTableCreator",{enumerable:true,get:function(){return mssqlCore.mssqlTableCreator}});Object.defineProperty(exports,"mssqlView",{enumerable:true,get:function(){return mssqlCore.mssqlView}});Object.defineProperty(exports,"nchar",{enumerable:true,get:function(){return mssqlCore.nchar}});Object.defineProperty(exports,"ntext",{enumerable:true,get:function(){return mssqlCore.ntext}});Object.defineProperty(exports,"numeric",{enumerable:true,get:function(){return mssqlCore.numeric}});Object.defineProperty(exports,"nvarchar",{enumerable:true,get:function(){return mssqlCore.nvarchar}});Object.defineProperty(exports,"primaryKey",{enumerable:true,get:function(){return mssqlCore.primaryKey}});Object.defineProperty(exports,"real",{enumerable:true,get:function(){return mssqlCore.real}});Object.defineProperty(exports,"smallint",{enumerable:true,get:function(){return mssqlCore.smallint}});Object.defineProperty(exports,"text",{enumerable:true,get:function(){return mssqlCore.text}});Object.defineProperty(exports,"time",{enumerable:true,get:function(){return mssqlCore.time}});Object.defineProperty(exports,"tinyint",{enumerable:true,get:function(){return mssqlCore.tinyint}});Object.defineProperty(exports,"unique",{enumerable:true,get:function(){return mssqlCore.unique}});Object.defineProperty(exports,"uniqueIndex",{enumerable:true,get:function(){return mssqlCore.uniqueIndex}});Object.defineProperty(exports,"varbinary",{enumerable:true,get:function(){return mssqlCore.varbinary}});Object.defineProperty(exports,"varchar",{enumerable:true,get:function(){return mssqlCore.varchar}});exports.MsSqlQuery=MsSqlQuery;exports.TableColumns=TableColumns;exports.avg=avg;exports.avgDistinct=avgDistinct;exports.coalesce=coalesce;exports.coalesceBoolean=coalesceBoolean;exports.coalesceNumber=coalesceNumber;exports.coalesceString=coalesceString;exports.createConditions=createConditions;exports.default=drizzleMsSql;exports.drizzleMsSql=drizzleMsSql;exports.mssqlTable=mssqlTable;exports.sum=sum;exports.sumBoolean=sumBoolean;exports.sumDistinct=sumDistinct;exports.sumDistinctBoolean=sumDistinctBoolean;exports.sumDistinctNumber=sumDistinctNumber;exports.sumDistinctString=sumDistinctString;exports.sumNumber=sumNumber;exports.sumString=sumString;

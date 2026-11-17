@@ -45,6 +45,15 @@ const sqlString = createMappedSql(String);
 const sqlBoolean = createMappedSql((value) => value === true || value === 1);function coalesce(first, second, decoder) {
     const expression = sql `coalesce(${first}, ${second})`;
     return decoder === undefined ? expression : expression.mapWith(decoder);
+}
+function coalesceNumber(first, second) {
+    return coalesce(first, second, Number);
+}
+function coalesceString(first, second) {
+    return coalesce(first, second, String);
+}
+function coalesceBoolean(first, second) {
+    return coalesce(first, second, Boolean);
 }function sum(expression, decoder) {
     return sum$1(expression).mapWith(decoder);
 }
@@ -56,6 +65,24 @@ function avg(expression, decoder) {
 }
 function avgDistinct(expression, decoder) {
     return avgDistinct$1(expression).mapWith(decoder);
+}
+function sumNumber(expression) {
+    return sum(expression, Number);
+}
+function sumBoolean(expression) {
+    return sum(expression, Boolean);
+}
+function sumString(expression) {
+    return sum(expression, String);
+}
+function sumDistinctNumber(expression) {
+    return sumDistinct(expression, Number);
+}
+function sumDistinctBoolean(expression) {
+    return sumDistinct(expression, Boolean);
+}
+function sumDistinctString(expression) {
+    return sumDistinct(expression, String);
 }function createAlias(schema) {
     /********************************************************************************************************************
      * getDefaultAlias
@@ -346,6 +373,15 @@ class MsSqlQuery {
         }
         return coalesce(column, fallback, decoder);
     }
+    coalesceNumber(first, fallback) {
+        return this.coalesce(first, fallback, Number);
+    }
+    coalesceString(first, fallback) {
+        return this.coalesce(first, fallback, String);
+    }
+    coalesceBoolean(first, fallback) {
+        return this.coalesce(first, fallback, Boolean);
+    }
     sum(columnOrName, decoder) {
         const expression = typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName;
         return sum(expression, decoder);
@@ -353,6 +389,24 @@ class MsSqlQuery {
     sumDistinct(columnOrName, decoder) {
         const expression = typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName;
         return sumDistinct(expression, decoder);
+    }
+    sumNumber(columnOrName) {
+        return this.sum(columnOrName, Number);
+    }
+    sumBoolean(columnOrName) {
+        return this.sum(columnOrName, Boolean);
+    }
+    sumString(columnOrName) {
+        return this.sum(columnOrName, String);
+    }
+    sumDistinctNumber(columnOrName) {
+        return this.sumDistinct(columnOrName, Number);
+    }
+    sumDistinctBoolean(columnOrName) {
+        return this.sumDistinct(columnOrName, Boolean);
+    }
+    sumDistinctString(columnOrName) {
+        return this.sumDistinct(columnOrName, String);
     }
     /********************************************************************************************************************
      * alias
@@ -1235,10 +1289,19 @@ function drizzleMsSql(options) {
         desc, count: native.count, countDistinct: native.countDistinct, avg,
         avgDistinct,
         sum,
-        sumDistinct, max: native.max, min: native.min, not: native.not, exists: native.exists, notExists: native.notExists, arrayContains: native.arrayContains, arrayContained: native.arrayContained, arrayOverlaps: native.arrayOverlaps, s: options.schema, a: createAlias(options.schema) }, createConditions(options.schema)), { columns: TableColumns, alias: alias$1,
+        sumDistinct,
+        sumDistinctNumber,
+        sumDistinctBoolean,
+        sumDistinctString,
+        sumNumber,
+        sumBoolean,
+        sumString, max: native.max, min: native.min, not: native.not, exists: native.exists, notExists: native.notExists, arrayContains: native.arrayContains, arrayContained: native.arrayContained, arrayOverlaps: native.arrayOverlaps, s: options.schema, a: createAlias(options.schema) }, createConditions(options.schema)), { columns: TableColumns, alias: alias$1,
         sql,
         coalesce,
+        coalesceNumber,
+        coalesceString,
+        coalesceBoolean,
         sqlNumber,
         sqlString,
         sqlBoolean }), connection), { query: (table) => new MsSqlQuery(table, connection.current) });
-}export{MsSqlQuery,TableColumns,avg,avgDistinct,coalesce,createConditions,drizzleMsSql as default,drizzleMsSql,mssqlTable,sum,sumDistinct};
+}export{MsSqlQuery,TableColumns,avg,avgDistinct,coalesce,coalesceBoolean,coalesceNumber,coalesceString,createConditions,drizzleMsSql as default,drizzleMsSql,mssqlTable,sum,sumBoolean,sumDistinct,sumDistinctBoolean,sumDistinctNumber,sumDistinctString,sumNumber,sumString};

@@ -1,9 +1,9 @@
 import { sqlNumber, sqlString, sqlBoolean } from './mappedSql.cjs';
-import { coalesce } from './coalesce.cjs';
+import { coalesce, coalesceNumber, coalesceString, coalesceBoolean } from './coalesce.cjs';
 import mssql, { type config as MsSqlConfig } from 'mssql';
 import { SQL, sql, type Subquery } from 'drizzle-orm';
 import { alias, type MsSqlTable } from 'drizzle-orm/mssql-core';
-import { sum, sumDistinct, avg, avgDistinct } from './aggregate.cjs';
+import { sum, sumDistinct, avg, avgDistinct, sumNumber, sumBoolean, sumString, sumDistinctNumber, sumDistinctBoolean, sumDistinctString } from './aggregate.cjs';
 import * as native from 'drizzle-orm';
 import { type MsSqlAliases } from './alias.cjs';
 import { type MsSqlSchemaConditions } from './conditions.cjs';
@@ -30,6 +30,9 @@ interface MsSqlDatabaseHelpers<TSchema extends Record<string, MsSqlTable>> exten
     columns: typeof TableColumns;
     alias: typeof alias;
     coalesce: typeof coalesce;
+    coalesceNumber: typeof coalesceNumber;
+    coalesceString: typeof coalesceString;
+    coalesceBoolean: typeof coalesceBoolean;
     sql: typeof sql;
     sqlNumber: typeof sqlNumber;
     sqlString: typeof sqlString;
@@ -54,6 +57,12 @@ type MultiColumnOrderHelper = {
 type MsSqlNativeHelpers = Omit<Pick<typeof native, 'count' | 'countDistinct' | 'max' | 'min' | 'not' | 'exists' | 'notExists' | 'arrayContains' | 'arrayContained' | 'arrayOverlaps'>, 'asc' | 'desc'> & {
     avg: typeof avg;
     avgDistinct: typeof avgDistinct;
+    sumDistinctNumber: typeof sumDistinctNumber;
+    sumDistinctBoolean: typeof sumDistinctBoolean;
+    sumDistinctString: typeof sumDistinctString;
+    sumNumber: typeof sumNumber;
+    sumBoolean: typeof sumBoolean;
+    sumString: typeof sumString;
     sum: typeof sum;
     sumDistinct: typeof sumDistinct;
     asc: MultiColumnOrderHelper;

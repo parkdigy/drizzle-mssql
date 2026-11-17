@@ -1,5 +1,19 @@
 import { drizzle } from 'drizzle-orm/node-mssql';
-import { drizzleMsSql, int, mssqlTable, sum, sumDistinct, avg, avgDistinct } from '../src';
+import {
+  drizzleMsSql,
+  int,
+  mssqlTable,
+  sum,
+  sumDistinct,
+  avg,
+  avgDistinct,
+  sumDistinctNumber,
+  sumDistinctBoolean,
+  sumDistinctString,
+  sumNumber,
+  sumBoolean,
+  sumString,
+} from '../src';
 import {
   avg as nativeAvg,
   avgDistinct as nativeAvgDistinct,
@@ -73,3 +87,40 @@ test.each(['sum', 'sumDistinct'] as const)(
     expect(() => Reflect.apply(query[method], query, ['missing', Number])).toThrow('unknown column "missing"');
   }
 );
+
+test.each([
+  ['sumDistinctNumber', sumDistinctNumber, Number],
+  ['sumDistinctBoolean', sumDistinctBoolean, Boolean],
+  ['sumDistinctString', sumDistinctString, String],
+  ['sumNumber', sumNumber, Number],
+  ['sumBoolean', sumBoolean, Boolean],
+  ['sumString', sumString, String],
+] as const)('%s는 자동 변환기를 모든 진입점에 적용한다', async (method, aggregate, decoder) => {
+  const query = db.query(items);
+  for (const value of ['12.5', '0', 0, 1, null]) {
+    const database = drizzle({
+      client: {
+        request: () => ({ query: async () => ({ recordset: [[value]] }) }),
+      } as never,
+    });
+    for (const expression of [
+      aggregate(items.id),
+      db[method](items.id),
+      query[method]('id'),
+      query[method](items.id),
+      aggregate<unknown>(items.id),
+      db[method]<unknown>(items.id),
+      query[method]<unknown>('id'),
+    ]) {
+      const selected = database.select({ total: expression }).from(items);
+      const expected = database
+        .select({
+          total: (method.startsWith('sumDistinct') ? nativeSumDistinct : nativeSum)(items.id).mapWith(decoder),
+        })
+        .from(items);
+      expect(selected.toSQL()).toEqual(expected.toSQL());
+      expect(await selected).toEqual([{ total: value === null ? null : decoder(value) }]);
+    }
+  }
+  expect(() => Reflect.apply(query[method], query, ['missing'])).toThrow('unknown column "missing"');
+});

@@ -35,3 +35,39 @@ export function avg<TDecoder extends AggregateDecoder>(expression: SQLWrapper, d
 export function avgDistinct<TDecoder extends AggregateDecoder>(expression: SQLWrapper, decoder: TDecoder) {
   return drizzleAvgDistinct(expression).mapWith(decoder);
 }
+
+export function sumNumber(expression: SQLWrapper): SQL<number | null>;
+export function sumNumber<TResult>(expression: SQLWrapper): SQL<TResult>;
+export function sumNumber(expression: SQLWrapper): SQL {
+  return sum(expression, Number);
+}
+
+export function sumBoolean(expression: SQLWrapper): SQL<boolean | null>;
+export function sumBoolean<TResult>(expression: SQLWrapper): SQL<TResult>;
+export function sumBoolean(expression: SQLWrapper): SQL {
+  return sum(expression, Boolean);
+}
+
+export function sumString(expression: SQLWrapper): SQL<string | null>;
+export function sumString<TResult>(expression: SQLWrapper): SQL<TResult>;
+export function sumString(expression: SQLWrapper): SQL {
+  return sum(expression, String);
+}
+
+export function sumDistinctNumber(expression: SQLWrapper): SQL<number | null>;
+export function sumDistinctNumber<TResult>(expression: SQLWrapper): SQL<TResult>;
+export function sumDistinctNumber(expression: SQLWrapper): SQL {
+  return sumDistinct(expression, Number);
+}
+
+export function sumDistinctBoolean(expression: SQLWrapper): SQL<boolean | null>;
+export function sumDistinctBoolean<TResult>(expression: SQLWrapper): SQL<TResult>;
+export function sumDistinctBoolean(expression: SQLWrapper): SQL {
+  return sumDistinct(expression, Boolean);
+}
+
+export function sumDistinctString(expression: SQLWrapper): SQL<string | null>;
+export function sumDistinctString<TResult>(expression: SQLWrapper): SQL<TResult>;
+export function sumDistinctString(expression: SQLWrapper): SQL {
+  return sumDistinct(expression, String);
+}

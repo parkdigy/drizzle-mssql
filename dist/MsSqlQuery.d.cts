@@ -28,10 +28,28 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AD extends MsSqlAddDa
     coalesce<N extends MsSqlColumnName<TTable>, TSecond extends Parameters<typeof coalesce>[1], TDecoder extends CoalesceDecoder | undefined = undefined>(name: N, fallback: TSecond, decoder?: TDecoder): SQL<CoalesceOutput<TTable['_']['columns'][N], TSecond, TDecoder>>;
     coalesce<TFirst extends SQLWrapper, TSecond extends Parameters<typeof coalesce>[1], TDecoder extends CoalesceDecoder | undefined = undefined>(expression: TFirst, fallback: TSecond, decoder?: TDecoder): SQL<CoalesceOutput<TFirst, TSecond, TDecoder>>;
     coalesce<TResult>(first: MsSqlColumnName<TTable> | SQLWrapper, fallback: Parameters<typeof coalesce>[1], decoder?: CoalesceDecoder): SQL<TResult>;
+    coalesceNumber<TFirst extends MsSqlColumnName<TTable> | SQLWrapper, TSecond extends Parameters<typeof coalesce>[1]>(first: TFirst, fallback: TSecond): SQL<CoalesceOutput<TFirst extends MsSqlColumnName<TTable> ? TTable['_']['columns'][TFirst] : TFirst, TSecond, NumberConstructor>>;
+    coalesceNumber<TResult>(first: MsSqlColumnName<TTable> | SQLWrapper, fallback: Parameters<typeof coalesce>[1]): SQL<TResult>;
+    coalesceString<TFirst extends MsSqlColumnName<TTable> | SQLWrapper, TSecond extends Parameters<typeof coalesce>[1]>(first: TFirst, fallback: TSecond): SQL<CoalesceOutput<TFirst extends MsSqlColumnName<TTable> ? TTable['_']['columns'][TFirst] : TFirst, TSecond, StringConstructor>>;
+    coalesceString<TResult>(first: MsSqlColumnName<TTable> | SQLWrapper, fallback: Parameters<typeof coalesce>[1]): SQL<TResult>;
+    coalesceBoolean<TFirst extends MsSqlColumnName<TTable> | SQLWrapper, TSecond extends Parameters<typeof coalesce>[1]>(first: TFirst, fallback: TSecond): SQL<CoalesceOutput<TFirst extends MsSqlColumnName<TTable> ? TTable['_']['columns'][TFirst] : TFirst, TSecond, BooleanConstructor>>;
+    coalesceBoolean<TResult>(first: MsSqlColumnName<TTable> | SQLWrapper, fallback: Parameters<typeof coalesce>[1]): SQL<TResult>;
     sum<TDecoder extends AggregateDecoder>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper, decoder: TDecoder): SQL<GetDecoderResult<TDecoder> | null>;
     sum<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper, decoder: AggregateDecoder): SQL<TResult>;
     sumDistinct<TDecoder extends AggregateDecoder>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper, decoder: TDecoder): SQL<GetDecoderResult<TDecoder> | null>;
     sumDistinct<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper, decoder: AggregateDecoder): SQL<TResult>;
+    sumNumber(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<number | null>;
+    sumNumber<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
+    sumBoolean(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<boolean | null>;
+    sumBoolean<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
+    sumString(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<string | null>;
+    sumString<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
+    sumDistinctNumber(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<number | null>;
+    sumDistinctNumber<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
+    sumDistinctBoolean(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<boolean | null>;
+    sumDistinctBoolean<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
+    sumDistinctString(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<string | null>;
+    sumDistinctString<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
     private readonly drizzle;
     /********************************************************************************************************************
      * alias
