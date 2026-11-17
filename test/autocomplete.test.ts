@@ -10,7 +10,7 @@ test.each(['../src/index', '../dist/index'])('%s: 200개 테이블에서도 자�
       `const table${i} = mssqlTable('table${i}', { id: int().notNull(), name: varchar({length: 100}), ${i === 199 ? wideColumns : ''} });`
   ).join('\n');
   const marked = `
-    import { drizzleMsSql, mssqlTable, int, varchar, sum, sumDistinct, avg, avgDistinct } from '${entry}';
+    import { drizzleMsSql, mssqlTable, int, varchar, sum, sumDistinct, avg, avgDistinct, coalesce } from '${entry}';
     ${tables}
     const db = drizzleMsSql({ url: '', getTimestamp: () => 0, schema: {
       ${Array.from({ length: 200 }, (_, i) => `table${i}`).join(',')}
@@ -83,6 +83,22 @@ test.each(['../src/index', '../dist/index'])('%s: 200개 테이블에서도 자�
     const fullRow: Awaited<typeof full>[number] = { base: null, first: null, last: null };
     void [joinedRow, invalidJoinedRow, outerRow, invalidOuterRow, rightRow, fullRow];
     const query = db.query(table199);
+    const explicitCoalesced = query.select({
+      direct: db.coalesce<0 | 1 | 2>(table199.id, 0),
+      named: query.coalesce<0 | 1 | 2>('id', 0),
+      mapped: db.coalesce<0 | 1 | 2>(db.sql\`\${table199.id}\`, 0, Number),
+      expression: query.coalesce<0 | 1 | 2>(db.sql\`\${table199.id}\`, 0, Number),
+      standalone: coalesce<0 | 1 | 2>(table199.id, 0),
+      nullable: query.coalesce<0 | 1 | 2 | null>('extra0', null),
+    });
+    type ExplicitCoalesced = Awaited<typeof explicitCoalesced>[number];
+    const explicitCoalescedRow: ExplicitCoalesced = { direct: 0, named: 1, mapped: 2, expression: 0, standalone: 1, nullable: null };
+    // @ts-expect-error 지정한 결과 타입에 포함되지 않은 값이다
+    const invalidExplicitCoalesced: ExplicitCoalesced['mapped'] = 3;
+    // @ts-expect-error 결과 타입을 지정해도 잘못된 컬럼명은 허용하지 않는다
+    query.coalesce<0 | 1 | 2>('missing', 0);
+    void [explicitCoalescedRow, invalidExplicitCoalesced];
+
     const tagged = query.select({
       val1: db.sqlNumber\`\${table199.id} + 1\`,
       val2: db.sqlBoolean\`\${table199.id}\`,

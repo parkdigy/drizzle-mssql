@@ -98,6 +98,12 @@ export class MsSqlQuery<
     decoder?: TDecoder
   ): SQL<CoalesceOutput<TFirst, TSecond, TDecoder>>;
 
+  coalesce<TResult>(
+    first: MsSqlColumnName<TTable> | SQLWrapper,
+    fallback: Parameters<typeof coalesce>[1],
+    decoder?: CoalesceDecoder
+  ): SQL<TResult>;
+
   coalesce(first: string | SQLWrapper, fallback: Parameters<typeof coalesce>[1], decoder?: CoalesceDecoder): SQL {
     if (typeof first !== 'string') return coalesce(first, fallback, decoder);
     const columns = getTableColumns(this.t);

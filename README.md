@@ -527,6 +527,8 @@ const rows = await user.select({
 
 결과 타입은 첫 값의 `null`을 제외한 타입과 대체 값의 타입을 조합합니다. 양쪽 컬럼이 nullable이면 결과도 nullable이며, 타입을 지정하지 않은 `db.sql` 표현식의 결과는 `unknown`입니다. 선택적인 세 번째 인자에 `Number` 같은 변환 함수나 `mapFromDriverValue` 객체를 전달하면 `.mapWith(...)`와 동일하게 적용됩니다. 위 `calculated`의 결과 타입은 `number`입니다. 변환기를 생략하면 기존 타입 추론을 유지합니다.
 
+결과 타입을 직접 지정하려면 `db.coalesce<0 | 1 | 2>(column, 0)` 또는 `user.coalesce<0 | 1 | 2>('id', 0)`처럼 사용합니다. 세 번째 변환기도 함께 사용할 수 있습니다: ``db.coalesce<0 | 1 | 2>(db.sql`...`, 0, Number)``. 명시한 타입은 결과에 대한 타입 선언이며 런타임 값 검증이나 변환을 추가하지 않습니다. `null`이 가능한 결과라면 타입에 직접 포함하세요. 타입 인자를 생략하면 기존 자동 추론을 유지합니다.
+
 ### 공개 타입과 스키마 API
 
 스키마 정의에 필요한 다음 API를 `@pdg/drizzle-mssql`에서 직접 가져올 수 있습니다.

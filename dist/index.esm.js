@@ -44,7 +44,7 @@ const sqlNumber = createMappedSql(Number);
 const sqlString = createMappedSql(String);
 const sqlBoolean = createMappedSql((value) => value === true || value === 1);function coalesce(first, second, decoder) {
     const expression = sql `coalesce(${first}, ${second})`;
-    return (decoder === undefined ? expression : expression.mapWith(decoder));
+    return decoder === undefined ? expression : expression.mapWith(decoder);
 }function sum(expression, decoder) {
     return sum$1(expression).mapWith(decoder);
 }
