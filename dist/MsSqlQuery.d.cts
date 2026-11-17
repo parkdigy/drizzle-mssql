@@ -1,5 +1,6 @@
+import { type AggregateDecoder } from './aggregate.cjs';
 import { coalesce, type CoalesceOutput, type CoalesceDecoder } from './coalesce.cjs';
-import { SQL, Subquery, min as drizzleMin, max as drizzleMax, type Placeholder } from 'drizzle-orm';
+import { SQL, Subquery, min as drizzleMin, max as drizzleMax, type Placeholder, type GetDecoderResult } from 'drizzle-orm';
 import { MsSqlTable, MsSqlColumn, MsSqlSelectBase } from 'drizzle-orm/mssql-core';
 import type { SelectedFields } from 'drizzle-orm/operations';
 import type { SQLWrapper } from 'drizzle-orm';
@@ -27,6 +28,10 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AD extends MsSqlAddDa
     coalesce<N extends MsSqlColumnName<TTable>, TSecond extends Parameters<typeof coalesce>[1], TDecoder extends CoalesceDecoder | undefined = undefined>(name: N, fallback: TSecond, decoder?: TDecoder): SQL<CoalesceOutput<TTable['_']['columns'][N], TSecond, TDecoder>>;
     coalesce<TFirst extends SQLWrapper, TSecond extends Parameters<typeof coalesce>[1], TDecoder extends CoalesceDecoder | undefined = undefined>(expression: TFirst, fallback: TSecond, decoder?: TDecoder): SQL<CoalesceOutput<TFirst, TSecond, TDecoder>>;
     coalesce<TResult>(first: MsSqlColumnName<TTable> | SQLWrapper, fallback: Parameters<typeof coalesce>[1], decoder?: CoalesceDecoder): SQL<TResult>;
+    sum<TDecoder extends AggregateDecoder>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper, decoder: TDecoder): SQL<GetDecoderResult<TDecoder> | null>;
+    sum<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper, decoder: AggregateDecoder): SQL<TResult>;
+    sumDistinct<TDecoder extends AggregateDecoder>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper, decoder: TDecoder): SQL<GetDecoderResult<TDecoder> | null>;
+    sumDistinct<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper, decoder: AggregateDecoder): SQL<TResult>;
     private readonly drizzle;
     /********************************************************************************************************************
      * alias

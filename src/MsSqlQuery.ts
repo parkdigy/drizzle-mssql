@@ -1,3 +1,4 @@
+import { sum, sumDistinct, type AggregateDecoder } from './aggregate';
 import { coalesce, type CoalesceOutput, type CoalesceDecoder } from './coalesce';
 import {
   SQL,
@@ -15,6 +16,7 @@ import {
   min as drizzleMin,
   max as drizzleMax,
   type Placeholder,
+  type GetDecoderResult,
 } from 'drizzle-orm';
 import {
   MsSqlTable,
@@ -112,6 +114,30 @@ export class MsSqlQuery<
       throw new Error(`coalesce: unknown column "${first}".`);
     }
     return coalesce(column, fallback, decoder);
+  }
+
+  sum<TDecoder extends AggregateDecoder>(
+    columnOrName: MsSqlColumnName<TTable> | SQLWrapper,
+    decoder: TDecoder
+  ): SQL<GetDecoderResult<TDecoder> | null>;
+
+  sum<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper, decoder: AggregateDecoder): SQL<TResult>;
+
+  sum(columnOrName: string | SQLWrapper, decoder: AggregateDecoder): SQL {
+    const expression = typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName;
+    return sum(expression, decoder);
+  }
+
+  sumDistinct<TDecoder extends AggregateDecoder>(
+    columnOrName: MsSqlColumnName<TTable> | SQLWrapper,
+    decoder: TDecoder
+  ): SQL<GetDecoderResult<TDecoder> | null>;
+
+  sumDistinct<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper, decoder: AggregateDecoder): SQL<TResult>;
+
+  sumDistinct(columnOrName: string | SQLWrapper, decoder: AggregateDecoder): SQL {
+    const expression = typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName;
+    return sumDistinct(expression, decoder);
   }
 
   private readonly drizzle = { ...createConditions({}), sqlNumber: (value: number) => sql`${value}`.mapWith(Number) };

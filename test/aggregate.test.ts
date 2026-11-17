@@ -35,3 +35,41 @@ test.each([
     }
   }
 });
+
+test.each(['sum', 'sumDistinct'] as const)('명시적 %s 결과 타입도 기존 SQL과 변환기를 유지한다', async (method) => {
+  const database = drizzle({
+    client: {
+      request: () => ({ query: async () => ({ recordset: [['12.5']] }) }),
+    } as never,
+  });
+  const aggregate = method === 'sum' ? sum : sumDistinct;
+  for (const expression of [aggregate<number>(items.id, Number), db[method]<number>(items.id, Number)]) {
+    const selected = database.select({ total: expression }).from(items);
+    expect(selected.toSQL()).toEqual(
+      database
+        .select({ total: aggregate(items.id, Number) })
+        .from(items)
+        .toSQL()
+    );
+    expect(await selected).toEqual([{ total: 12.5 }]);
+  }
+});
+
+test.each(['sum', 'sumDistinct'] as const)(
+  'MsSqlQuery.%s는 컬럼명을 해석하고 집계 변환기를 전달한다',
+  async (method) => {
+    const query = db.query(items);
+    const aggregate = method === 'sum' ? sum : sumDistinct;
+    const selected = query.select(() => ({ total: query[method]('id', Number) })).toSQL();
+    expect(selected).toEqual(query.select({ total: aggregate(items.id, Number) }).toSQL());
+    const database = drizzle({
+      client: {
+        request: () => ({ query: async () => ({ recordset: [['12.5']] }) }),
+      } as never,
+    });
+    expect(await database.select({ total: query[method]<number>('id', Number) }).from(items)).toEqual([
+      { total: 12.5 },
+    ]);
+    expect(() => Reflect.apply(query[method], query, ['missing', Number])).toThrow('unknown column "missing"');
+  }
+);

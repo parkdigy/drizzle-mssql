@@ -346,6 +346,14 @@ class MsSqlQuery {
         }
         return coalesce(column, fallback, decoder);
     }
+    sum(columnOrName, decoder) {
+        const expression = typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName;
+        return sum(expression, decoder);
+    }
+    sumDistinct(columnOrName, decoder) {
+        const expression = typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName;
+        return sumDistinct(expression, decoder);
+    }
     /********************************************************************************************************************
      * alias
      * ******************************************************************************************************************/

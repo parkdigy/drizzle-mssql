@@ -5,15 +5,26 @@ import {
   sumDistinct as drizzleSumDistinct,
   type SQL,
   type SQLWrapper,
+  type GetDecoderResult,
 } from 'drizzle-orm';
 
-type AggregateDecoder = Parameters<SQL<string | null>['mapWith']>[0];
+export type AggregateDecoder = Parameters<SQL<string | null>['mapWith']>[0];
 
-export function sum<TDecoder extends AggregateDecoder>(expression: SQLWrapper, decoder: TDecoder) {
+export function sum<TDecoder extends AggregateDecoder>(
+  expression: SQLWrapper,
+  decoder: TDecoder
+): SQL<GetDecoderResult<TDecoder> | null>;
+export function sum<TResult>(expression: SQLWrapper, decoder: AggregateDecoder): SQL<TResult>;
+export function sum(expression: SQLWrapper, decoder: AggregateDecoder): SQL {
   return drizzleSum(expression).mapWith(decoder);
 }
 
-export function sumDistinct<TDecoder extends AggregateDecoder>(expression: SQLWrapper, decoder: TDecoder) {
+export function sumDistinct<TDecoder extends AggregateDecoder>(
+  expression: SQLWrapper,
+  decoder: TDecoder
+): SQL<GetDecoderResult<TDecoder> | null>;
+export function sumDistinct<TResult>(expression: SQLWrapper, decoder: AggregateDecoder): SQL<TResult>;
+export function sumDistinct(expression: SQLWrapper, decoder: AggregateDecoder): SQL {
   return drizzleSumDistinct(expression).mapWith(decoder);
 }
 
