@@ -500,8 +500,17 @@ const [summary] = await db.current()
   .select({ total: db.count() })
   .from(users);
 
+const [totals] = await db.current().select({
+  total: db.sum(users.id, Number),
+  distinctTotal: db.sumDistinct(users.id, Number),
+  average: db.avg(users.id, Number),
+  distinctAverage: db.avgDistinct(users.id, Number),
+}).from(users);
+
 const numericExpression = db.sqlNumber(db.sql`1`);
 ```
+
+`sum(expression, decoder)`, `sumDistinct(expression, decoder)`, `avg(expression, decoder)`, `avgDistinct(expression, decoder)`는 두 번째 인자가 필수입니다. `decoder`는 Drizzle의 `mapWith`와 동일하게 변환 함수(`Number`, `BigInt` 등) 또는 `mapFromDriverValue`를 가진 객체를 받습니다. 패키지에서 직접 가져온 함수와 `db` 메서드 모두 동일합니다. 예를 들어 `sum(users.id, Number)`의 결과 타입은 `number | null`이며, 집계 결과가 SQL `NULL`이면 그대로 `null`을 유지합니다. 기존 `sum`, `sumDistinct`, `avg`, `avgDistinct`의 단일 인자 호출에는 변환기를 추가해야 합니다.
 
 ### 공개 타입과 스키마 API
 

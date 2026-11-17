@@ -10,7 +10,7 @@ test.each(['../src/index', '../dist/index'])('%s: 200개 테이블에서도 자�
       `const table${i} = mssqlTable('table${i}', { id: int().notNull(), name: varchar({length: 100}), ${i === 199 ? wideColumns : ''} });`
   ).join('\n');
   const marked = `
-    import { drizzleMsSql, mssqlTable, int, varchar } from '${entry}';
+    import { drizzleMsSql, mssqlTable, int, varchar, sum, sumDistinct, avg, avgDistinct } from '${entry}';
     ${tables}
     const db = drizzleMsSql({ url: '', getTimestamp: () => 0, schema: {
       ${Array.from({ length: 200 }, (_, i) => `table${i}`).join(',')}
@@ -83,6 +83,82 @@ test.each(['../src/index', '../dist/index'])('%s: 200개 테이블에서도 자�
     const fullRow: Awaited<typeof full>[number] = { base: null, first: null, last: null };
     void [joinedRow, invalidJoinedRow, outerRow, invalidOuterRow, rightRow, fullRow];
     const query = db.query(table199);
+    const sums = query.select({
+      numeric: sum(table199.id, Number),
+      distinct: sumDistinct(table199.id, Number),
+      bigint: db.sum(table199.id, BigInt),
+      text: db.sumDistinct(table199.id, { mapFromDriverValue: (value: string) => 'total=' + value }),
+    });
+    type SumRow = Awaited<typeof sums>[number];
+    const sumRow: SumRow = { numeric: 1, distinct: null, bigint: 2n, text: 'total=2' };
+    const nullSumRow: SumRow = { numeric: null, distinct: null, bigint: null, text: null };
+    // @ts-expect-error 변환 결과 타입을 유지한다
+    const invalidSumRow: SumRow = { numeric: '1', distinct: 1, bigint: 2n, text: '2' };
+    void [sumRow, nullSumRow, invalidSumRow];
+    // @ts-expect-error decoder는 필수다
+    sum(table199.id);
+    // @ts-expect-error decoder는 필수다
+    sumDistinct(table199.id);
+    // @ts-expect-error decoder는 필수다
+    db.sum(table199.id);
+    // @ts-expect-error decoder는 필수다
+    db.sumDistinct(table199.id);
+
+    // 제거한 API는 연결 객체·쿼리·조건 객체에서 사용할 수 없다.
+    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
+    db.ilike;
+    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
+    query.ilike;
+    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
+    db.and('table199', { ilike: { name: 'A%' } });
+    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
+    query.select().where(q => q.ilike({ name: 'A%' }));
+    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
+    db.notIlike;
+    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
+    query.notIlike;
+    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
+    db.and('table199', { notIlike: { name: 'A%' } });
+    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
+    query.select().where(q => q.notIlike({ name: 'A%' }));
+    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
+    db.orIlike;
+    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
+    query.orIlike;
+    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
+    db.and('table199', { orIlike: { name: 'A%' } });
+    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
+    query.select().where(q => q.orIlike({ name: 'A%' }));
+    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
+    db.orNotIlike;
+    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
+    query.orNotIlike;
+    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
+    db.and('table199', { orNotIlike: { name: 'A%' } });
+    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
+    query.select().where(q => q.orNotIlike({ name: 'A%' }));
+
+    const avgs = query.select({
+      numeric: avg(table199.id, Number),
+      distinct: avgDistinct(table199.id, Number),
+      bigint: db.avg(table199.id, BigInt),
+      text: db.avgDistinct(table199.id, { mapFromDriverValue: (value: string) => 'total=' + value }),
+    });
+    type AvgRow = Awaited<typeof avgs>[number];
+    const avgRow: AvgRow = { numeric: 1, distinct: null, bigint: 2n, text: 'total=2' };
+    const nullAvgRow: AvgRow = { numeric: null, distinct: null, bigint: null, text: null };
+    // @ts-expect-error 변환 결과 타입을 유지한다
+    const invalidAvgRow: AvgRow = { numeric: '1', distinct: 1, bigint: 2n, text: '2' };
+    void [avgRow, nullAvgRow, invalidAvgRow];
+    // @ts-expect-error decoder는 필수다
+    avg(table199.id);
+    // @ts-expect-error decoder는 필수다
+    avgDistinct(table199.id);
+    // @ts-expect-error decoder는 필수다
+    db.avg(table199.id);
+    // @ts-expect-error decoder는 필수다
+    db.avgDistinct(table199.id);
+
     // 제거한 API는 연결 객체·쿼리·조건 객체에서 사용할 수 없다.
     // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     db.ilike;

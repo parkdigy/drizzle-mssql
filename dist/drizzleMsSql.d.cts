@@ -1,6 +1,7 @@
 import mssql, { type config as MsSqlConfig } from 'mssql';
 import { SQL, sql, type Subquery } from 'drizzle-orm';
 import { alias, type MsSqlTable } from 'drizzle-orm/mssql-core';
+import { sum, sumDistinct, avg, avgDistinct } from './aggregate.cjs';
 import * as native from 'drizzle-orm';
 import { type MsSqlAliases } from './alias.cjs';
 import { type MsSqlSchemaConditions } from './conditions.cjs';
@@ -47,7 +48,11 @@ type MultiColumnOrderHelper = {
     (column: OrderByColumn): SQL;
     (first: OrderByColumn, second: OrderByColumn, ...rest: OrderByColumn[]): SQL[];
 } & AliasOrderByHelper;
-type MsSqlNativeHelpers = Omit<Pick<typeof native, 'count' | 'countDistinct' | 'avg' | 'avgDistinct' | 'sum' | 'sumDistinct' | 'max' | 'min' | 'not' | 'exists' | 'notExists' | 'arrayContains' | 'arrayContained' | 'arrayOverlaps'>, 'asc' | 'desc'> & {
+type MsSqlNativeHelpers = Omit<Pick<typeof native, 'count' | 'countDistinct' | 'max' | 'min' | 'not' | 'exists' | 'notExists' | 'arrayContains' | 'arrayContained' | 'arrayOverlaps'>, 'asc' | 'desc'> & {
+    avg: typeof avg;
+    avgDistinct: typeof avgDistinct;
+    sum: typeof sum;
+    sumDistinct: typeof sumDistinct;
     asc: MultiColumnOrderHelper;
     desc: MultiColumnOrderHelper;
 };

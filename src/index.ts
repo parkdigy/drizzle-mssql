@@ -5,6 +5,7 @@ export default drizzleMsSql;
 export * from './@types/index';
 export * from './columns';
 export * from './conditions';
+export { sum, sumDistinct, avg, avgDistinct } from './aggregate';
 export * from './drizzleMsSql';
 export * from './MsSqlQuery';
 export { mssqlTable, type TablePolicy } from './mssqlTable';
@@ -14,10 +15,6 @@ export {
   desc,
   count,
   countDistinct,
-  avg,
-  avgDistinct,
-  sum,
-  sumDistinct,
   max,
   min,
   not,
