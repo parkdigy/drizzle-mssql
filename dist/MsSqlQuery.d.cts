@@ -81,8 +81,10 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AD extends MsSqlAddDa
      * ******************************************************************************************************************/
     min<N extends keyof TTable['_']['columns'] & string>(name: N): ReturnType<typeof drizzleMin<TTable['_']['columns'][N]>>;
     min<C extends MsSqlColumn>(column: C): ReturnType<typeof drizzleMin<C>>;
+    min<TResult>(columnOrName: MsSqlColumnName<TTable> | MsSqlColumn): SQL<TResult>;
     max<N extends keyof TTable['_']['columns'] & string>(name: N): ReturnType<typeof drizzleMax<TTable['_']['columns'][N]>>;
     max<C extends MsSqlColumn>(column: C): ReturnType<typeof drizzleMax<C>>;
+    max<TResult>(columnOrName: MsSqlColumnName<TTable> | MsSqlColumn): SQL<TResult>;
     private resolveAggregateColumn;
     private resolveOrderColumn;
     private resolveConditionColumn;
@@ -542,7 +544,9 @@ type SubqueryFieldsQuery<T extends Subquery> = {
     columns(): T['_']['selectedFields'];
     columns<N extends keyof T['_']['selectedFields'] & string>(...names: N[]): Pick<T['_']['selectedFields'], N>;
     min<N extends keyof T['_']['selectedFields'] & string>(name: N): SQL<SubqueryFieldData<T['_']['selectedFields'][N]> | null>;
+    min<TResult>(name: keyof T['_']['selectedFields'] & string): SQL<TResult>;
     max<N extends keyof T['_']['selectedFields'] & string>(name: N): SQL<SubqueryFieldData<T['_']['selectedFields'][N]> | null>;
+    max<TResult>(name: keyof T['_']['selectedFields'] & string): SQL<TResult>;
 };
 export type SubquerySelectInput<T extends Subquery> = readonly (FieldInput | (keyof T['_']['selectedFields'] & string))[] | Record<string, FieldSet[string] | (keyof T['_']['selectedFields'] & string) | SQLWrapper> | ((query: SubqueryFieldsQuery<T>) => FieldSet | readonly FieldInput[]);
 export type ResolveSubquerySelectInput<T extends Subquery, V> = Extract<ResolvedSubqueryInput<T, V>, FieldSet | undefined>;

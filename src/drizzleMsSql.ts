@@ -4,7 +4,7 @@ import { drizzle, getMsSqlConnectionParams } from 'drizzle-orm/node-mssql';
 import mssql, { type config as MsSqlConfig } from 'mssql';
 import { count, defineRelations, getTableColumns, is, isTable, SQL, sql, type Subquery } from 'drizzle-orm';
 import { alias, type MsSqlTable } from 'drizzle-orm/mssql-core';
-import { sum, sumDistinct, avg, avgDistinct, sumNumber, sumBoolean, sumString, sumDistinctNumber, sumDistinctBoolean, sumDistinctString, avgNumber, avgBoolean, avgString, avgDistinctNumber, avgDistinctBoolean, avgDistinctString } from './aggregate';
+import { sum, sumDistinct, avg, avgDistinct, sumNumber, sumBoolean, sumString, sumDistinctNumber, sumDistinctBoolean, sumDistinctString, avgNumber, avgBoolean, avgString, avgDistinctNumber, avgDistinctBoolean, avgDistinctString, min, max } from './aggregate';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import * as native from 'drizzle-orm';
 import { createAlias, type MsSqlAliases } from './alias';
@@ -113,8 +113,6 @@ type MsSqlNativeHelpers = Omit<
     typeof native,
     | 'count'
     | 'countDistinct'
-    | 'max'
-    | 'min'
     | 'not'
     | 'exists'
     | 'notExists'
@@ -124,6 +122,8 @@ type MsSqlNativeHelpers = Omit<
   >,
   'asc' | 'desc'
 > & {
+  min: typeof min;
+  max: typeof max;
   avg: typeof avg;
   avgDistinct: typeof avgDistinct;
   sumDistinctNumber: typeof sumDistinctNumber;
@@ -296,8 +296,8 @@ export function drizzleMsSql<TSchema extends Record<string, MsSqlTable>>(
     sumNumber,
     sumBoolean,
     sumString,
-    max: native.max,
-    min: native.min,
+    max,
+    min,
     not: native.not,
     exists: native.exists,
     notExists: native.notExists,

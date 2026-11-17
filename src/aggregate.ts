@@ -1,4 +1,6 @@
 import {
+  min as drizzleMin,
+  max as drizzleMax,
   avg as drizzleAvg,
   avgDistinct as drizzleAvgDistinct,
   sum as drizzleSum,
@@ -106,4 +108,20 @@ export function avgDistinctString(expression: SQLWrapper): SQL<string | null>;
 export function avgDistinctString<TResult>(expression: SQLWrapper): SQL<TResult>;
 export function avgDistinctString(expression: SQLWrapper): SQL {
   return avgDistinct(expression, String);
+}
+
+export function min<TExpression extends SQLWrapper>(
+  expression: TExpression
+): ReturnType<typeof drizzleMin<TExpression>>;
+export function min<TResult>(expression: SQLWrapper): SQL<TResult>;
+export function min(expression: SQLWrapper): SQL {
+  return drizzleMin(expression);
+}
+
+export function max<TExpression extends SQLWrapper>(
+  expression: TExpression
+): ReturnType<typeof drizzleMax<TExpression>>;
+export function max<TResult>(expression: SQLWrapper): SQL<TResult>;
+export function max(expression: SQLWrapper): SQL {
+  return drizzleMax(expression);
 }

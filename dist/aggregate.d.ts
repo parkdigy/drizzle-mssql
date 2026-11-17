@@ -1,4 +1,4 @@
-import { type SQL, type SQLWrapper, type GetDecoderResult } from 'drizzle-orm';
+import { min as drizzleMin, max as drizzleMax, type SQL, type SQLWrapper, type GetDecoderResult } from 'drizzle-orm';
 export type AggregateDecoder = Parameters<SQL<string | null>['mapWith']>[0];
 export declare function sum<TDecoder extends AggregateDecoder>(expression: SQLWrapper, decoder: TDecoder): SQL<GetDecoderResult<TDecoder> | null>;
 export declare function sum<TResult>(expression: SQLWrapper, decoder: AggregateDecoder): SQL<TResult>;
@@ -30,3 +30,7 @@ export declare function avgDistinctBoolean(expression: SQLWrapper): SQL<boolean 
 export declare function avgDistinctBoolean<TResult>(expression: SQLWrapper): SQL<TResult>;
 export declare function avgDistinctString(expression: SQLWrapper): SQL<string | null>;
 export declare function avgDistinctString<TResult>(expression: SQLWrapper): SQL<TResult>;
+export declare function min<TExpression extends SQLWrapper>(expression: TExpression): ReturnType<typeof drizzleMin<TExpression>>;
+export declare function min<TResult>(expression: SQLWrapper): SQL<TResult>;
+export declare function max<TExpression extends SQLWrapper>(expression: TExpression): ReturnType<typeof drizzleMax<TExpression>>;
+export declare function max<TResult>(expression: SQLWrapper): SQL<TResult>;
