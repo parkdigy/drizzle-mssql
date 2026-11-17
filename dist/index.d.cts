@@ -4,7 +4,7 @@ export * from './@types/index.cjs';
 export * from './columns.cjs';
 export * from './conditions.cjs';
 export { coalesce, coalesceNumber, coalesceString, coalesceBoolean } from './coalesce.cjs';
-export { sum, sumDistinct, avg, avgDistinct, sumNumber, sumBoolean, sumString, sumDistinctNumber, sumDistinctBoolean, sumDistinctString } from './aggregate.cjs';
+export { sum, sumDistinct, avg, avgDistinct, sumNumber, sumBoolean, sumString, sumDistinctNumber, sumDistinctBoolean, sumDistinctString, avgNumber, avgBoolean, avgString, avgDistinctNumber, avgDistinctBoolean, avgDistinctString } from './aggregate.cjs';
 export * from './drizzleMsSql.cjs';
 export * from './MsSqlQuery.cjs';
 export { mssqlTable, type TablePolicy } from './mssqlTable.cjs';

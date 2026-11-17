@@ -83,6 +83,24 @@ function sumDistinctBoolean(expression) {
 }
 function sumDistinctString(expression) {
     return sumDistinct(expression, String);
+}
+function avgNumber(expression) {
+    return avg(expression, Number);
+}
+function avgBoolean(expression) {
+    return avg(expression, Boolean);
+}
+function avgString(expression) {
+    return avg(expression, String);
+}
+function avgDistinctNumber(expression) {
+    return avgDistinct(expression, Number);
+}
+function avgDistinctBoolean(expression) {
+    return avgDistinct(expression, Boolean);
+}
+function avgDistinctString(expression) {
+    return avgDistinct(expression, String);
 }function createAlias(schema) {
     /********************************************************************************************************************
      * getDefaultAlias
@@ -408,6 +426,24 @@ class MsSqlQuery {
     sumDistinctString(columnOrName) {
         return this.sumDistinct(columnOrName, String);
     }
+    avgNumber(columnOrName) {
+        return avg(typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName, Number);
+    }
+    avgBoolean(columnOrName) {
+        return avg(typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName, Boolean);
+    }
+    avgString(columnOrName) {
+        return avg(typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName, String);
+    }
+    avgDistinctNumber(columnOrName) {
+        return avgDistinct(typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName, Number);
+    }
+    avgDistinctBoolean(columnOrName) {
+        return avgDistinct(typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName, Boolean);
+    }
+    avgDistinctString(columnOrName) {
+        return avgDistinct(typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName, String);
+    }
     /********************************************************************************************************************
      * alias
      * ******************************************************************************************************************/
@@ -619,8 +655,11 @@ class MsSqlQuery {
             };
             const enhancements = {
                 where: (condition) => originalWhere(typeof condition === 'function'
-                    ? () => condition(whereQuery)
-                    : condition),
+                    ? () => {
+                        const resolved = condition(whereQuery);
+                        return resolved === false ? undefined : resolved;
+                    }
+                    : condition === false ? undefined : condition),
                 top: (count) => typeof selectBuilder.top === 'function' ? enhance(selectBuilder.top(count).from(table)) : query,
             };
             if (originalOrderBy) {
@@ -1293,6 +1332,12 @@ function drizzleMsSql(options) {
         sumDistinctNumber,
         sumDistinctBoolean,
         sumDistinctString,
+        avgNumber,
+        avgBoolean,
+        avgString,
+        avgDistinctNumber,
+        avgDistinctBoolean,
+        avgDistinctString,
         sumNumber,
         sumBoolean,
         sumString, max: native.max, min: native.min, not: native.not, exists: native.exists, notExists: native.notExists, arrayContains: native.arrayContains, arrayContained: native.arrayContained, arrayOverlaps: native.arrayOverlaps, s: options.schema, a: createAlias(options.schema) }, createConditions(options.schema)), { columns: TableColumns, alias: alias$1,
@@ -1304,4 +1349,4 @@ function drizzleMsSql(options) {
         sqlNumber,
         sqlString,
         sqlBoolean }), connection), { query: (table) => new MsSqlQuery(table, connection.current) });
-}export{MsSqlQuery,TableColumns,avg,avgDistinct,coalesce,coalesceBoolean,coalesceNumber,coalesceString,createConditions,drizzleMsSql as default,drizzleMsSql,mssqlTable,sum,sumBoolean,sumDistinct,sumDistinctBoolean,sumDistinctNumber,sumDistinctString,sumNumber,sumString};
+}export{MsSqlQuery,TableColumns,avg,avgBoolean,avgDistinct,avgDistinctBoolean,avgDistinctNumber,avgDistinctString,avgNumber,avgString,coalesce,coalesceBoolean,coalesceNumber,coalesceString,createConditions,drizzleMsSql as default,drizzleMsSql,mssqlTable,sum,sumBoolean,sumDistinct,sumDistinctBoolean,sumDistinctNumber,sumDistinctString,sumNumber,sumString};

@@ -10,6 +10,12 @@ import {
   sumDistinctNumber,
   sumDistinctBoolean,
   sumDistinctString,
+  avgNumber,
+  avgBoolean,
+  avgString,
+  avgDistinctNumber,
+  avgDistinctBoolean,
+  avgDistinctString,
   sumNumber,
   sumBoolean,
   sumString,
@@ -95,6 +101,12 @@ test.each([
   ['sumNumber', sumNumber, Number],
   ['sumBoolean', sumBoolean, Boolean],
   ['sumString', sumString, String],
+  ['avgDistinctNumber', avgDistinctNumber, Number],
+  ['avgDistinctBoolean', avgDistinctBoolean, Boolean],
+  ['avgDistinctString', avgDistinctString, String],
+  ['avgNumber', avgNumber, Number],
+  ['avgBoolean', avgBoolean, Boolean],
+  ['avgString', avgString, String],
 ] as const)('%s는 자동 변환기를 모든 진입점에 적용한다', async (method, aggregate, decoder) => {
   const query = db.query(items);
   for (const value of ['12.5', '0', 0, 1, null]) {
@@ -115,7 +127,13 @@ test.each([
       const selected = database.select({ total: expression }).from(items);
       const expected = database
         .select({
-          total: (method.startsWith('sumDistinct') ? nativeSumDistinct : nativeSum)(items.id).mapWith(decoder),
+          total: (method.startsWith('avgDistinct')
+            ? nativeAvgDistinct
+            : method.startsWith('avg')
+              ? nativeAvg
+              : method.startsWith('sumDistinct')
+                ? nativeSumDistinct
+                : nativeSum)(items.id).mapWith(decoder),
         })
         .from(items);
       expect(selected.toSQL()).toEqual(expected.toSQL());

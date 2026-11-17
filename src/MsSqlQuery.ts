@@ -1,4 +1,4 @@
-import { sum, sumDistinct, type AggregateDecoder } from './aggregate';
+import { avg as aggregateAvg, avgDistinct as aggregateAvgDistinct, sum, sumDistinct, type AggregateDecoder } from './aggregate';
 import { coalesce, type CoalesceOutput, type CoalesceDecoder } from './coalesce';
 import {
   SQL,
@@ -216,6 +216,54 @@ export class MsSqlQuery<
 
   sumDistinctString(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL {
     return this.sumDistinct(columnOrName, String);
+  }
+
+  avgNumber(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<number | null>;
+
+  avgNumber<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
+
+  avgNumber(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL {
+    return aggregateAvg(typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName, Number);
+  }
+
+  avgBoolean(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<boolean | null>;
+
+  avgBoolean<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
+
+  avgBoolean(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL {
+    return aggregateAvg(typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName, Boolean);
+  }
+
+  avgString(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<string | null>;
+
+  avgString<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
+
+  avgString(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL {
+    return aggregateAvg(typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName, String);
+  }
+
+  avgDistinctNumber(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<number | null>;
+
+  avgDistinctNumber<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
+
+  avgDistinctNumber(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL {
+    return aggregateAvgDistinct(typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName, Number);
+  }
+
+  avgDistinctBoolean(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<boolean | null>;
+
+  avgDistinctBoolean<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
+
+  avgDistinctBoolean(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL {
+    return aggregateAvgDistinct(typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName, Boolean);
+  }
+
+  avgDistinctString(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<string | null>;
+
+  avgDistinctString<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
+
+  avgDistinctString(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL {
+    return aggregateAvgDistinct(typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName, String);
   }
 
   private readonly drizzle = { ...createConditions({}), sqlNumber: (value: number) => sql`${value}`.mapWith(Number) };
@@ -536,8 +584,11 @@ export class MsSqlQuery<
         where: (condition: unknown) =>
           originalWhere(
             typeof condition === 'function'
-              ? () => (condition as (query: SelectConditionQuery<MsSqlTable>) => unknown)(whereQuery)
-              : condition
+              ? () => {
+                  const resolved = (condition as (query: SelectConditionQuery<MsSqlTable>) => unknown)(whereQuery);
+                  return resolved === false ? undefined : resolved;
+                }
+              : condition === false ? undefined : condition
           ),
         top: (count: number) =>
           typeof selectBuilder.top === 'function' ? enhance(selectBuilder.top(count).from(table)) : query,
@@ -1361,7 +1412,7 @@ type SelectQueryBase<
 >;
 
 type TableWhere<TTable extends MsSqlTable | Subquery> =
-  SQL | undefined | ((query: SelectConditionQuery<TTable>) => SQL | undefined);
+  SQL | false | undefined | ((query: SelectConditionQuery<TTable>) => SQL | false | undefined);
 
 type OrderByValue = MsSqlColumn | SQL | SQL.Aliased;
 type OptionalOrderByValue = OrderByValue | false | undefined;
@@ -1399,7 +1450,8 @@ type SelectSetOperatorMethod<
 type DynamicSelect<
   TQuery extends { readonly _: { readonly selection: unknown }; $dynamic: (...args: any[]) => any },
   TTable extends MsSqlTable | Subquery,
-> = Omit<ReturnType<TQuery['$dynamic']>, 'groupBy' | 'orderBy' | 'having' | 'offset' | 'fetch' | '$dynamic'> & {
+> = Omit<ReturnType<TQuery['$dynamic']>, 'where' | 'groupBy' | 'orderBy' | 'having' | 'offset' | 'fetch' | '$dynamic'> & {
+  where(condition: TableWhere<TTable>): DynamicSelect<TQuery, TTable>;
   groupBy(builder: (aliases: TQuery['_']['selection']) => OrderByValue | OrderByValue[]): DynamicSelect<TQuery, TTable>;
   groupBy(...columns: OrderByValue[]): DynamicSelect<TQuery, TTable>;
   orderBy(builder: OrderByCallback<TTable>): DynamicSelect<TQuery, TTable>;

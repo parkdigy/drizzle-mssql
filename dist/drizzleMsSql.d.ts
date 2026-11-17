@@ -3,7 +3,7 @@ import { coalesce, coalesceNumber, coalesceString, coalesceBoolean } from './coa
 import mssql, { type config as MsSqlConfig } from 'mssql';
 import { SQL, sql, type Subquery } from 'drizzle-orm';
 import { alias, type MsSqlTable } from 'drizzle-orm/mssql-core';
-import { sum, sumDistinct, avg, avgDistinct, sumNumber, sumBoolean, sumString, sumDistinctNumber, sumDistinctBoolean, sumDistinctString } from './aggregate.js';
+import { sum, sumDistinct, avg, avgDistinct, sumNumber, sumBoolean, sumString, sumDistinctNumber, sumDistinctBoolean, sumDistinctString, avgNumber, avgBoolean, avgString, avgDistinctNumber, avgDistinctBoolean, avgDistinctString } from './aggregate.js';
 import * as native from 'drizzle-orm';
 import { type MsSqlAliases } from './alias.js';
 import { type MsSqlSchemaConditions } from './conditions.js';
@@ -60,6 +60,12 @@ type MsSqlNativeHelpers = Omit<Pick<typeof native, 'count' | 'countDistinct' | '
     sumDistinctNumber: typeof sumDistinctNumber;
     sumDistinctBoolean: typeof sumDistinctBoolean;
     sumDistinctString: typeof sumDistinctString;
+    avgNumber: typeof avgNumber;
+    avgBoolean: typeof avgBoolean;
+    avgString: typeof avgString;
+    avgDistinctNumber: typeof avgDistinctNumber;
+    avgDistinctBoolean: typeof avgDistinctBoolean;
+    avgDistinctString: typeof avgDistinctString;
     sumNumber: typeof sumNumber;
     sumBoolean: typeof sumBoolean;
     sumString: typeof sumString;

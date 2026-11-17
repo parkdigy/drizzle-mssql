@@ -50,6 +50,18 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AD extends MsSqlAddDa
     sumDistinctBoolean<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
     sumDistinctString(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<string | null>;
     sumDistinctString<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
+    avgNumber(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<number | null>;
+    avgNumber<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
+    avgBoolean(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<boolean | null>;
+    avgBoolean<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
+    avgString(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<string | null>;
+    avgString<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
+    avgDistinctNumber(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<number | null>;
+    avgDistinctNumber<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
+    avgDistinctBoolean(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<boolean | null>;
+    avgDistinctBoolean<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
+    avgDistinctString(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<string | null>;
+    avgDistinctString<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
     private readonly drizzle;
     /********************************************************************************************************************
      * alias
@@ -296,7 +308,7 @@ type AliasedSelection<T extends FieldSet> = {
     [K in keyof T]: T[K] extends SQL<infer D> ? SQL.Aliased<D> : T[K];
 };
 type SelectQueryBase<TTable extends MsSqlTable | Subquery, TSelection extends FieldSet | undefined, TBranch extends 'from' | 'top'> = MsSqlSelectBase<GetSelectTableName<TTable>, TSelection extends undefined ? SourceSelection<TTable> : AliasedSelection<NonNullable<TSelection>>, 'partial', NodeMsSqlPreparedQueryHKT, TBranch>;
-type TableWhere<TTable extends MsSqlTable | Subquery> = SQL | undefined | ((query: SelectConditionQuery<TTable>) => SQL | undefined);
+type TableWhere<TTable extends MsSqlTable | Subquery> = SQL | false | undefined | ((query: SelectConditionQuery<TTable>) => SQL | false | undefined);
 type OrderByValue = MsSqlColumn | SQL | SQL.Aliased;
 type OptionalOrderByValue = OrderByValue | false | undefined;
 type OrderByInput = OptionalOrderByValue | readonly OptionalOrderByValue[];
@@ -323,7 +335,8 @@ type DynamicSelect<TQuery extends {
         readonly selection: unknown;
     };
     $dynamic: (...args: any[]) => any;
-}, TTable extends MsSqlTable | Subquery> = Omit<ReturnType<TQuery['$dynamic']>, 'groupBy' | 'orderBy' | 'having' | 'offset' | 'fetch' | '$dynamic'> & {
+}, TTable extends MsSqlTable | Subquery> = Omit<ReturnType<TQuery['$dynamic']>, 'where' | 'groupBy' | 'orderBy' | 'having' | 'offset' | 'fetch' | '$dynamic'> & {
+    where(condition: TableWhere<TTable>): DynamicSelect<TQuery, TTable>;
     groupBy(builder: (aliases: TQuery['_']['selection']) => OrderByValue | OrderByValue[]): DynamicSelect<TQuery, TTable>;
     groupBy(...columns: OrderByValue[]): DynamicSelect<TQuery, TTable>;
     orderBy(builder: OrderByCallback<TTable>): DynamicSelect<TQuery, TTable>;

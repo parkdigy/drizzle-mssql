@@ -670,3 +670,63 @@ test('MSSQL 조건 API에서 ILIKE 계열을 제공하지 않는다', () => {
     );
   }
 });
+
+test.each([false, undefined] as const)('where는 직접 인자와 콜백의 %s를 제외한다', (value) => {
+  const expected = usersQuery.select().toSQL();
+  expect(usersQuery.select().where(value).toSQL()).toEqual(expected);
+  let calls = 0;
+  expect(
+    usersQuery
+      .select()
+      .where((q) => {
+        calls++;
+        expect(q.t).toBe(users);
+        return value;
+      })
+      .toSQL()
+  ).toEqual(expected);
+  expect(calls).toBe(1);
+  expect(
+    usersQuery
+      .select()
+      .top(1)
+      .where(() => value)
+      .toSQL().sql
+  ).not.toMatch(/where/i);
+  expect(
+    usersQuery
+      .select()
+      .$dynamic()
+      .where((q) => q.eq({ id: 1 }))
+      .where(value)
+      .toSQL()
+  ).toEqual(expected);
+  const joined = createAlias({ users }).users('joined_where');
+  expect(
+    usersQuery
+      .select()
+      .innerJoin(joined, drizzleEq(joined.id, users.id))
+      .where(() => value)
+      .toSQL().sql
+  ).not.toMatch(/\bwhere\b/i);
+});
+
+test.each([false, true])('where의 조건부 SQL은 활성화 여부(%s)를 유지한다', (enabled) => {
+  const condition = usersQuery.eq({ id: 1 });
+  const expected = usersQuery
+    .select()
+    .where(enabled ? condition : undefined)
+    .toSQL();
+  expect(
+    usersQuery
+      .select()
+      .where(enabled && condition)
+      .toSQL()
+  ).toEqual(expected);
+  expect(
+    usersQuery
+      .select()
+      .where((q) => enabled && q.eq({ id: 1 }))
+      .toSQL()
+  ).toEqual(expected);
+});

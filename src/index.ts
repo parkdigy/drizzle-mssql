@@ -6,7 +6,7 @@ export * from './@types/index';
 export * from './columns';
 export * from './conditions';
 export { coalesce, coalesceNumber, coalesceString, coalesceBoolean } from './coalesce';
-export { sum, sumDistinct, avg, avgDistinct, sumNumber, sumBoolean, sumString, sumDistinctNumber, sumDistinctBoolean, sumDistinctString } from './aggregate';
+export { sum, sumDistinct, avg, avgDistinct, sumNumber, sumBoolean, sumString, sumDistinctNumber, sumDistinctBoolean, sumDistinctString, avgNumber, avgBoolean, avgString, avgDistinctNumber, avgDistinctBoolean, avgDistinctString } from './aggregate';
 export * from './drizzleMsSql';
 export * from './MsSqlQuery';
 export { mssqlTable, type TablePolicy } from './mssqlTable';

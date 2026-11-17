@@ -108,6 +108,8 @@ const missing = await user.notExistsByPrimaryKey(id);
 
 `select`는 Drizzle 조회 빌더를 반환하므로 `where`, `orderBy`, `offset`, `fetch` 등 Drizzle의 빌더 메서드를 이어서 사용할 수 있습니다. `find`는 한 행을 조회하며, 결과가 없으면 `undefined`를 반환합니다.
 
+`where`의 직접 인자 또는 콜백 반환값이 `false`·`undefined`이면 해당 WHERE 조건을 생략합니다. 예를 들어 `.where(q => !!name && q.eq({ name }))`처럼 조건부 조회에 사용할 수 있습니다. 이 규칙은 `select()` 조회 빌더에 적용됩니다.
+
 ```ts
 const rows = await user
   .select(['id', 'name'])
@@ -544,6 +546,19 @@ sumDistinctNumber<number>(user.t.id);
 db.sumDistinctBoolean<boolean>(user.t.id);
 user.sumDistinctString<string | null>('id');
 ```
+
+평균 집계에도 `avgNumber`, `avgBoolean`, `avgString`, `avgDistinctNumber`, `avgDistinctBoolean`, `avgDistinctString`을 사용할 수 있습니다. 각각 `AVG` 또는 `AVG(DISTINCT ...)`에 `Number`, `Boolean`, `String` 변환을 적용합니다. 기본 결과 타입은 각각 `number | null`, `boolean | null`, `string | null`이며 타입 인자를 지정하면 명시한 타입을 그대로 사용합니다. 명시적 타입은 런타임 검증을 추가하지 않으며, 변환기는 그대로 적용됩니다. `Boolean` 변환은 문자열 `'0'`도 `true`로 처리합니다.
+
+```ts
+avgNumber<number>(user.t.id);
+db.avgBoolean<boolean>(user.t.id);
+user.avgString<string>('id');
+user.avgDistinctNumber<number | null>('id');
+db.avgDistinctBoolean<boolean>(user.t.id);
+avgDistinctString<string>(user.t.id);
+```
+
+직접 import와 `db` 메서드는 컬럼·SQL 표현식을 받고, 쿼리 메서드는 컬럼명도 받을 수 있습니다.
 
 `db.coalesce(expression, fallback)`는 SQL `COALESCE` 표현식을 만듭니다. 쿼리의 `coalesce(columnName, fallback)`에서는 첫 인자의 컬럼명을 해당 테이블의 컬럼으로 해석합니다. 첫 인자로 컬럼 객체나 SQL 표현식도 전달할 수 있습니다. 기본 문자열·숫자는 바인딩 파라미터로 전달하며, 두 피연산자는 SQL Server에서 호환되는 타입이어야 합니다.
 
