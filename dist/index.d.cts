@@ -7,7 +7,7 @@ export { coalesce, coalesceNumber, coalesceString, coalesceBoolean } from './coa
 export { sum, sumDistinct, avg, avgDistinct, sumNumber, sumBoolean, sumString, sumDistinctNumber, sumDistinctBoolean, sumDistinctString, avgNumber, avgBoolean, avgString, avgDistinctNumber, avgDistinctBoolean, avgDistinctString, min, max } from './aggregate.cjs';
 export * from './drizzleMsSql.cjs';
 export * from './MsSqlQuery.cjs';
-export { mssqlTable, type TablePolicy } from './mssqlTable.cjs';
+export { mssqlTable, primaryKey, type TablePolicy } from './mssqlTable.cjs';
 export { asc, desc, count, countDistinct, not, exists, notExists, type InferColumnsDataTypes, } from 'drizzle-orm';
-export { mssqlTableCreator, mssqlSchema, mssqlView, bigint, binary, bit, char, nchar, customType, date, datetime, datetime2, datetimeoffset, decimal, numeric, float, int, real, smallint, text, ntext, time, tinyint, varbinary, varchar, nvarchar, check, foreignKey, index, primaryKey, unique, uniqueIndex, } from 'drizzle-orm/mssql-core';
+export { mssqlTableCreator, mssqlSchema, mssqlView, bigint, binary, bit, char, nchar, customType, date, datetime, datetime2, datetimeoffset, decimal, numeric, float, int, real, smallint, text, ntext, time, tinyint, varbinary, varchar, nvarchar, check, foreignKey, index, unique, uniqueIndex, } from 'drizzle-orm/mssql-core';
 export type { MsSqlAliases } from './alias.cjs';

@@ -338,7 +338,10 @@ function max(expression) {
             throw new Error('columns: expected a column object.');
         return [column.name, column];
     }));
-}const policies = new WeakMap();
+}function primaryKey(config) {
+    return mssqlCore.primaryKey({ name: config.name, columns: [...config.columns] });
+}
+const policies = new WeakMap();
 for (const [method, policy] of Object.entries({
     insertBlocked: { insert: 'blocked' },
     insertAllowed: { insert: 'allowed' },
@@ -667,7 +670,9 @@ class MsSqlQuery {
                         const resolved = condition(whereQuery);
                         return resolved === false ? undefined : resolved;
                     }
-                    : condition === false ? undefined : condition),
+                    : condition === false
+                        ? undefined
+                        : condition),
                 top: (count) => typeof selectBuilder.top === 'function' ? enhance(selectBuilder.top(count).from(table)) : query,
             };
             if (originalOrderBy) {
@@ -886,30 +891,31 @@ class MsSqlQuery {
      * ******************************************************************************************************************/
     async executeInsert(value) {
         const tx = this.getTx();
-        const autoIncrementColumn = mssqlCore.getTableConfig(this.t).columns.find((column) => 'identity' in column && column.identity !== undefined);
-        const hasAutoIncrement = !!autoIncrementColumn;
-        const autoIncrementKey = autoIncrementColumn &&
-            Object.keys(native.getTableColumns(this.t)).find((key) => native.getTableColumns(this.t)[key] === autoIncrementColumn);
-        if (hasAutoIncrement) {
-            if (Array.isArray(value)) {
-                const addedItems = (await tx.insert(this.t).output().values(value));
-                return addedItems.map((item) => item[autoIncrementKey]);
-            }
-            else {
-                const [item] = (await tx.insert(this.t).output().values(value));
-                return item[autoIncrementKey];
-            }
+        const keys = this.insertPrimaryKeys();
+        if (keys.length === 0) {
+            await tx.insert(this.t).values(value);
+            return (Array.isArray(value) ? value.map(() => undefined) : undefined);
         }
-        else {
-            if (Array.isArray(value)) {
-                await tx.insert(this.t).values(value);
-                return Array(value.length).fill(undefined);
-            }
-            else {
-                await tx.insert(this.t).values(value);
-                return undefined;
-            }
-        }
+        const rows = (await tx
+            .insert(this.t)
+            .output()
+            .values(value));
+        const results = rows.map((row) => this.insertPrimaryResult(row, keys));
+        return Array.isArray(value) ? results : results[0];
+    }
+    insertPrimaryKeys() {
+        const table = this.t;
+        const config = mssqlCore.getTableConfig(table);
+        const primary = new Set(config.columns.filter((column) => column.primary));
+        for (const key of config.primaryKeys)
+            for (const column of key.columns)
+                primary.add(column);
+        return Object.entries(native.getTableColumns(table))
+            .filter(([, column]) => primary.has(column))
+            .map(([name]) => name);
+    }
+    insertPrimaryResult(row, keys) {
+        return (keys.length === 1 ? row[keys[0]] : Object.fromEntries(keys.map((key) => [key, row[key]])));
     }
     addData(values) {
         return values;
@@ -953,16 +959,12 @@ class MsSqlQuery {
                 .select(fields)
                 .from(source);
         }
-        const autoIncrementColumn = mssqlCore.getTableConfig(this.t).columns.find((column) => 'identity' in column && column.identity !== undefined);
+        const keys = this.insertPrimaryKeys();
         const rows = (await this.getTx()
             .insert(this.t)
             .output()
             .select(selectQuery));
-        if (!autoIncrementColumn)
-            return rows.map(() => undefined);
-        const columns = native.getTableColumns(this.t);
-        const autoIncrementKey = Object.keys(columns).find((key) => columns[key] === autoIncrementColumn);
-        return rows.map((row) => row[autoIncrementKey]);
+        return rows.map((row) => (keys.length ? this.insertPrimaryResult(row, keys) : undefined));
     }
     /********************************************************************************************************************
      * edit
@@ -1359,4 +1361,4 @@ function drizzleMsSql(options) {
         sqlNumber,
         sqlString,
         sqlBoolean }), connection), { query: (table) => new MsSqlQuery(table, connection.current) });
-}Object.defineProperty(exports,"asc",{enumerable:true,get:function(){return native.asc}});Object.defineProperty(exports,"count",{enumerable:true,get:function(){return native.count}});Object.defineProperty(exports,"countDistinct",{enumerable:true,get:function(){return native.countDistinct}});Object.defineProperty(exports,"desc",{enumerable:true,get:function(){return native.desc}});Object.defineProperty(exports,"exists",{enumerable:true,get:function(){return native.exists}});Object.defineProperty(exports,"not",{enumerable:true,get:function(){return native.not}});Object.defineProperty(exports,"notExists",{enumerable:true,get:function(){return native.notExists}});Object.defineProperty(exports,"bigint",{enumerable:true,get:function(){return mssqlCore.bigint}});Object.defineProperty(exports,"binary",{enumerable:true,get:function(){return mssqlCore.binary}});Object.defineProperty(exports,"bit",{enumerable:true,get:function(){return mssqlCore.bit}});Object.defineProperty(exports,"char",{enumerable:true,get:function(){return mssqlCore.char}});Object.defineProperty(exports,"check",{enumerable:true,get:function(){return mssqlCore.check}});Object.defineProperty(exports,"customType",{enumerable:true,get:function(){return mssqlCore.customType}});Object.defineProperty(exports,"date",{enumerable:true,get:function(){return mssqlCore.date}});Object.defineProperty(exports,"datetime",{enumerable:true,get:function(){return mssqlCore.datetime}});Object.defineProperty(exports,"datetime2",{enumerable:true,get:function(){return mssqlCore.datetime2}});Object.defineProperty(exports,"datetimeoffset",{enumerable:true,get:function(){return mssqlCore.datetimeoffset}});Object.defineProperty(exports,"decimal",{enumerable:true,get:function(){return mssqlCore.decimal}});Object.defineProperty(exports,"float",{enumerable:true,get:function(){return mssqlCore.float}});Object.defineProperty(exports,"foreignKey",{enumerable:true,get:function(){return mssqlCore.foreignKey}});Object.defineProperty(exports,"index",{enumerable:true,get:function(){return mssqlCore.index}});Object.defineProperty(exports,"int",{enumerable:true,get:function(){return mssqlCore.int}});Object.defineProperty(exports,"mssqlSchema",{enumerable:true,get:function(){return mssqlCore.mssqlSchema}});Object.defineProperty(exports,"mssqlTableCreator",{enumerable:true,get:function(){return mssqlCore.mssqlTableCreator}});Object.defineProperty(exports,"mssqlView",{enumerable:true,get:function(){return mssqlCore.mssqlView}});Object.defineProperty(exports,"nchar",{enumerable:true,get:function(){return mssqlCore.nchar}});Object.defineProperty(exports,"ntext",{enumerable:true,get:function(){return mssqlCore.ntext}});Object.defineProperty(exports,"numeric",{enumerable:true,get:function(){return mssqlCore.numeric}});Object.defineProperty(exports,"nvarchar",{enumerable:true,get:function(){return mssqlCore.nvarchar}});Object.defineProperty(exports,"primaryKey",{enumerable:true,get:function(){return mssqlCore.primaryKey}});Object.defineProperty(exports,"real",{enumerable:true,get:function(){return mssqlCore.real}});Object.defineProperty(exports,"smallint",{enumerable:true,get:function(){return mssqlCore.smallint}});Object.defineProperty(exports,"text",{enumerable:true,get:function(){return mssqlCore.text}});Object.defineProperty(exports,"time",{enumerable:true,get:function(){return mssqlCore.time}});Object.defineProperty(exports,"tinyint",{enumerable:true,get:function(){return mssqlCore.tinyint}});Object.defineProperty(exports,"unique",{enumerable:true,get:function(){return mssqlCore.unique}});Object.defineProperty(exports,"uniqueIndex",{enumerable:true,get:function(){return mssqlCore.uniqueIndex}});Object.defineProperty(exports,"varbinary",{enumerable:true,get:function(){return mssqlCore.varbinary}});Object.defineProperty(exports,"varchar",{enumerable:true,get:function(){return mssqlCore.varchar}});exports.MsSqlQuery=MsSqlQuery;exports.TableColumns=TableColumns;exports.avg=avg;exports.avgBoolean=avgBoolean;exports.avgDistinct=avgDistinct;exports.avgDistinctBoolean=avgDistinctBoolean;exports.avgDistinctNumber=avgDistinctNumber;exports.avgDistinctString=avgDistinctString;exports.avgNumber=avgNumber;exports.avgString=avgString;exports.coalesce=coalesce;exports.coalesceBoolean=coalesceBoolean;exports.coalesceNumber=coalesceNumber;exports.coalesceString=coalesceString;exports.createConditions=createConditions;exports.default=drizzleMsSql;exports.drizzleMsSql=drizzleMsSql;exports.max=max;exports.min=min;exports.mssqlTable=mssqlTable;exports.sum=sum;exports.sumBoolean=sumBoolean;exports.sumDistinct=sumDistinct;exports.sumDistinctBoolean=sumDistinctBoolean;exports.sumDistinctNumber=sumDistinctNumber;exports.sumDistinctString=sumDistinctString;exports.sumNumber=sumNumber;exports.sumString=sumString;
+}Object.defineProperty(exports,"asc",{enumerable:true,get:function(){return native.asc}});Object.defineProperty(exports,"count",{enumerable:true,get:function(){return native.count}});Object.defineProperty(exports,"countDistinct",{enumerable:true,get:function(){return native.countDistinct}});Object.defineProperty(exports,"desc",{enumerable:true,get:function(){return native.desc}});Object.defineProperty(exports,"exists",{enumerable:true,get:function(){return native.exists}});Object.defineProperty(exports,"not",{enumerable:true,get:function(){return native.not}});Object.defineProperty(exports,"notExists",{enumerable:true,get:function(){return native.notExists}});Object.defineProperty(exports,"bigint",{enumerable:true,get:function(){return mssqlCore.bigint}});Object.defineProperty(exports,"binary",{enumerable:true,get:function(){return mssqlCore.binary}});Object.defineProperty(exports,"bit",{enumerable:true,get:function(){return mssqlCore.bit}});Object.defineProperty(exports,"char",{enumerable:true,get:function(){return mssqlCore.char}});Object.defineProperty(exports,"check",{enumerable:true,get:function(){return mssqlCore.check}});Object.defineProperty(exports,"customType",{enumerable:true,get:function(){return mssqlCore.customType}});Object.defineProperty(exports,"date",{enumerable:true,get:function(){return mssqlCore.date}});Object.defineProperty(exports,"datetime",{enumerable:true,get:function(){return mssqlCore.datetime}});Object.defineProperty(exports,"datetime2",{enumerable:true,get:function(){return mssqlCore.datetime2}});Object.defineProperty(exports,"datetimeoffset",{enumerable:true,get:function(){return mssqlCore.datetimeoffset}});Object.defineProperty(exports,"decimal",{enumerable:true,get:function(){return mssqlCore.decimal}});Object.defineProperty(exports,"float",{enumerable:true,get:function(){return mssqlCore.float}});Object.defineProperty(exports,"foreignKey",{enumerable:true,get:function(){return mssqlCore.foreignKey}});Object.defineProperty(exports,"index",{enumerable:true,get:function(){return mssqlCore.index}});Object.defineProperty(exports,"int",{enumerable:true,get:function(){return mssqlCore.int}});Object.defineProperty(exports,"mssqlSchema",{enumerable:true,get:function(){return mssqlCore.mssqlSchema}});Object.defineProperty(exports,"mssqlTableCreator",{enumerable:true,get:function(){return mssqlCore.mssqlTableCreator}});Object.defineProperty(exports,"mssqlView",{enumerable:true,get:function(){return mssqlCore.mssqlView}});Object.defineProperty(exports,"nchar",{enumerable:true,get:function(){return mssqlCore.nchar}});Object.defineProperty(exports,"ntext",{enumerable:true,get:function(){return mssqlCore.ntext}});Object.defineProperty(exports,"numeric",{enumerable:true,get:function(){return mssqlCore.numeric}});Object.defineProperty(exports,"nvarchar",{enumerable:true,get:function(){return mssqlCore.nvarchar}});Object.defineProperty(exports,"real",{enumerable:true,get:function(){return mssqlCore.real}});Object.defineProperty(exports,"smallint",{enumerable:true,get:function(){return mssqlCore.smallint}});Object.defineProperty(exports,"text",{enumerable:true,get:function(){return mssqlCore.text}});Object.defineProperty(exports,"time",{enumerable:true,get:function(){return mssqlCore.time}});Object.defineProperty(exports,"tinyint",{enumerable:true,get:function(){return mssqlCore.tinyint}});Object.defineProperty(exports,"unique",{enumerable:true,get:function(){return mssqlCore.unique}});Object.defineProperty(exports,"uniqueIndex",{enumerable:true,get:function(){return mssqlCore.uniqueIndex}});Object.defineProperty(exports,"varbinary",{enumerable:true,get:function(){return mssqlCore.varbinary}});Object.defineProperty(exports,"varchar",{enumerable:true,get:function(){return mssqlCore.varchar}});exports.MsSqlQuery=MsSqlQuery;exports.TableColumns=TableColumns;exports.avg=avg;exports.avgBoolean=avgBoolean;exports.avgDistinct=avgDistinct;exports.avgDistinctBoolean=avgDistinctBoolean;exports.avgDistinctNumber=avgDistinctNumber;exports.avgDistinctString=avgDistinctString;exports.avgNumber=avgNumber;exports.avgString=avgString;exports.coalesce=coalesce;exports.coalesceBoolean=coalesceBoolean;exports.coalesceNumber=coalesceNumber;exports.coalesceString=coalesceString;exports.createConditions=createConditions;exports.default=drizzleMsSql;exports.drizzleMsSql=drizzleMsSql;exports.max=max;exports.min=min;exports.mssqlTable=mssqlTable;exports.primaryKey=primaryKey;exports.sum=sum;exports.sumBoolean=sumBoolean;exports.sumDistinct=sumDistinct;exports.sumDistinctBoolean=sumDistinctBoolean;exports.sumDistinctNumber=sumDistinctNumber;exports.sumDistinctString=sumDistinctString;exports.sumNumber=sumNumber;exports.sumString=sumString;

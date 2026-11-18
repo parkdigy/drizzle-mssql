@@ -1,4 +1,4 @@
-import*as native from'drizzle-orm';import {sql,is,SQL,avg as avg$1,avgDistinct as avgDistinct$1,max as max$1,min as min$1,sum as sum$1,sumDistinct as sumDistinct$1,isTable,Subquery,getTableColumns,asc as asc$1,desc as desc$1,eq,and,count,or,defineRelations}from'drizzle-orm';export{asc,count,countDistinct,desc,exists,not,notExists}from'drizzle-orm';import {getMsSqlConnectionParams,drizzle}from'drizzle-orm/node-mssql';import mssql from'mssql';import {MsSqlTable,mssqlTable as mssqlTable$1,getTableConfig,MsSqlSelectBase,MsSqlColumn,alias as alias$1}from'drizzle-orm/mssql-core';export{bigint,binary,bit,char,check,customType,date,datetime,datetime2,datetimeoffset,decimal,float,foreignKey,index,int,mssqlSchema,mssqlTableCreator,mssqlView,nchar,ntext,numeric,nvarchar,primaryKey,real,smallint,text,time,tinyint,unique,uniqueIndex,varbinary,varchar}from'drizzle-orm/mssql-core';import {AsyncLocalStorage}from'node:async_hooks';import {alias}from'drizzle-orm/mssql-core/alias';import {MsSqlColumnBuilder}from'drizzle-orm/mssql-core/columns/common';/******************************************************************************
+import*as native from'drizzle-orm';import {sql,is,SQL,avg as avg$1,avgDistinct as avgDistinct$1,max as max$1,min as min$1,sum as sum$1,sumDistinct as sumDistinct$1,isTable,Subquery,getTableColumns,asc as asc$1,desc as desc$1,eq,and,count,or,defineRelations}from'drizzle-orm';export{asc,count,countDistinct,desc,exists,not,notExists}from'drizzle-orm';import {getMsSqlConnectionParams,drizzle}from'drizzle-orm/node-mssql';import mssql from'mssql';import {MsSqlTable,mssqlTable as mssqlTable$1,primaryKey as primaryKey$1,getTableConfig,MsSqlSelectBase,MsSqlColumn,alias as alias$1}from'drizzle-orm/mssql-core';export{bigint,binary,bit,char,check,customType,date,datetime,datetime2,datetimeoffset,decimal,float,foreignKey,index,int,mssqlSchema,mssqlTableCreator,mssqlView,nchar,ntext,numeric,nvarchar,real,smallint,text,time,tinyint,unique,uniqueIndex,varbinary,varchar}from'drizzle-orm/mssql-core';import {AsyncLocalStorage}from'node:async_hooks';import {alias}from'drizzle-orm/mssql-core/alias';import {MsSqlColumnBuilder}from'drizzle-orm/mssql-core/columns/common';/******************************************************************************
 Copyright (c) Microsoft Corporation.
 
 Permission to use, copy, modify, and/or distribute this software for any
@@ -338,7 +338,10 @@ function max(expression) {
             throw new Error('columns: expected a column object.');
         return [column.name, column];
     }));
-}const policies = new WeakMap();
+}function primaryKey(config) {
+    return primaryKey$1({ name: config.name, columns: [...config.columns] });
+}
+const policies = new WeakMap();
 for (const [method, policy] of Object.entries({
     insertBlocked: { insert: 'blocked' },
     insertAllowed: { insert: 'allowed' },
@@ -667,7 +670,9 @@ class MsSqlQuery {
                         const resolved = condition(whereQuery);
                         return resolved === false ? undefined : resolved;
                     }
-                    : condition === false ? undefined : condition),
+                    : condition === false
+                        ? undefined
+                        : condition),
                 top: (count) => typeof selectBuilder.top === 'function' ? enhance(selectBuilder.top(count).from(table)) : query,
             };
             if (originalOrderBy) {
@@ -886,30 +891,31 @@ class MsSqlQuery {
      * ******************************************************************************************************************/
     async executeInsert(value) {
         const tx = this.getTx();
-        const autoIncrementColumn = getTableConfig(this.t).columns.find((column) => 'identity' in column && column.identity !== undefined);
-        const hasAutoIncrement = !!autoIncrementColumn;
-        const autoIncrementKey = autoIncrementColumn &&
-            Object.keys(getTableColumns(this.t)).find((key) => getTableColumns(this.t)[key] === autoIncrementColumn);
-        if (hasAutoIncrement) {
-            if (Array.isArray(value)) {
-                const addedItems = (await tx.insert(this.t).output().values(value));
-                return addedItems.map((item) => item[autoIncrementKey]);
-            }
-            else {
-                const [item] = (await tx.insert(this.t).output().values(value));
-                return item[autoIncrementKey];
-            }
+        const keys = this.insertPrimaryKeys();
+        if (keys.length === 0) {
+            await tx.insert(this.t).values(value);
+            return (Array.isArray(value) ? value.map(() => undefined) : undefined);
         }
-        else {
-            if (Array.isArray(value)) {
-                await tx.insert(this.t).values(value);
-                return Array(value.length).fill(undefined);
-            }
-            else {
-                await tx.insert(this.t).values(value);
-                return undefined;
-            }
-        }
+        const rows = (await tx
+            .insert(this.t)
+            .output()
+            .values(value));
+        const results = rows.map((row) => this.insertPrimaryResult(row, keys));
+        return Array.isArray(value) ? results : results[0];
+    }
+    insertPrimaryKeys() {
+        const table = this.t;
+        const config = getTableConfig(table);
+        const primary = new Set(config.columns.filter((column) => column.primary));
+        for (const key of config.primaryKeys)
+            for (const column of key.columns)
+                primary.add(column);
+        return Object.entries(getTableColumns(table))
+            .filter(([, column]) => primary.has(column))
+            .map(([name]) => name);
+    }
+    insertPrimaryResult(row, keys) {
+        return (keys.length === 1 ? row[keys[0]] : Object.fromEntries(keys.map((key) => [key, row[key]])));
     }
     addData(values) {
         return values;
@@ -953,16 +959,12 @@ class MsSqlQuery {
                 .select(fields)
                 .from(source);
         }
-        const autoIncrementColumn = getTableConfig(this.t).columns.find((column) => 'identity' in column && column.identity !== undefined);
+        const keys = this.insertPrimaryKeys();
         const rows = (await this.getTx()
             .insert(this.t)
             .output()
             .select(selectQuery));
-        if (!autoIncrementColumn)
-            return rows.map(() => undefined);
-        const columns = getTableColumns(this.t);
-        const autoIncrementKey = Object.keys(columns).find((key) => columns[key] === autoIncrementColumn);
-        return rows.map((row) => row[autoIncrementKey]);
+        return rows.map((row) => (keys.length ? this.insertPrimaryResult(row, keys) : undefined));
     }
     /********************************************************************************************************************
      * edit
@@ -1359,4 +1361,4 @@ function drizzleMsSql(options) {
         sqlNumber,
         sqlString,
         sqlBoolean }), connection), { query: (table) => new MsSqlQuery(table, connection.current) });
-}export{MsSqlQuery,TableColumns,avg,avgBoolean,avgDistinct,avgDistinctBoolean,avgDistinctNumber,avgDistinctString,avgNumber,avgString,coalesce,coalesceBoolean,coalesceNumber,coalesceString,createConditions,drizzleMsSql as default,drizzleMsSql,max,min,mssqlTable,sum,sumBoolean,sumDistinct,sumDistinctBoolean,sumDistinctNumber,sumDistinctString,sumNumber,sumString};
+}export{MsSqlQuery,TableColumns,avg,avgBoolean,avgDistinct,avgDistinctBoolean,avgDistinctNumber,avgDistinctString,avgNumber,avgString,coalesce,coalesceBoolean,coalesceNumber,coalesceString,createConditions,drizzleMsSql as default,drizzleMsSql,max,min,mssqlTable,primaryKey,sum,sumBoolean,sumDistinct,sumDistinctBoolean,sumDistinctNumber,sumDistinctString,sumNumber,sumString};

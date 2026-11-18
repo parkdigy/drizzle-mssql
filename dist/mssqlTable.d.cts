@@ -1,6 +1,6 @@
 import type { ColumnBuilderBase, ColumnBuilderBaseConfig, ColumnBuilderExtraConfig, ColumnType } from 'drizzle-orm/column-builder';
-import { type MsSqlTable, type MsSqlTableWithColumns } from 'drizzle-orm/mssql-core';
-import type { BuildColumns, BuildExtraConfigColumns } from 'drizzle-orm/column-builder';
+import { type AnyMsSqlColumn, type PrimaryKeyBuilder, type MsSqlTable, type MsSqlTableWithColumns } from 'drizzle-orm/mssql-core';
+import type { BuildColumns } from 'drizzle-orm/column-builder';
 import type { MsSqlColumnBuilders } from 'drizzle-orm/mssql-core/columns/all';
 import type { MsSqlTableExtraConfigValue } from 'drizzle-orm/mssql-core/table';
 export type ColumnPolicy = {
@@ -12,6 +12,25 @@ export type TablePolicy = {
     updateBlocked?: boolean;
     deleteBlocked?: boolean;
 };
+declare const primaryKeyColumnsType: unique symbol;
+declare const extraColumnKey: unique symbol;
+type KeyedColumns<N extends string, C extends Record<string, ColumnBuilderBase>> = {
+    [K in keyof C]: BuildColumns<N, C, 'mssql'>[K] & {
+        readonly [extraColumnKey]: K;
+    };
+};
+export declare function primaryKey<const C extends readonly [AnyMsSqlColumn, ...AnyMsSqlColumn[]]>(config: {
+    name?: string;
+    columns: C;
+}): PrimaryKeyBuilder & {
+    readonly [primaryKeyColumnsType]: C;
+};
+export type ExtraColumnKey<T> = T extends {
+    readonly [extraColumnKey]: infer K;
+} ? K : never;
+export type TablePrimaryKeyColumns<T> = T extends {
+    readonly [primaryKeyColumnsType]: infer C;
+} ? C : never;
 declare const tableMutationPolicyType: unique symbol;
 declare const policyType: unique symbol;
 declare const tablePolicyType: unique symbol;
@@ -54,7 +73,7 @@ export type TablePolicies<T> = T extends {
 export type TableMutationPolicy<T> = T extends {
     readonly [tableMutationPolicyType]: infer P;
 } ? P : {};
-type TableResult<N extends string, C extends Record<string, ColumnBuilderBase>, P extends TablePolicy> = MsSqlTableWithColumns<{
+type TableResult<N extends string, C extends Record<string, ColumnBuilderBase>, P extends TablePolicy, E> = MsSqlTableWithColumns<{
     name: N;
     schema: undefined;
     columns: BuildColumns<N, C, 'mssql'>;
@@ -63,9 +82,9 @@ type TableResult<N extends string, C extends Record<string, ColumnBuilderBase>, 
 }> & {
     readonly [tablePolicyType]: Policies<C>;
     readonly [tableMutationPolicyType]: P;
+    readonly [primaryKeyColumnsType]: TablePrimaryKeyColumns<E extends readonly unknown[] ? E[number] : never>;
 };
 export declare function getColumnPolicies(table: MsSqlTable): Record<string, ColumnPolicy>;
 export declare function getTablePolicy(table: MsSqlTable): TablePolicy;
-type ExtraConfig<N extends string, C extends Record<string, ColumnBuilderBase>> = (self: BuildExtraConfigColumns<N, C, 'mssql'>) => (MsSqlTableExtraConfigValue | MsSqlTableExtraConfigValue[])[];
-export declare function mssqlTable<N extends string, C extends Record<string, ColumnBuilderBase>, const P extends TablePolicy = {}, const Q extends TablePolicy = {}>(name: N, columns: C | ((types: MsSqlColumnBuilders) => C), extraConfigOrPolicy?: ExtraConfig<N, C> | (P & TablePolicy), policy?: Q & TablePolicy): TableResult<N, C, P & Q>;
+export declare function mssqlTable<N extends string, C extends Record<string, ColumnBuilderBase>, const P extends TablePolicy = {}, const Q extends TablePolicy = {}, const E extends (MsSqlTableExtraConfigValue | MsSqlTableExtraConfigValue[])[] = []>(name: N, columns: C | ((types: MsSqlColumnBuilders) => C), extraConfigOrPolicy?: ((self: KeyedColumns<N, C>) => E) | (P & TablePolicy), policy?: Q & TablePolicy): TableResult<N, C, P & Q, E>;
 export {};

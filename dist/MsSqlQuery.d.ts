@@ -9,7 +9,7 @@ import type { GetSelectTableName } from 'drizzle-orm/query-builders/select.types
 import type { AnyMsSqlSelectQueryBuilder, MsSqlSelectKind, MsSqlSelectHKT, GetMsSqlSetOperators, MsSqlJoin, MsSqlSetOperatorWithResult, SetOperatorRightSelect } from 'drizzle-orm/mssql-core/query-builders/select.types';
 import type { MsSqlViewBase } from 'drizzle-orm/mssql-core/view-base';
 import type { MsSqlColumnSelectionName, MsSqlSelectedNamedColumnUnion, MsSqlSelectedNamedColumns, MsSqlSelectedTableColumns, MsSqlAliasTable } from './columns.js';
-import { type TableMutationPolicy } from './mssqlTable.js';
+import { type TableMutationPolicy, type TablePrimaryKeyColumns, type ExtraColumnKey } from './mssqlTable.js';
 import type { MsSqlAddData, MsSqlEditData, MsSqlCompareValues, MsSqlColumnName, MsSqlArrayCompareValues, MsSqlRangeCompareValues, MsSqlPatternCompareValues, MsSqlNullConditionInput, MsSqlAndConditions, MsSqlOrConditions } from './@types/index.js';
 import type { NodeMsSqlDatabase, NodeMsSqlPreparedQueryHKT } from 'drizzle-orm/node-mssql';
 /********************************************************************************************************************
@@ -175,6 +175,8 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AD extends MsSqlAddDa
      * (PRIVATE) executeInsert
      * ******************************************************************************************************************/
     private executeInsert;
+    private insertPrimaryKeys;
+    private insertPrimaryResult;
     /********************************************************************************************************************
      * addData
      * ******************************************************************************************************************/
@@ -522,7 +524,7 @@ type PrimaryKeyNames<T extends MsSqlTable> = {
     [P in keyof T['_']['columns']]: T['_']['columns'][P]['_'] extends {
         isPrimaryKey: true;
     } ? P : never;
-}[keyof T['_']['columns']];
+}[keyof T['_']['columns']] | Extract<ExtraColumnKey<TablePrimaryKeyColumns<T> extends readonly (infer C)[] ? C : never>, keyof T['_']['columns']>;
 type PrimaryKeyObject<T extends MsSqlTable> = {
     [P in PrimaryKeyNames<T>]: T['_']['columns'][P]['_']['data'];
 };
@@ -530,13 +532,7 @@ type IsUnion<T, U = T> = T extends U ? ([U] extends [T] ? false : true) : never;
 type PrimaryKeyInput<T extends MsSqlTable> = [PrimaryKeyNames<T>] extends [never] ? Partial<{
     [P in keyof T['_']['columns']]: T['_']['columns'][P]['_']['data'];
 }> : IsUnion<PrimaryKeyNames<T>> extends true ? PrimaryKeyObject<T> : PrimaryKeyObject<T> | PrimaryKeyObject<T>[PrimaryKeyNames<T>];
-type AutoIncrementKeys<TTable extends MsSqlTable> = {
-    [P in keyof TTable['_']['columns']]: TTable['_']['columns'][P]['_'] extends {
-        generated: infer G;
-    } ? undefined extends G ? never : keyof G extends never ? P : never : never;
-}[keyof TTable['_']['columns']];
-type HasAutoIncrement<TTable extends MsSqlTable> = [AutoIncrementKeys<TTable>] extends [never] ? false : true;
-type AddResult<TTable extends MsSqlTable> = HasAutoIncrement<TTable> extends true ? TTable['_']['columns'][AutoIncrementKeys<TTable>]['_']['data'] : undefined;
+type AddResult<T extends MsSqlTable> = [PrimaryKeyNames<T>] extends [never] ? unknown : IsUnion<PrimaryKeyNames<T>> extends true ? PrimaryKeyObject<T> : PrimaryKeyObject<T>[PrimaryKeyNames<T>];
 type SourceSelection<T extends MsSqlTable | Subquery> = T extends MsSqlTable ? MsSqlSelectedTableColumns<T> : T extends Subquery ? T['_']['selectedFields'] : never;
 type SourceColumnName<T extends MsSqlTable | Subquery> = T extends MsSqlTable ? MsSqlColumnName<T> : keyof SourceSelection<T> & string;
 type SubqueryFieldsQuery<T extends Subquery> = {

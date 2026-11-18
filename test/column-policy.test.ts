@@ -54,7 +54,7 @@ if (false) {
   // @ts-expect-error bigint IDENTITY도 등록할 수 없다.
   const bigintInsert: MsSqlAddData<typeof identityCases> = { normal: 1, longId: BigInt(1) };
   const idResult: Promise<number> = new MsSqlQuery(table, () => raw).add({ name: 'name' });
-  const noIdResult: Promise<undefined> = new MsSqlQuery(noIdentity, () => raw).add({ name: 'name' });
+  const noIdResult: Promise<unknown> = new MsSqlQuery(noIdentity, () => raw).add({ name: 'name' });
   const allowedUpdate: MsSqlEditData<typeof allowedIdentity> = { id: 2 };
   const allowedSql: MsSqlEditData<typeof allowedIdentity> = { id: sql`2` };
   const allowedPlaceholder: MsSqlEditData<typeof allowedIdentity> = { id: placeholder('id') };

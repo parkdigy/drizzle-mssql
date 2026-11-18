@@ -9,7 +9,7 @@ export { coalesce, coalesceNumber, coalesceString, coalesceBoolean } from './coa
 export { sum, sumDistinct, avg, avgDistinct, sumNumber, sumBoolean, sumString, sumDistinctNumber, sumDistinctBoolean, sumDistinctString, avgNumber, avgBoolean, avgString, avgDistinctNumber, avgDistinctBoolean, avgDistinctString, min, max } from './aggregate';
 export * from './drizzleMsSql';
 export * from './MsSqlQuery';
-export { mssqlTable, type TablePolicy } from './mssqlTable';
+export { mssqlTable, primaryKey, type TablePolicy } from './mssqlTable';
 
 export {
   asc,
@@ -52,7 +52,6 @@ export {
   check,
   foreignKey,
   index,
-  primaryKey,
   unique,
   uniqueIndex,
 } from 'drizzle-orm/mssql-core';

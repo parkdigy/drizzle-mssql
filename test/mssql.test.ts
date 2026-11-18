@@ -359,15 +359,15 @@ test('IDENTITY 삽입은 OUTPUT 결과에서 생성된 키를 반환한다', asy
   expect(values).toHaveBeenCalledWith({ name: '홍길동' });
 });
 
-test('IDENTITY가 없는 삽입은 undefined를 반환한다', async () => {
-  const values = jest.fn().mockResolvedValue({});
-  const insert = jest.fn(() => ({ values }));
+test('복합 기본 키 삽입은 키 객체를 반환한다', async () => {
+  const values = jest.fn().mockResolvedValue([{ userId: 1, groupId: 2 }]);
+  const insert = jest.fn(() => ({ output: () => ({ values }) }));
   const query = new MsSqlQuery(
     memberships,
     () => ({ insert }) as unknown as typeof db,
     () => new Date()
   );
-  await expect(query.add({ userId: 1, groupId: 2 })).resolves.toBeUndefined();
+  await expect(query.add({ userId: 1, groupId: 2 })).resolves.toEqual({ userId: 1, groupId: 2 });
 });
 
 test('min과 max가 컬럼 객체와 속성명의 결과 타입 및 SQL을 유지한다', () => {
@@ -783,4 +783,17 @@ test('직접 비교 조건의 undefined 값을 생략한다', () => {
       .where(c.between(users.id, 1, 2))
       .toSQL().params
   ).toEqual([1, 2]);
+});
+
+test('컬럼 기본 키는 단일 값과 복합 객체를 반환한다', async () => {
+  const single = mssqlTable('single_key', { id: int().primaryKey() });
+  const composite = mssqlTable('composite_key', { id1: int().primaryKey(), id2: int().primaryKey() });
+  const values = jest.fn().mockResolvedValueOnce([{ id: 3 }]).mockResolvedValueOnce([{ id1: 1, id2: 2 }, { id1: 3, id2: 4 }]);
+  const insert = jest.fn(() => ({ output: () => ({ values }) }));
+  const one = new MsSqlQuery(single, () => ({ insert }) as unknown as typeof db);
+  const many = new MsSqlQuery(composite, () => ({ insert }) as unknown as typeof db);
+  const result: Promise<number> = one.add({ id: 3 });
+  const results: Promise<{ id1: number; id2: number }[]> = many.add([{ id1: 1, id2: 2 }, { id1: 3, id2: 4 }]);
+  await expect(result).resolves.toBe(3);
+  await expect(results).resolves.toEqual([{ id1: 1, id2: 2 }, { id1: 3, id2: 4 }]);
 });

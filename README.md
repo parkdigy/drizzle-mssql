@@ -76,7 +76,7 @@ const query = db.query(u);
 
 `user.addValues(...)`와 `user.editValues(...)`는 테이블의 입력 타입을 검사하고 전달한 값을 그대로 반환합니다. 실제 정책 검사와 시각 생성은 `add`와 `edit`에서 수행합니다.
 
-IDENTITY 컬럼이 있는 테이블에서 `add`는 `OUTPUT`으로 생성된 값을 반환합니다. 여러 행을 넣으면 값의 배열을 반환하고, IDENTITY 컬럼이 없으면 단일 행에는 `undefined`, 여러 행에는 `undefined` 배열을 반환합니다. 해당 INSERT 동작에 활성 트리거가 있는 테이블에서는 SQL Server가 결과를 직접 반환하는 `OUTPUT`을 허용하지 않습니다. 생성 키의 타입은 IDENTITY 컬럼의 타입을 따릅니다.
+`add`는 `OUTPUT`으로 삽입된 기본 키를 반환합니다. 단일 기본 키는 값으로, 복합 기본 키는 컬럼명을 키로 하는 객체로 반환합니다. 여러 행을 넣으면 결과 배열을 반환하며 기본 키가 없으면 `undefined`를 반환합니다. 활성 트리거가 있는 테이블에서는 SQL Server의 직접 `OUTPUT` 제약이 적용됩니다. 패키지에서 내보내는 `mssqlTable`과 `primaryKey`를 사용하면 테이블 수준 복합 기본 키의 반환 타입도 추론됩니다. Drizzle에서 직접 가져온 함수는 해당 타입 정보를 보존하지 않습니다.
 
 ```ts
 const id = (await user.add({ name: '홍길동', email: 'hong@example.com' })) as number;

@@ -1,4 +1,10 @@
-import { avg as aggregateAvg, avgDistinct as aggregateAvgDistinct, sum, sumDistinct, type AggregateDecoder } from './aggregate';
+import {
+  avg as aggregateAvg,
+  avgDistinct as aggregateAvgDistinct,
+  sum,
+  sumDistinct,
+  type AggregateDecoder,
+} from './aggregate';
 import { coalesce, type CoalesceOutput, type CoalesceDecoder } from './coalesce';
 import {
   SQL,
@@ -48,7 +54,13 @@ import type {
   MsSqlAliasTable,
 } from './columns';
 import { TableColumns } from './columns';
-import { getColumnPolicies, getTablePolicy, type TableMutationPolicy } from './mssqlTable';
+import {
+  getColumnPolicies,
+  getTablePolicy,
+  type TableMutationPolicy,
+  type TablePrimaryKeyColumns,
+  type ExtraColumnKey,
+} from './mssqlTable';
 import type { MsSqlInsertValue } from 'drizzle-orm/mssql-core/query-builders/insert';
 import type {
   MsSqlAddData,
@@ -88,17 +100,17 @@ export class MsSqlQuery<
     this.t = table;
   }
 
-  coalesce<N extends MsSqlColumnName<TTable>, TSecond extends Parameters<typeof coalesce>[1], TDecoder extends CoalesceDecoder | undefined = undefined>(
-    name: N,
-    fallback: TSecond,
-    decoder?: TDecoder
-  ): SQL<CoalesceOutput<TTable['_']['columns'][N], TSecond, TDecoder>>;
+  coalesce<
+    N extends MsSqlColumnName<TTable>,
+    TSecond extends Parameters<typeof coalesce>[1],
+    TDecoder extends CoalesceDecoder | undefined = undefined,
+  >(name: N, fallback: TSecond, decoder?: TDecoder): SQL<CoalesceOutput<TTable['_']['columns'][N], TSecond, TDecoder>>;
 
-  coalesce<TFirst extends SQLWrapper, TSecond extends Parameters<typeof coalesce>[1], TDecoder extends CoalesceDecoder | undefined = undefined>(
-    expression: TFirst,
-    fallback: TSecond,
-    decoder?: TDecoder
-  ): SQL<CoalesceOutput<TFirst, TSecond, TDecoder>>;
+  coalesce<
+    TFirst extends SQLWrapper,
+    TSecond extends Parameters<typeof coalesce>[1],
+    TDecoder extends CoalesceDecoder | undefined = undefined,
+  >(expression: TFirst, fallback: TSecond, decoder?: TDecoder): SQL<CoalesceOutput<TFirst, TSecond, TDecoder>>;
 
   coalesce<TResult>(
     first: MsSqlColumnName<TTable> | SQLWrapper,
@@ -117,30 +129,60 @@ export class MsSqlQuery<
   }
 
   coalesceNumber<TFirst extends MsSqlColumnName<TTable> | SQLWrapper, TSecond extends Parameters<typeof coalesce>[1]>(
-    first: TFirst, fallback: TSecond
-  ): SQL<CoalesceOutput<TFirst extends MsSqlColumnName<TTable> ? TTable['_']['columns'][TFirst] : TFirst, TSecond, NumberConstructor>>;
+    first: TFirst,
+    fallback: TSecond
+  ): SQL<
+    CoalesceOutput<
+      TFirst extends MsSqlColumnName<TTable> ? TTable['_']['columns'][TFirst] : TFirst,
+      TSecond,
+      NumberConstructor
+    >
+  >;
 
-  coalesceNumber<TResult>(first: MsSqlColumnName<TTable> | SQLWrapper, fallback: Parameters<typeof coalesce>[1]): SQL<TResult>;
+  coalesceNumber<TResult>(
+    first: MsSqlColumnName<TTable> | SQLWrapper,
+    fallback: Parameters<typeof coalesce>[1]
+  ): SQL<TResult>;
 
   coalesceNumber(first: MsSqlColumnName<TTable> | SQLWrapper, fallback: Parameters<typeof coalesce>[1]): SQL {
     return this.coalesce<unknown>(first, fallback, Number);
   }
 
   coalesceString<TFirst extends MsSqlColumnName<TTable> | SQLWrapper, TSecond extends Parameters<typeof coalesce>[1]>(
-    first: TFirst, fallback: TSecond
-  ): SQL<CoalesceOutput<TFirst extends MsSqlColumnName<TTable> ? TTable['_']['columns'][TFirst] : TFirst, TSecond, StringConstructor>>;
+    first: TFirst,
+    fallback: TSecond
+  ): SQL<
+    CoalesceOutput<
+      TFirst extends MsSqlColumnName<TTable> ? TTable['_']['columns'][TFirst] : TFirst,
+      TSecond,
+      StringConstructor
+    >
+  >;
 
-  coalesceString<TResult>(first: MsSqlColumnName<TTable> | SQLWrapper, fallback: Parameters<typeof coalesce>[1]): SQL<TResult>;
+  coalesceString<TResult>(
+    first: MsSqlColumnName<TTable> | SQLWrapper,
+    fallback: Parameters<typeof coalesce>[1]
+  ): SQL<TResult>;
 
   coalesceString(first: MsSqlColumnName<TTable> | SQLWrapper, fallback: Parameters<typeof coalesce>[1]): SQL {
     return this.coalesce<unknown>(first, fallback, String);
   }
 
   coalesceBoolean<TFirst extends MsSqlColumnName<TTable> | SQLWrapper, TSecond extends Parameters<typeof coalesce>[1]>(
-    first: TFirst, fallback: TSecond
-  ): SQL<CoalesceOutput<TFirst extends MsSqlColumnName<TTable> ? TTable['_']['columns'][TFirst] : TFirst, TSecond, BooleanConstructor>>;
+    first: TFirst,
+    fallback: TSecond
+  ): SQL<
+    CoalesceOutput<
+      TFirst extends MsSqlColumnName<TTable> ? TTable['_']['columns'][TFirst] : TFirst,
+      TSecond,
+      BooleanConstructor
+    >
+  >;
 
-  coalesceBoolean<TResult>(first: MsSqlColumnName<TTable> | SQLWrapper, fallback: Parameters<typeof coalesce>[1]): SQL<TResult>;
+  coalesceBoolean<TResult>(
+    first: MsSqlColumnName<TTable> | SQLWrapper,
+    fallback: Parameters<typeof coalesce>[1]
+  ): SQL<TResult>;
 
   coalesceBoolean(first: MsSqlColumnName<TTable> | SQLWrapper, fallback: Parameters<typeof coalesce>[1]): SQL {
     return this.coalesce<unknown>(first, fallback, Boolean);
@@ -154,7 +196,8 @@ export class MsSqlQuery<
   sum<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper, decoder: AggregateDecoder): SQL<TResult>;
 
   sum(columnOrName: string | SQLWrapper, decoder: AggregateDecoder): SQL {
-    const expression = typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName;
+    const expression =
+      typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName;
     return sum(expression, decoder);
   }
 
@@ -166,7 +209,8 @@ export class MsSqlQuery<
   sumDistinct<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper, decoder: AggregateDecoder): SQL<TResult>;
 
   sumDistinct(columnOrName: string | SQLWrapper, decoder: AggregateDecoder): SQL {
-    const expression = typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName;
+    const expression =
+      typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName;
     return sumDistinct(expression, decoder);
   }
 
@@ -223,7 +267,10 @@ export class MsSqlQuery<
   avgNumber<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
 
   avgNumber(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL {
-    return aggregateAvg(typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName, Number);
+    return aggregateAvg(
+      typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName,
+      Number
+    );
   }
 
   avgBoolean(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<boolean | null>;
@@ -231,7 +278,10 @@ export class MsSqlQuery<
   avgBoolean<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
 
   avgBoolean(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL {
-    return aggregateAvg(typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName, Boolean);
+    return aggregateAvg(
+      typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName,
+      Boolean
+    );
   }
 
   avgString(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<string | null>;
@@ -239,7 +289,10 @@ export class MsSqlQuery<
   avgString<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
 
   avgString(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL {
-    return aggregateAvg(typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName, String);
+    return aggregateAvg(
+      typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName,
+      String
+    );
   }
 
   avgDistinctNumber(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<number | null>;
@@ -247,7 +300,10 @@ export class MsSqlQuery<
   avgDistinctNumber<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
 
   avgDistinctNumber(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL {
-    return aggregateAvgDistinct(typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName, Number);
+    return aggregateAvgDistinct(
+      typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName,
+      Number
+    );
   }
 
   avgDistinctBoolean(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<boolean | null>;
@@ -255,7 +311,10 @@ export class MsSqlQuery<
   avgDistinctBoolean<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
 
   avgDistinctBoolean(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL {
-    return aggregateAvgDistinct(typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName, Boolean);
+    return aggregateAvgDistinct(
+      typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName,
+      Boolean
+    );
   }
 
   avgDistinctString(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<string | null>;
@@ -263,7 +322,10 @@ export class MsSqlQuery<
   avgDistinctString<TResult>(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL<TResult>;
 
   avgDistinctString(columnOrName: MsSqlColumnName<TTable> | SQLWrapper): SQL {
-    return aggregateAvgDistinct(typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName, String);
+    return aggregateAvgDistinct(
+      typeof columnOrName === 'string' ? this.resolveAggregateColumn(columnOrName, this.t) : columnOrName,
+      String
+    );
   }
 
   private readonly drizzle = { ...createConditions({}), sqlNumber: (value: number) => sql`${value}`.mapWith(Number) };
@@ -594,7 +656,9 @@ export class MsSqlQuery<
                   const resolved = (condition as (query: SelectConditionQuery<MsSqlTable>) => unknown)(whereQuery);
                   return resolved === false ? undefined : resolved;
                 }
-              : condition === false ? undefined : condition
+              : condition === false
+                ? undefined
+                : condition
           ),
         top: (count: number) =>
           typeof selectBuilder.top === 'function' ? enhance(selectBuilder.top(count).from(table)) : query,
@@ -994,31 +1058,31 @@ export class MsSqlQuery<
   private async executeInsert(value: MsSqlInsertValue<TTable> | MsSqlInsertValue<TTable>[]): Promise<AR | AR[]> {
     const tx = this.getTx();
 
-    const autoIncrementColumn = getTableConfig(this.t).columns.find(
-      (column) => 'identity' in column && column.identity !== undefined
-    );
-    const hasAutoIncrement = !!autoIncrementColumn;
-    const autoIncrementKey =
-      autoIncrementColumn &&
-      Object.keys(getTableColumns(this.t)).find((key) => getTableColumns(this.t)[key] === autoIncrementColumn);
-
-    if (hasAutoIncrement) {
-      if (Array.isArray(value)) {
-        const addedItems = (await tx.insert(this.t).output().values(value)) as unknown as Record<string, unknown>[];
-        return addedItems.map((item) => (item as any)[autoIncrementKey!]);
-      } else {
-        const [item] = (await tx.insert(this.t).output().values(value)) as unknown as Record<string, unknown>[];
-        return (item as any)[autoIncrementKey!];
-      }
-    } else {
-      if (Array.isArray(value)) {
-        await tx.insert(this.t).values(value);
-        return Array(value.length).fill(undefined);
-      } else {
-        await tx.insert(this.t).values(value);
-        return undefined as AR;
-      }
+    const keys = this.insertPrimaryKeys();
+    if (keys.length === 0) {
+      await tx.insert(this.t).values(value as MsSqlInsertValue<TTable>);
+      return (Array.isArray(value) ? value.map(() => undefined) : undefined) as AR | AR[];
     }
+    const rows = (await tx
+      .insert(this.t)
+      .output()
+      .values(value as MsSqlInsertValue<TTable>)) as unknown as Record<string, unknown>[];
+    const results = rows.map((row) => this.insertPrimaryResult(row, keys));
+    return Array.isArray(value) ? results : (results[0] as AR);
+  }
+
+  private insertPrimaryKeys(): string[] {
+    const table: MsSqlTable = this.t;
+    const config = getTableConfig(table);
+    const primary = new Set(config.columns.filter((column) => column.primary));
+    for (const key of config.primaryKeys) for (const column of key.columns) primary.add(column);
+    return Object.entries(getTableColumns(table))
+      .filter(([, column]) => primary.has(column))
+      .map(([name]) => name);
+  }
+
+  private insertPrimaryResult(row: Record<string, unknown>, keys: string[]): AR {
+    return (keys.length === 1 ? row[keys[0]!] : Object.fromEntries(keys.map((key) => [key, row[key]]))) as AR;
   }
 
   /********************************************************************************************************************
@@ -1089,19 +1153,12 @@ export class MsSqlQuery<
         .from(source) as TypedQueryBuilder<Record<string, unknown>>;
     }
 
-    const autoIncrementColumn = getTableConfig(this.t).columns.find(
-      (column) => 'identity' in column && column.identity !== undefined
-    );
+    const keys = this.insertPrimaryKeys();
     const rows = (await this.getTx()
       .insert(this.t)
       .output()
       .select(selectQuery as any)) as Record<string, unknown>[];
-
-    if (!autoIncrementColumn) return rows.map(() => undefined as AR);
-
-    const columns = getTableColumns(this.t);
-    const autoIncrementKey = Object.keys(columns).find((key) => columns[key] === autoIncrementColumn);
-    return rows.map((row) => row[autoIncrementKey!] as AR);
+    return rows.map((row) => (keys.length ? this.insertPrimaryResult(row, keys) : (undefined as AR)));
   }
 
   /********************************************************************************************************************
@@ -1456,7 +1513,10 @@ type SelectSetOperatorMethod<
 type DynamicSelect<
   TQuery extends { readonly _: { readonly selection: unknown }; $dynamic: (...args: any[]) => any },
   TTable extends MsSqlTable | Subquery,
-> = Omit<ReturnType<TQuery['$dynamic']>, 'where' | 'groupBy' | 'orderBy' | 'having' | 'offset' | 'fetch' | '$dynamic'> & {
+> = Omit<
+  ReturnType<TQuery['$dynamic']>,
+  'where' | 'groupBy' | 'orderBy' | 'having' | 'offset' | 'fetch' | '$dynamic'
+> & {
   where(condition: TableWhere<TTable>): DynamicSelect<TQuery, TTable>;
   groupBy(builder: (aliases: TQuery['_']['selection']) => OrderByValue | OrderByValue[]): DynamicSelect<TQuery, TTable>;
   groupBy(...columns: OrderByValue[]): DynamicSelect<TQuery, TTable>;
@@ -1910,13 +1970,18 @@ const normalizeFields = (fields: unknown, table?: MsSqlTable | Subquery): FieldS
   return result;
 };
 
-type PrimaryKeyNames<T extends MsSqlTable> = {
-  [P in keyof T['_']['columns']]: T['_']['columns'][P]['_'] extends {
-    isPrimaryKey: true;
-  }
-    ? P
-    : never;
-}[keyof T['_']['columns']];
+type PrimaryKeyNames<T extends MsSqlTable> =
+  | {
+      [P in keyof T['_']['columns']]: T['_']['columns'][P]['_'] extends {
+        isPrimaryKey: true;
+      }
+        ? P
+        : never;
+    }[keyof T['_']['columns']]
+  | Extract<
+      ExtraColumnKey<TablePrimaryKeyColumns<T> extends readonly (infer C)[] ? C : never>,
+      keyof T['_']['columns']
+    >;
 
 type PrimaryKeyObject<T extends MsSqlTable> = {
   [P in PrimaryKeyNames<T>]: T['_']['columns'][P]['_']['data'];
@@ -1930,22 +1995,11 @@ type PrimaryKeyInput<T extends MsSqlTable> = [PrimaryKeyNames<T>] extends [never
     ? PrimaryKeyObject<T>
     : PrimaryKeyObject<T> | PrimaryKeyObject<T>[PrimaryKeyNames<T>];
 
-type AutoIncrementKeys<TTable extends MsSqlTable> = {
-  [P in keyof TTable['_']['columns']]: TTable['_']['columns'][P]['_'] extends {
-    generated: infer G;
-  }
-    ? undefined extends G
-      ? never
-      : keyof G extends never
-        ? P
-        : never
-    : never;
-}[keyof TTable['_']['columns']];
-
-type HasAutoIncrement<TTable extends MsSqlTable> = [AutoIncrementKeys<TTable>] extends [never] ? false : true;
-
-type AddResult<TTable extends MsSqlTable> =
-  HasAutoIncrement<TTable> extends true ? TTable['_']['columns'][AutoIncrementKeys<TTable>]['_']['data'] : undefined;
+type AddResult<T extends MsSqlTable> = [PrimaryKeyNames<T>] extends [never]
+  ? unknown
+  : IsUnion<PrimaryKeyNames<T>> extends true
+    ? PrimaryKeyObject<T>
+    : PrimaryKeyObject<T>[PrimaryKeyNames<T>];
 
 function sourceColumns(source: MsSqlTable | Subquery, names: string[] = []): FieldSet {
   return is(source, Subquery)
