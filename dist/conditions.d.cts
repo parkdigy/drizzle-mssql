@@ -1,6 +1,6 @@
 import * as native from 'drizzle-orm';
 import { MsSqlTable } from 'drizzle-orm/mssql-core';
-import type { Column, SQL } from 'drizzle-orm';
+import type { Column, SQL, SQLWrapper } from 'drizzle-orm';
 import type { MsSqlAndConditions, MsSqlColumnName, MsSqlNullConditionInput, MsSqlOrConditions } from './@types/index.cjs';
 export declare function createConditions<TSchema extends Record<string, MsSqlTable>>(schema: TSchema): {
     eq: {
@@ -83,6 +83,14 @@ export declare function createConditions<TSchema extends Record<string, MsSqlTab
         <T extends MsSqlTable>(table: T, values: import("./index.cjs").MsSqlPatternCompareValues<T> | undefined): SQL | undefined;
         <K extends keyof TSchema & string>(table: K, values: import("./index.cjs").MsSqlPatternCompareValues<TSchema[K]> | undefined): SQL | undefined;
     } & typeof native.notLike & ((args_0: native.Column<native.ColumnBaseConfig<native.ColumnType>, object> | native.SQLWrapper<unknown> | native.SQL<unknown> | native.SQL.Aliased<unknown>, args_1: string | native.SQLWrapper<unknown> | undefined) => SQL | undefined);
+    ilike: {
+        <T extends MsSqlTable>(table: T, values: import("./index.cjs").MsSqlPatternCompareValues<T> | undefined): SQL | undefined;
+        <K extends keyof TSchema & string>(table: K, values: import("./index.cjs").MsSqlPatternCompareValues<TSchema[K]> | undefined): SQL | undefined;
+    } & ((column: SQLWrapper, pattern: string | SQLWrapper) => native.SQL<unknown>) & ((args_0: native.SQLWrapper<unknown>, args_1: string | native.SQLWrapper<unknown> | undefined) => SQL | undefined);
+    notIlike: {
+        <T extends MsSqlTable>(table: T, values: import("./index.cjs").MsSqlPatternCompareValues<T> | undefined): SQL | undefined;
+        <K extends keyof TSchema & string>(table: K, values: import("./index.cjs").MsSqlPatternCompareValues<TSchema[K]> | undefined): SQL | undefined;
+    } & ((column: SQLWrapper, pattern: string | SQLWrapper) => native.SQL<unknown>) & ((args_0: native.SQLWrapper<unknown>, args_1: string | native.SQLWrapper<unknown> | undefined) => SQL | undefined);
     isNull: {
         <T extends MsSqlTable>(table: T, name: MsSqlColumnName<T>): SQL;
         <T extends MsSqlTable>(table: T, names: MsSqlNullConditionInput<T>): SQL | undefined;
@@ -132,6 +140,14 @@ export declare function createConditions<TSchema extends Record<string, MsSqlTab
         <K extends keyof TSchema & string>(table: K, values: import("./index.cjs").MsSqlPatternCompareValues<TSchema[K]> | undefined): SQL | undefined;
     };
     orNotLike: {
+        <T extends MsSqlTable>(table: T, values: import("./index.cjs").MsSqlPatternCompareValues<T> | undefined): SQL | undefined;
+        <K extends keyof TSchema & string>(table: K, values: import("./index.cjs").MsSqlPatternCompareValues<TSchema[K]> | undefined): SQL | undefined;
+    };
+    orIlike: {
+        <T extends MsSqlTable>(table: T, values: import("./index.cjs").MsSqlPatternCompareValues<T> | undefined): SQL | undefined;
+        <K extends keyof TSchema & string>(table: K, values: import("./index.cjs").MsSqlPatternCompareValues<TSchema[K]> | undefined): SQL | undefined;
+    };
+    orNotIlike: {
         <T extends MsSqlTable>(table: T, values: import("./index.cjs").MsSqlPatternCompareValues<T> | undefined): SQL | undefined;
         <K extends keyof TSchema & string>(table: K, values: import("./index.cjs").MsSqlPatternCompareValues<TSchema[K]> | undefined): SQL | undefined;
     };

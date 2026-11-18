@@ -281,7 +281,7 @@ const recentIds = await user
 
 #### 문자열 패턴
 
-`like`, `notLike`는 문자열 컬럼에 SQL 패턴을 적용합니다. `%`는 임의 길이 문자열, `_`는 한 문자에 대응합니다. SQL Server의 `LIKE` 대소문자 구분 여부는 컬럼 collation 설정에 따릅니다.
+`like`, `notLike`는 문자열 컬럼에 SQL 패턴을 적용합니다. `ilike`, `notIlike`는 컬럼에 `Latin1_General_CI_AS` collation을 적용하여 대소문자를 구분하지 않습니다. `%`는 임의 길이 문자열, `_`는 한 문자에 대응합니다. SQL Server의 `LIKE` 대소문자 구분 여부는 컬럼 collation 설정에 따릅니다.
 
 ```ts
 const matchingUsers = await user.find((query) =>

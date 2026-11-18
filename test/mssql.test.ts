@@ -641,36 +641,6 @@ test('정렬 조건이 전부 제외되면 ORDER BY를 생성하지 않는다', 
     expect(query.toSQL().sql).not.toMatch(/order by/i);
 });
 
-test('MSSQL 조건 API에서 ILIKE 계열을 제공하지 않는다', () => {
-  const conditions = createConditions({ users });
-  const removed = ['ilike', 'notIlike', 'orIlike', 'orNotIlike'] as const;
-  const check = (target: object) => {
-    for (const name of removed) expect(name in target).toBe(false);
-  };
-  check(conditions);
-  check(usersQuery);
-  usersQuery
-    .select()
-    .where((q) => {
-      check(q);
-      return q.like({ name: 'A%' });
-    })
-    .toSQL();
-  const subquery = usersQuery.select(['id', 'name']).as('sq');
-  usersQuery
-    .select()
-    .innerJoin(subquery, (q) => {
-      check(q);
-      return q.eq({ id: users.id });
-    })
-    .toSQL();
-  for (const name of removed) {
-    expect(() => Reflect.apply(conditions.and, undefined, [users, { [name]: { name: 'A%' } }])).toThrow(
-      `unknown operator "${name}"`
-    );
-  }
-});
-
 test.each([false, undefined] as const)('where는 직접 인자와 콜백의 %s를 제외한다', (value) => {
   const expected = usersQuery.select().toSQL();
   expect(usersQuery.select().where(value).toSQL()).toEqual(expected);
@@ -796,4 +766,18 @@ test('컬럼 기본 키는 단일 값과 복합 객체를 반환한다', async (
   const results: Promise<{ id1: number; id2: number }[]> = many.add([{ id1: 1, id2: 2 }, { id1: 3, id2: 4 }]);
   await expect(result).resolves.toBe(3);
   await expect(results).resolves.toEqual([{ id1: 1, id2: 2 }, { id1: 3, id2: 4 }]);
+});
+
+test('ilike 조건은 대소문자 무시 collation과 바인딩을 사용한다', () => {
+  const c = createConditions({ users });
+  const direct = usersQuery.select().where(c.ilike(users.name, 'A%')).toSQL();
+  expect(direct.sql).toMatch(/\[users\]\.\[name\] collate Latin1_General_CI_AS like @par0/i);
+  expect(direct.params).toEqual(['A%']);
+  const object = usersQuery.select().where(c.notIlike(users, { name: 'B%' })).toSQL();
+  expect(object.sql).toMatch(/collate Latin1_General_CI_AS not like @par0/i);
+  expect(object.params).toEqual(['B%']);
+  const callback = usersQuery.select().where(q => q.orIlike({ name: 'C%' })).toSQL();
+  expect(callback.params).toEqual(['C%']);
+  expect(callback.sql).toMatch(/collate Latin1_General_CI_AS like/i);
+  expect(c.ilike(users.name, undefined)).toBeUndefined();
 });

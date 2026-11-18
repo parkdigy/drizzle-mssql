@@ -477,38 +477,21 @@ test.each(['../src/index', '../dist/index'])(
     // @ts-expect-error decoder는 필수다
     db.sumDistinct(table199.id);
 
-    // 제거한 API는 연결 객체·쿼리·조건 객체에서 사용할 수 없다.
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     db.ilike;
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     query.ilike;
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     db.and('table199', { ilike: { name: 'A%' } });
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     query.select().where(q => q.ilike({ name: 'A%' }));
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     db.notIlike;
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     query.notIlike;
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     db.and('table199', { notIlike: { name: 'A%' } });
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     query.select().where(q => q.notIlike({ name: 'A%' }));
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     db.orIlike;
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     query.orIlike;
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     db.and('table199', { orIlike: { name: 'A%' } });
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     query.select().where(q => q.orIlike({ name: 'A%' }));
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     db.orNotIlike;
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     query.orNotIlike;
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     db.and('table199', { orNotIlike: { name: 'A%' } });
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     query.select().where(q => q.orNotIlike({ name: 'A%' }));
 
     const avgs = query.select({
@@ -532,38 +515,21 @@ test.each(['../src/index', '../dist/index'])(
     // @ts-expect-error decoder는 필수다
     db.avgDistinct(table199.id);
 
-    // 제거한 API는 연결 객체·쿼리·조건 객체에서 사용할 수 없다.
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     db.ilike;
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     query.ilike;
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     db.and('table199', { ilike: { name: 'A%' } });
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     query.select().where(q => q.ilike({ name: 'A%' }));
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     db.notIlike;
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     query.notIlike;
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     db.and('table199', { notIlike: { name: 'A%' } });
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     query.select().where(q => q.notIlike({ name: 'A%' }));
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     db.orIlike;
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     query.orIlike;
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     db.and('table199', { orIlike: { name: 'A%' } });
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     query.select().where(q => q.orIlike({ name: 'A%' }));
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     db.orNotIlike;
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     query.orNotIlike;
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     db.and('table199', { orNotIlike: { name: 'A%' } });
-    // @ts-expect-error MSSQL에서 지원하지 않는 조건이다
     query.select().where(q => q.orNotIlike({ name: 'A%' }));
 
     const isOrderByName = false;

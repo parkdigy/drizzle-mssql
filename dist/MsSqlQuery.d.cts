@@ -232,6 +232,8 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AD extends MsSqlAddDa
     orNotInArray(values: MsSqlArrayCompareValues<TTable>): SQL | undefined;
     orBetween(values: MsSqlRangeCompareValues<TTable>): SQL | undefined;
     orNotBetween(values: MsSqlRangeCompareValues<TTable>): SQL | undefined;
+    orIlike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
+    orNotIlike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
     orLike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
     orNotLike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
     orIsNull(values: MsSqlNullConditionInput<TTable>): SQL | undefined;
@@ -279,6 +281,8 @@ export declare class MsSqlQuery<TTable extends MsSqlTable, AD extends MsSqlAddDa
     /********************************************************************************************************************
      * like
      * ******************************************************************************************************************/
+    ilike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
+    notIlike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
     like(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
     /********************************************************************************************************************
      * notLike
@@ -426,7 +430,7 @@ type WhereQueryEq<TTable extends MsSqlTable> = {
 type QueryTable<TQuery> = TQuery extends {
     readonly t: infer TTable extends MsSqlTable;
 } ? TTable : never;
-type WhereQuery<TQuery> = Omit<Pick<TQuery, Extract<keyof TQuery, 't' | 'eq' | 'ne' | 'orEq' | 'orNe' | 'orIsNotNull' | 'orIsNull' | 'orNotLike' | 'orLike' | 'orNotBetween' | 'orBetween' | 'orNotInArray' | 'orInArray' | 'orLte' | 'orLt' | 'orGte' | 'orGt' | 'gt' | 'gte' | 'lt' | 'lte' | 'inArray' | 'notInArray' | 'between' | 'notBetween' | 'like' | 'notLike' | 'isNull' | 'isNotNull' | 'and' | 'or'>>, 'eq'> & {
+type WhereQuery<TQuery> = Omit<Pick<TQuery, Extract<keyof TQuery, 't' | 'eq' | 'ne' | 'orEq' | 'orNe' | 'orIsNotNull' | 'orIsNull' | 'orNotLike' | 'orIlike' | 'orNotIlike' | 'orLike' | 'orNotBetween' | 'orBetween' | 'orNotInArray' | 'orInArray' | 'orLte' | 'orLt' | 'orGte' | 'orGt' | 'gt' | 'gte' | 'lt' | 'lte' | 'inArray' | 'notInArray' | 'between' | 'notBetween' | 'like' | 'ilike' | 'notIlike' | 'notLike' | 'isNull' | 'isNotNull' | 'and' | 'or'>>, 'eq'> & {
     eq: WhereQueryEq<QueryTable<TQuery>>;
 };
 type SelectConditionQuery<TSource extends MsSqlTable | Subquery> = TSource extends MsSqlTable ? TableConditionQuery<TSource> : TSource extends Subquery ? SubqueryConditionQuery<TSource> : never;
@@ -439,6 +443,8 @@ type TableConditionQuery<TTable extends MsSqlTable> = {
     orIsNotNull(values: MsSqlNullConditionInput<TTable>): SQL | undefined;
     orIsNull(values: MsSqlNullConditionInput<TTable>): SQL | undefined;
     orNotLike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
+    orIlike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
+    orNotIlike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
     orLike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
     orNotBetween(values: MsSqlRangeCompareValues<TTable>): SQL | undefined;
     orBetween(values: MsSqlRangeCompareValues<TTable>): SQL | undefined;
@@ -456,6 +462,8 @@ type TableConditionQuery<TTable extends MsSqlTable> = {
     notInArray(values: MsSqlArrayCompareValues<TTable>): SQL | undefined;
     between(values: MsSqlRangeCompareValues<TTable>): SQL | undefined;
     notBetween(values: MsSqlRangeCompareValues<TTable>): SQL | undefined;
+    ilike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
+    notIlike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
     like(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
     notLike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
     isNull(names: MsSqlNullConditionInput<TTable>): SQL | undefined;
@@ -574,11 +582,11 @@ type SubqueryAtomicMethods<T extends Subquery> = Pick<{
 } & {
     [K in 'between' | 'notBetween']: (values: SubqueryRangeValues<T>) => SQL | undefined;
 } & {
-    [K in 'like' | 'notLike']: (values: SubqueryPatternValues<T>) => SQL | undefined;
+    [K in 'like' | 'ilike' | 'notIlike' | 'notLike']: (values: SubqueryPatternValues<T>) => SQL | undefined;
 } & {
     isNull(names: SourceColumnName<T> | undefined | readonly (SourceColumnName<T> | undefined)[]): SQL | undefined;
     isNotNull(names: SourceColumnName<T> | undefined | readonly (SourceColumnName<T> | undefined)[]): SQL | undefined;
-}, 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'inArray' | 'notInArray' | 'between' | 'notBetween' | 'like' | 'notLike' | 'isNull' | 'isNotNull'>;
+}, 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'inArray' | 'notInArray' | 'between' | 'notBetween' | 'like' | 'ilike' | 'notIlike' | 'notLike' | 'isNull' | 'isNotNull'>;
 type SubqueryAtomicConditions<T extends Subquery> = {
     [K in keyof SubqueryAtomicMethods<T>]?: Parameters<SubqueryAtomicMethods<T>[K]>[0];
 } & {
@@ -599,7 +607,7 @@ type BaseSubqueryConditionQuery<T extends Subquery> = {
 } & {
     [K in 'between' | 'notBetween']: (values: SubqueryRangeValues<T>) => SQL | undefined;
 } & {
-    [K in 'like' | 'notLike']: (values: SubqueryPatternValues<T>) => SQL | undefined;
+    [K in 'like' | 'ilike' | 'notIlike' | 'notLike']: (values: SubqueryPatternValues<T>) => SQL | undefined;
 } & {
     isNull(names: SourceColumnName<T> | undefined | readonly (SourceColumnName<T> | undefined)[]): SQL | undefined;
     isNotNull(names: SourceColumnName<T> | undefined | readonly (SourceColumnName<T> | undefined)[]): SQL | undefined;

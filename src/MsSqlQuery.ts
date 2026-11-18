@@ -619,6 +619,8 @@ export class MsSqlQuery<
           notBetween: bindCondition('notBetween', conditionTable),
           like: bindCondition('like', conditionTable),
           notLike: bindCondition('notLike', conditionTable),
+          ilike: bindCondition('ilike', conditionTable),
+          notIlike: bindCondition('notIlike', conditionTable),
           isNull: bindCondition('isNull', conditionTable),
           isNotNull: bindCondition('isNotNull', conditionTable),
           and: (...conditions: unknown[]) => combineCallbackConditions('and', conditionTable, conditions),
@@ -629,6 +631,8 @@ export class MsSqlQuery<
           orIsNull: bindCondition('orIsNull', conditionTable),
           orNotLike: bindCondition('orNotLike', conditionTable),
           orLike: bindCondition('orLike', conditionTable),
+          orIlike: bindCondition('orIlike', conditionTable),
+          orNotIlike: bindCondition('orNotIlike', conditionTable),
           orNotBetween: bindCondition('orNotBetween', conditionTable),
           orBetween: bindCondition('orBetween', conditionTable),
           orNotInArray: bindCondition('orNotInArray', conditionTable),
@@ -1296,6 +1300,9 @@ export class MsSqlQuery<
     return this.drizzle.orNotBetween(this.t, values);
   }
 
+  orIlike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined { return this.drizzle.orIlike(this.t, values); }
+  orNotIlike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined { return this.drizzle.orNotIlike(this.t, values); }
+
   orLike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined {
     return this.drizzle.orLike(this.t, values);
   }
@@ -1388,6 +1395,9 @@ export class MsSqlQuery<
   /********************************************************************************************************************
    * like
    * ******************************************************************************************************************/
+  ilike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined { return this.drizzle.ilike(this.t, values); }
+  notIlike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined { return this.drizzle.notIlike(this.t, values); }
+
   like(values: MsSqlPatternCompareValues<TTable>): SQL | undefined {
     return this.drizzle.like(this.t, values);
   }
@@ -1743,7 +1753,7 @@ type WhereQuery<TQuery> = Omit<
       | 'orIsNotNull'
       | 'orIsNull'
       | 'orNotLike'
-      | 'orLike'
+      | 'orIlike' | 'orNotIlike' | 'orLike'
       | 'orNotBetween'
       | 'orBetween'
       | 'orNotInArray'
@@ -1761,7 +1771,7 @@ type WhereQuery<TQuery> = Omit<
       | 'between'
       | 'notBetween'
       | 'like'
-      | 'notLike'
+      | 'ilike' | 'notIlike' | 'notLike'
       | 'isNull'
       | 'isNotNull'
       | 'and'
@@ -1786,6 +1796,8 @@ type TableConditionQuery<TTable extends MsSqlTable> = {
   orIsNotNull(values: MsSqlNullConditionInput<TTable>): SQL | undefined;
   orIsNull(values: MsSqlNullConditionInput<TTable>): SQL | undefined;
   orNotLike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
+  orIlike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
+  orNotIlike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
   orLike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
   orNotBetween(values: MsSqlRangeCompareValues<TTable>): SQL | undefined;
   orBetween(values: MsSqlRangeCompareValues<TTable>): SQL | undefined;
@@ -1803,6 +1815,8 @@ type TableConditionQuery<TTable extends MsSqlTable> = {
   notInArray(values: MsSqlArrayCompareValues<TTable>): SQL | undefined;
   between(values: MsSqlRangeCompareValues<TTable>): SQL | undefined;
   notBetween(values: MsSqlRangeCompareValues<TTable>): SQL | undefined;
+  ilike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
+  notIlike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
   like(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
   notLike(values: MsSqlPatternCompareValues<TTable>): SQL | undefined;
   isNull(names: MsSqlNullConditionInput<TTable>): SQL | undefined;
@@ -2087,7 +2101,7 @@ type SubqueryAtomicMethods<T extends Subquery> = Pick<
     [K in 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte']: (values: SubqueryValues<T>) => SQL | undefined;
   } & { [K in 'inArray' | 'notInArray']: (values: SubqueryArrayValues<T>) => SQL | undefined } & {
     [K in 'between' | 'notBetween']: (values: SubqueryRangeValues<T>) => SQL | undefined;
-  } & { [K in 'like' | 'notLike']: (values: SubqueryPatternValues<T>) => SQL | undefined } & {
+  } & { [K in 'like' | 'ilike' | 'notIlike' | 'notLike']: (values: SubqueryPatternValues<T>) => SQL | undefined } & {
     isNull(names: SourceColumnName<T> | undefined | readonly (SourceColumnName<T> | undefined)[]): SQL | undefined;
     isNotNull(names: SourceColumnName<T> | undefined | readonly (SourceColumnName<T> | undefined)[]): SQL | undefined;
   },
@@ -2102,7 +2116,7 @@ type SubqueryAtomicMethods<T extends Subquery> = Pick<
   | 'between'
   | 'notBetween'
   | 'like'
-  | 'notLike'
+  | 'ilike' | 'notIlike' | 'notLike'
   | 'isNull'
   | 'isNotNull'
 >;
@@ -2122,7 +2136,7 @@ type BaseSubqueryConditionQuery<T extends Subquery> = {
 } & { [K in 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte']: (values: SubqueryValues<T>) => SQL | undefined } & {
   [K in 'inArray' | 'notInArray']: (values: SubqueryArrayValues<T>) => SQL | undefined;
 } & { [K in 'between' | 'notBetween']: (values: SubqueryRangeValues<T>) => SQL | undefined } & {
-  [K in 'like' | 'notLike']: (values: SubqueryPatternValues<T>) => SQL | undefined;
+  [K in 'like' | 'ilike' | 'notIlike' | 'notLike']: (values: SubqueryPatternValues<T>) => SQL | undefined;
 } & {
   isNull(names: SourceColumnName<T> | undefined | readonly (SourceColumnName<T> | undefined)[]): SQL | undefined;
   isNotNull(names: SourceColumnName<T> | undefined | readonly (SourceColumnName<T> | undefined)[]): SQL | undefined;
