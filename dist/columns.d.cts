@@ -134,7 +134,7 @@ export declare function TableColumns<A extends MsSqlTable, const AN extends read
 export declare function TableColumns<A extends MsSqlTable, const AN extends readonly MsSqlColumnSelectionName<A>[], B extends MsSqlTable, const BN extends readonly MsSqlColumnSelectionName<B>[], C extends MsSqlTable, const CN extends readonly MsSqlColumnSelectionName<C>[]>(a: readonly [A, ...AN], b: readonly [B, ...BN], c: readonly [C, ...CN]): MsSqlMergedGroupColumns<readonly [readonly [A, ...AN], readonly [B, ...BN], readonly [C, ...CN]]>;
 export declare function TableColumns<A extends MsSqlTable, const AN extends readonly MsSqlColumnSelectionName<A>[], B extends MsSqlTable, const BN extends readonly MsSqlColumnSelectionName<B>[]>(a: readonly [A, ...AN], b: readonly [B, ...BN]): MsSqlMergedGroupColumns<readonly [readonly [A, ...AN], readonly [B, ...BN]]>;
 export declare function TableColumns<T extends MsSqlTable>(table: T): MsSqlSelectedTableColumns<T>;
-export declare function TableColumns<T extends MsSqlTable, N extends MsSqlColumnSelectionName<T>>(table: T, ...names: N[]): MsSqlSelectedNamedColumnUnion<T, N>;
+export declare function TableColumns<T extends MsSqlTable, N extends MsSqlColumnSelectionName<T>>(table: T, ...names: (N | NoInfer<MsSqlColumnSelectionName<T>>)[]): MsSqlSelectedNamedColumnUnion<T, N>;
 export declare function TableColumns<T extends MsSqlTable, N extends string>(table: T, ...names: N[] & MsSqlColumnSelectionName<T>[]): Record<string, MsSqlColumn | SQL.Aliased>;
 export declare function TableColumns<const T extends readonly MsSqlColumn[]>(columns: T): MsSqlSelectedColumns<T>;
 export declare function TableColumns<const T extends readonly [MsSqlColumn, ...MsSqlColumn[]]>(...columns: T): MsSqlSelectedColumns<T>;

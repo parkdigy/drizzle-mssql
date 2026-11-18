@@ -28,6 +28,8 @@ test.each(['../src/index', '../dist/index'])(
     db.a./*aliases*/table199;
     // @ts-expect-error 자동완성용 미완성 컬럼명
     db.columns(a, '/*columns*/');
+    // @ts-expect-error 자동완성 확인용 미완성 컬럼명
+    db.query(a).select(a, [db.columns(a, 'id', '/*nestedColumn*/')]);
     const td1 = db.a.table199('td1'), td2 = db.a.table199('td2'), td3 = db.a.table199('td3');
     // @ts-expect-error 자동완성 확인용 미완성 컬럼명
     db.columns([td1, 'id', 'name'], [td2, 'id'], [td3, '/*thirdGroup*/']);
@@ -697,6 +699,7 @@ test.each(['../src/index', '../dist/index'])(
         members: ['columns', 'query', 'current', 'eq'],
         aliases: ['table0', 'table199'],
         columns: ['id', 'name'],
+        nestedColumn: ['id', 'name', 'extra199'],
         thirdGroup: ['id', 'name', 'extra199'],
         fourthGroup: ['id', 'name', 'extra199'],
         subquerySelect: ['id', 'name'],
