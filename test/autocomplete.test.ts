@@ -1,15 +1,17 @@
 import ts from 'typescript';
 import path from 'node:path';
 
-test.each(['../src/index', '../dist/index'])('%s: 200개 테이블에서도 자동완성과 JOIN 결과 타입을 유지한다', (entry) => {
-  const file = path.resolve('test/__autocomplete_fixture.ts');
-  const wideColumns = Array.from({ length: 200 }, (_, i) => `extra${i}: int()`).join(',');
-  const tables = Array.from(
-    { length: 200 },
-    (_, i) =>
-      `const table${i} = mssqlTable('table${i}', { id: int().notNull(), name: varchar({length: 100}), ${i === 199 ? wideColumns : ''} });`
-  ).join('\n');
-  const marked = `
+test.each(['../src/index', '../dist/index'])(
+  '%s: 200개 테이블에서도 자동완성과 JOIN 결과 타입을 유지한다',
+  (entry) => {
+    const file = path.resolve('test/__autocomplete_fixture.ts');
+    const wideColumns = Array.from({ length: 200 }, (_, i) => `extra${i}: int()`).join(',');
+    const tables = Array.from(
+      { length: 200 },
+      (_, i) =>
+        `const table${i} = mssqlTable('table${i}', { id: int().notNull(), name: varchar({length: 100}), ${i === 199 ? wideColumns : ''} });`
+    ).join('\n');
+    const marked = `
     import { drizzleMsSql, mssqlTable, int, varchar, datetime2, min, max, sum, sumDistinct, avg, avgDistinct, coalesce, coalesceNumber, coalesceString, coalesceBoolean, sumNumber, sumBoolean, sumString, sumDistinctNumber, sumDistinctBoolean, sumDistinctString, avgNumber, avgBoolean, avgString, avgDistinctNumber, avgDistinctBoolean, avgDistinctString } from '${entry}';
     ${tables}
     const db = drizzleMsSql({ url: '', getTimestamp: () => 0, schema: {
@@ -26,6 +28,11 @@ test.each(['../src/index', '../dist/index'])('%s: 200개 테이블에서도 자�
     db.a./*aliases*/table199;
     // @ts-expect-error 자동완성용 미완성 컬럼명
     db.columns(a, '/*columns*/');
+    const td1 = db.a.table199('td1'), td2 = db.a.table199('td2'), td3 = db.a.table199('td3');
+    // @ts-expect-error 자동완성 확인용 미완성 컬럼명
+    db.columns([td1, 'id', 'name'], [td2, 'id'], [td3, '/*thirdGroup*/']);
+    // @ts-expect-error 자동완성용 미완성 컬럼명
+    db.columns([td1, 'id'], [td2, 'id'], [td3, 'id'], [a, '/*fourthGroup*/']);
     // @ts-expect-error 자동완성용 미완성 컬럼명
     db.query(a).columns('/*query*/');
     db.eq(a, { /*condition*/ });
@@ -650,67 +657,73 @@ test.each(['../src/index', '../dist/index'])('%s: 200개 테이블에서도 자�
     // @ts-expect-error 존재하지 않는 컬럼은 허용하지 않는다
     db.columns(a, 'missing');
   `;
-  const positions: Record<string, number> = {};
-  let removed = 0;
-  const source = marked.replace(/\/\*(\w+)\*\//g, (match, name: string, offset: number) => {
-    positions[name] = offset - removed;
-    removed += match.length;
-    return '';
-  });
-  const options: ts.CompilerOptions = {
-    target: ts.ScriptTarget.ES2022,
-    module: ts.ModuleKind.ESNext,
-    moduleResolution: ts.ModuleResolutionKind.Bundler,
-    strict: true,
-    noUncheckedIndexedAccess: true,
-    skipLibCheck: true,
-    noEmit: true,
-  };
-  const host: ts.LanguageServiceHost = {
-    getScriptFileNames: () => [file],
-    getScriptVersion: () => '1',
-    getScriptSnapshot: (name) => {
-      const content = name === file ? source : ts.sys.readFile(name);
-      return content === undefined ? undefined : ts.ScriptSnapshot.fromString(content);
-    },
-    getCurrentDirectory: ts.sys.getCurrentDirectory,
-    getCompilationSettings: () => options,
-    getDefaultLibFileName: ts.getDefaultLibFilePath,
-    fileExists: ts.sys.fileExists,
-    readFile: ts.sys.readFile,
-    readDirectory: ts.sys.readDirectory,
-  };
-  const service = ts.createLanguageService(host);
-  try {
-    for (const [name, expected] of Object.entries({
-      directNamedFirst: ['id', 'name', 'extra0', 'extra199'],
-      directNamedNext: ['id', 'name', 'extra0', 'extra199'],
-      directFirst: ['id', 'name', 'extra0', 'extra199'],
-      directNext: ['id', 'name', 'extra0', 'extra199'],
-      members: ['columns', 'query', 'current', 'eq'],
-      aliases: ['table0', 'table199'],
-      columns: ['id', 'name'],
-      subquerySelect: ['id', 'name'],
-      subqueryFirst: ['id', 'name'],
-      subqueryNext: ['id', 'name'],
-      subqueryThird: ['id', 'name'],
-      nextColumn: ['id', 'name', 'extra0', 'extra199'],
-      aliasNextColumn: ['id', 'name', 'extra0', 'extra199'],
-      query: ['id', 'name'],
-      condition: ['id', 'name'],
-      queryEq: ['id'],
-      namedCondition: ['id', 'name'],
-      findCondition: ['id'],
-      editCondition: ['id'],
-      connectionOption: ['server', 'port', 'user', 'password', 'database', 'options'],
-      mssqlOption: ['encrypt', 'trustServerCertificate', 'useUTC'],
-    })) {
-      const entries = service.getCompletionsAtPosition(file, positions[name]!, {})?.entries.map((entry) => entry.name);
-      expect({ name, entries }).toEqual({ name, entries: expect.arrayContaining(expected) });
+    const positions: Record<string, number> = {};
+    let removed = 0;
+    const source = marked.replace(/\/\*(\w+)\*\//g, (match, name: string, offset: number) => {
+      positions[name] = offset - removed;
+      removed += match.length;
+      return '';
+    });
+    const options: ts.CompilerOptions = {
+      target: ts.ScriptTarget.ES2022,
+      module: ts.ModuleKind.ESNext,
+      moduleResolution: ts.ModuleResolutionKind.Bundler,
+      strict: true,
+      noUncheckedIndexedAccess: true,
+      skipLibCheck: true,
+      noEmit: true,
+    };
+    const host: ts.LanguageServiceHost = {
+      getScriptFileNames: () => [file],
+      getScriptVersion: () => '1',
+      getScriptSnapshot: (name) => {
+        const content = name === file ? source : ts.sys.readFile(name);
+        return content === undefined ? undefined : ts.ScriptSnapshot.fromString(content);
+      },
+      getCurrentDirectory: ts.sys.getCurrentDirectory,
+      getCompilationSettings: () => options,
+      getDefaultLibFileName: ts.getDefaultLibFilePath,
+      fileExists: ts.sys.fileExists,
+      readFile: ts.sys.readFile,
+      readDirectory: ts.sys.readDirectory,
+    };
+    const service = ts.createLanguageService(host);
+    try {
+      for (const [name, expected] of Object.entries({
+        directNamedFirst: ['id', 'name', 'extra0', 'extra199'],
+        directNamedNext: ['id', 'name', 'extra0', 'extra199'],
+        directFirst: ['id', 'name', 'extra0', 'extra199'],
+        directNext: ['id', 'name', 'extra0', 'extra199'],
+        members: ['columns', 'query', 'current', 'eq'],
+        aliases: ['table0', 'table199'],
+        columns: ['id', 'name'],
+        thirdGroup: ['id', 'name', 'extra199'],
+        fourthGroup: ['id', 'name', 'extra199'],
+        subquerySelect: ['id', 'name'],
+        subqueryFirst: ['id', 'name'],
+        subqueryNext: ['id', 'name'],
+        subqueryThird: ['id', 'name'],
+        nextColumn: ['id', 'name', 'extra0', 'extra199'],
+        aliasNextColumn: ['id', 'name', 'extra0', 'extra199'],
+        query: ['id', 'name'],
+        condition: ['id', 'name'],
+        queryEq: ['id'],
+        namedCondition: ['id', 'name'],
+        findCondition: ['id'],
+        editCondition: ['id'],
+        connectionOption: ['server', 'port', 'user', 'password', 'database', 'options'],
+        mssqlOption: ['encrypt', 'trustServerCertificate', 'useUTC'],
+      })) {
+        const entries = service
+          .getCompletionsAtPosition(file, positions[name]!, {})
+          ?.entries.map((entry) => entry.name);
+        expect({ name, entries }).toEqual({ name, entries: expect.arrayContaining(expected) });
+      }
+      const diagnostics = service.getSemanticDiagnostics(file);
+      expect(diagnostics.map((d) => ts.flattenDiagnosticMessageText(d.messageText, '\n'))).toEqual([]);
+    } finally {
+      service.dispose();
     }
-    const diagnostics = service.getSemanticDiagnostics(file);
-    expect(diagnostics.map((d) => ts.flattenDiagnosticMessageText(d.messageText, '\n'))).toEqual([]);
-  } finally {
-    service.dispose();
-  }
-}, 30000);
+  },
+  30000
+);

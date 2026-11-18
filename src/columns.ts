@@ -126,6 +126,245 @@ export function TableColumns<
   const AN extends readonly MsSqlColumnSelectionName<A>[],
   B extends MsSqlTable,
   const BN extends readonly MsSqlColumnSelectionName<B>[],
+  C extends MsSqlTable,
+  const CN extends readonly MsSqlColumnSelectionName<C>[],
+  D extends MsSqlTable,
+  const DN extends readonly MsSqlColumnSelectionName<D>[],
+  E extends MsSqlTable,
+  const EN extends readonly MsSqlColumnSelectionName<E>[],
+  F extends MsSqlTable,
+  const FN extends readonly MsSqlColumnSelectionName<F>[],
+  G extends MsSqlTable,
+  const GN extends readonly MsSqlColumnSelectionName<G>[],
+  H extends MsSqlTable,
+  const HN extends readonly MsSqlColumnSelectionName<H>[],
+  I extends MsSqlTable,
+  const IN extends readonly MsSqlColumnSelectionName<I>[],
+  J extends MsSqlTable,
+  const JN extends readonly MsSqlColumnSelectionName<J>[],
+>(
+  a: readonly [A, ...AN],
+  b: readonly [B, ...BN],
+  c: readonly [C, ...CN],
+  d: readonly [D, ...DN],
+  e: readonly [E, ...EN],
+  f: readonly [F, ...FN],
+  g: readonly [G, ...GN],
+  h: readonly [H, ...HN],
+  i: readonly [I, ...IN],
+  j: readonly [J, ...JN]
+): MsSqlMergedGroupColumns<
+  readonly [
+    readonly [A, ...AN],
+    readonly [B, ...BN],
+    readonly [C, ...CN],
+    readonly [D, ...DN],
+    readonly [E, ...EN],
+    readonly [F, ...FN],
+    readonly [G, ...GN],
+    readonly [H, ...HN],
+    readonly [I, ...IN],
+    readonly [J, ...JN],
+  ]
+>;
+export function TableColumns<
+  A extends MsSqlTable,
+  const AN extends readonly MsSqlColumnSelectionName<A>[],
+  B extends MsSqlTable,
+  const BN extends readonly MsSqlColumnSelectionName<B>[],
+  C extends MsSqlTable,
+  const CN extends readonly MsSqlColumnSelectionName<C>[],
+  D extends MsSqlTable,
+  const DN extends readonly MsSqlColumnSelectionName<D>[],
+  E extends MsSqlTable,
+  const EN extends readonly MsSqlColumnSelectionName<E>[],
+  F extends MsSqlTable,
+  const FN extends readonly MsSqlColumnSelectionName<F>[],
+  G extends MsSqlTable,
+  const GN extends readonly MsSqlColumnSelectionName<G>[],
+  H extends MsSqlTable,
+  const HN extends readonly MsSqlColumnSelectionName<H>[],
+  I extends MsSqlTable,
+  const IN extends readonly MsSqlColumnSelectionName<I>[],
+>(
+  a: readonly [A, ...AN],
+  b: readonly [B, ...BN],
+  c: readonly [C, ...CN],
+  d: readonly [D, ...DN],
+  e: readonly [E, ...EN],
+  f: readonly [F, ...FN],
+  g: readonly [G, ...GN],
+  h: readonly [H, ...HN],
+  i: readonly [I, ...IN]
+): MsSqlMergedGroupColumns<
+  readonly [
+    readonly [A, ...AN],
+    readonly [B, ...BN],
+    readonly [C, ...CN],
+    readonly [D, ...DN],
+    readonly [E, ...EN],
+    readonly [F, ...FN],
+    readonly [G, ...GN],
+    readonly [H, ...HN],
+    readonly [I, ...IN],
+  ]
+>;
+export function TableColumns<
+  A extends MsSqlTable,
+  const AN extends readonly MsSqlColumnSelectionName<A>[],
+  B extends MsSqlTable,
+  const BN extends readonly MsSqlColumnSelectionName<B>[],
+  C extends MsSqlTable,
+  const CN extends readonly MsSqlColumnSelectionName<C>[],
+  D extends MsSqlTable,
+  const DN extends readonly MsSqlColumnSelectionName<D>[],
+  E extends MsSqlTable,
+  const EN extends readonly MsSqlColumnSelectionName<E>[],
+  F extends MsSqlTable,
+  const FN extends readonly MsSqlColumnSelectionName<F>[],
+  G extends MsSqlTable,
+  const GN extends readonly MsSqlColumnSelectionName<G>[],
+  H extends MsSqlTable,
+  const HN extends readonly MsSqlColumnSelectionName<H>[],
+>(
+  a: readonly [A, ...AN],
+  b: readonly [B, ...BN],
+  c: readonly [C, ...CN],
+  d: readonly [D, ...DN],
+  e: readonly [E, ...EN],
+  f: readonly [F, ...FN],
+  g: readonly [G, ...GN],
+  h: readonly [H, ...HN]
+): MsSqlMergedGroupColumns<
+  readonly [
+    readonly [A, ...AN],
+    readonly [B, ...BN],
+    readonly [C, ...CN],
+    readonly [D, ...DN],
+    readonly [E, ...EN],
+    readonly [F, ...FN],
+    readonly [G, ...GN],
+    readonly [H, ...HN],
+  ]
+>;
+export function TableColumns<
+  A extends MsSqlTable,
+  const AN extends readonly MsSqlColumnSelectionName<A>[],
+  B extends MsSqlTable,
+  const BN extends readonly MsSqlColumnSelectionName<B>[],
+  C extends MsSqlTable,
+  const CN extends readonly MsSqlColumnSelectionName<C>[],
+  D extends MsSqlTable,
+  const DN extends readonly MsSqlColumnSelectionName<D>[],
+  E extends MsSqlTable,
+  const EN extends readonly MsSqlColumnSelectionName<E>[],
+  F extends MsSqlTable,
+  const FN extends readonly MsSqlColumnSelectionName<F>[],
+  G extends MsSqlTable,
+  const GN extends readonly MsSqlColumnSelectionName<G>[],
+>(
+  a: readonly [A, ...AN],
+  b: readonly [B, ...BN],
+  c: readonly [C, ...CN],
+  d: readonly [D, ...DN],
+  e: readonly [E, ...EN],
+  f: readonly [F, ...FN],
+  g: readonly [G, ...GN]
+): MsSqlMergedGroupColumns<
+  readonly [
+    readonly [A, ...AN],
+    readonly [B, ...BN],
+    readonly [C, ...CN],
+    readonly [D, ...DN],
+    readonly [E, ...EN],
+    readonly [F, ...FN],
+    readonly [G, ...GN],
+  ]
+>;
+export function TableColumns<
+  A extends MsSqlTable,
+  const AN extends readonly MsSqlColumnSelectionName<A>[],
+  B extends MsSqlTable,
+  const BN extends readonly MsSqlColumnSelectionName<B>[],
+  C extends MsSqlTable,
+  const CN extends readonly MsSqlColumnSelectionName<C>[],
+  D extends MsSqlTable,
+  const DN extends readonly MsSqlColumnSelectionName<D>[],
+  E extends MsSqlTable,
+  const EN extends readonly MsSqlColumnSelectionName<E>[],
+  F extends MsSqlTable,
+  const FN extends readonly MsSqlColumnSelectionName<F>[],
+>(
+  a: readonly [A, ...AN],
+  b: readonly [B, ...BN],
+  c: readonly [C, ...CN],
+  d: readonly [D, ...DN],
+  e: readonly [E, ...EN],
+  f: readonly [F, ...FN]
+): MsSqlMergedGroupColumns<
+  readonly [
+    readonly [A, ...AN],
+    readonly [B, ...BN],
+    readonly [C, ...CN],
+    readonly [D, ...DN],
+    readonly [E, ...EN],
+    readonly [F, ...FN],
+  ]
+>;
+export function TableColumns<
+  A extends MsSqlTable,
+  const AN extends readonly MsSqlColumnSelectionName<A>[],
+  B extends MsSqlTable,
+  const BN extends readonly MsSqlColumnSelectionName<B>[],
+  C extends MsSqlTable,
+  const CN extends readonly MsSqlColumnSelectionName<C>[],
+  D extends MsSqlTable,
+  const DN extends readonly MsSqlColumnSelectionName<D>[],
+  E extends MsSqlTable,
+  const EN extends readonly MsSqlColumnSelectionName<E>[],
+>(
+  a: readonly [A, ...AN],
+  b: readonly [B, ...BN],
+  c: readonly [C, ...CN],
+  d: readonly [D, ...DN],
+  e: readonly [E, ...EN]
+): MsSqlMergedGroupColumns<
+  readonly [readonly [A, ...AN], readonly [B, ...BN], readonly [C, ...CN], readonly [D, ...DN], readonly [E, ...EN]]
+>;
+export function TableColumns<
+  A extends MsSqlTable,
+  const AN extends readonly MsSqlColumnSelectionName<A>[],
+  B extends MsSqlTable,
+  const BN extends readonly MsSqlColumnSelectionName<B>[],
+  C extends MsSqlTable,
+  const CN extends readonly MsSqlColumnSelectionName<C>[],
+  D extends MsSqlTable,
+  const DN extends readonly MsSqlColumnSelectionName<D>[],
+>(
+  a: readonly [A, ...AN],
+  b: readonly [B, ...BN],
+  c: readonly [C, ...CN],
+  d: readonly [D, ...DN]
+): MsSqlMergedGroupColumns<
+  readonly [readonly [A, ...AN], readonly [B, ...BN], readonly [C, ...CN], readonly [D, ...DN]]
+>;
+export function TableColumns<
+  A extends MsSqlTable,
+  const AN extends readonly MsSqlColumnSelectionName<A>[],
+  B extends MsSqlTable,
+  const BN extends readonly MsSqlColumnSelectionName<B>[],
+  C extends MsSqlTable,
+  const CN extends readonly MsSqlColumnSelectionName<C>[],
+>(
+  a: readonly [A, ...AN],
+  b: readonly [B, ...BN],
+  c: readonly [C, ...CN]
+): MsSqlMergedGroupColumns<readonly [readonly [A, ...AN], readonly [B, ...BN], readonly [C, ...CN]]>;
+export function TableColumns<
+  A extends MsSqlTable,
+  const AN extends readonly MsSqlColumnSelectionName<A>[],
+  B extends MsSqlTable,
+  const BN extends readonly MsSqlColumnSelectionName<B>[],
 >(
   a: readonly [A, ...AN],
   b: readonly [B, ...BN]
