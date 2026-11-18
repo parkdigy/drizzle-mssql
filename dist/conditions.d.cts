@@ -7,17 +7,17 @@ export declare function createConditions<TSchema extends Record<string, MsSqlTab
         <T extends MsSqlTable>(table: T, values: import("./index.cjs").MsSqlCompareValues<T> | undefined): SQL | undefined;
         <K extends keyof TSchema & string>(table: K, values: import("./index.cjs").MsSqlCompareValues<TSchema[K]> | undefined): SQL | undefined;
     } & {
-        <TColumn extends Column>(left: TColumn, right: native.GetColumnData<TColumn, "raw"> | native.SQLWrapper): SQL;
-        <T>(left: SQL.Aliased<T>, right: T | native.SQLWrapper): SQL;
-        <T extends native.SQLWrapper>(left: Exclude<T, MsSqlTable>, right: unknown): SQL;
+        <TColumn extends Column, TValue extends native.GetColumnData<TColumn, "raw"> | native.SQLWrapper | undefined>(left: TColumn, right: TValue): undefined extends TValue ? SQL | undefined : SQL;
+        <T, TValue extends T | native.SQLWrapper | undefined>(left: SQL.Aliased<T>, right: TValue): undefined extends TValue ? SQL | undefined : SQL;
+        <T extends native.SQLWrapper, TValue>(left: Exclude<T, MsSqlTable>, right: TValue): undefined extends TValue ? SQL | undefined : SQL;
     };
     ne: {
         <T extends MsSqlTable>(table: T, values: import("./index.cjs").MsSqlCompareValues<T> | undefined): SQL | undefined;
         <K extends keyof TSchema & string>(table: K, values: import("./index.cjs").MsSqlCompareValues<TSchema[K]> | undefined): SQL | undefined;
     } & {
-        <TColumn extends Column>(left: TColumn, right: native.GetColumnData<TColumn, "raw"> | native.SQLWrapper): SQL;
-        <T>(left: SQL.Aliased<T>, right: T | native.SQLWrapper): SQL;
-        <T extends native.SQLWrapper>(left: Exclude<T, MsSqlTable>, right: unknown): SQL;
+        <TColumn extends Column, TValue extends native.GetColumnData<TColumn, "raw"> | native.SQLWrapper | undefined>(left: TColumn, right: TValue): undefined extends TValue ? SQL | undefined : SQL;
+        <T, TValue extends T | native.SQLWrapper | undefined>(left: SQL.Aliased<T>, right: TValue): undefined extends TValue ? SQL | undefined : SQL;
+        <T extends native.SQLWrapper, TValue>(left: Exclude<T, MsSqlTable>, right: TValue): undefined extends TValue ? SQL | undefined : SQL;
     };
     orEq: {
         <T extends MsSqlTable>(table: T, values: import("./index.cjs").MsSqlCompareValues<T> | undefined): SQL | undefined;
@@ -31,58 +31,58 @@ export declare function createConditions<TSchema extends Record<string, MsSqlTab
         <T extends MsSqlTable>(table: T, values: import("./index.cjs").MsSqlCompareValues<T> | undefined): SQL | undefined;
         <K extends keyof TSchema & string>(table: K, values: import("./index.cjs").MsSqlCompareValues<TSchema[K]> | undefined): SQL | undefined;
     } & {
-        <TColumn extends Column>(left: TColumn, right: native.GetColumnData<TColumn, "raw"> | native.SQLWrapper): SQL;
-        <T>(left: SQL.Aliased<T>, right: T | native.SQLWrapper): SQL;
-        <T extends native.SQLWrapper>(left: Exclude<T, MsSqlTable>, right: unknown): SQL;
+        <TColumn extends Column, TValue extends native.GetColumnData<TColumn, "raw"> | native.SQLWrapper | undefined>(left: TColumn, right: TValue): undefined extends TValue ? SQL | undefined : SQL;
+        <T, TValue extends T | native.SQLWrapper | undefined>(left: SQL.Aliased<T>, right: TValue): undefined extends TValue ? SQL | undefined : SQL;
+        <T extends native.SQLWrapper, TValue>(left: Exclude<T, MsSqlTable>, right: TValue): undefined extends TValue ? SQL | undefined : SQL;
     };
     gte: {
         <T extends MsSqlTable>(table: T, values: import("./index.cjs").MsSqlCompareValues<T> | undefined): SQL | undefined;
         <K extends keyof TSchema & string>(table: K, values: import("./index.cjs").MsSqlCompareValues<TSchema[K]> | undefined): SQL | undefined;
     } & {
-        <TColumn extends Column>(left: TColumn, right: native.GetColumnData<TColumn, "raw"> | native.SQLWrapper): SQL;
-        <T>(left: SQL.Aliased<T>, right: T | native.SQLWrapper): SQL;
-        <T extends native.SQLWrapper>(left: Exclude<T, MsSqlTable>, right: unknown): SQL;
+        <TColumn extends Column, TValue extends native.GetColumnData<TColumn, "raw"> | native.SQLWrapper | undefined>(left: TColumn, right: TValue): undefined extends TValue ? SQL | undefined : SQL;
+        <T, TValue extends T | native.SQLWrapper | undefined>(left: SQL.Aliased<T>, right: TValue): undefined extends TValue ? SQL | undefined : SQL;
+        <T extends native.SQLWrapper, TValue>(left: Exclude<T, MsSqlTable>, right: TValue): undefined extends TValue ? SQL | undefined : SQL;
     };
     lt: {
         <T extends MsSqlTable>(table: T, values: import("./index.cjs").MsSqlCompareValues<T> | undefined): SQL | undefined;
         <K extends keyof TSchema & string>(table: K, values: import("./index.cjs").MsSqlCompareValues<TSchema[K]> | undefined): SQL | undefined;
     } & {
-        <TColumn extends Column>(left: TColumn, right: native.GetColumnData<TColumn, "raw"> | native.SQLWrapper): SQL;
-        <T>(left: SQL.Aliased<T>, right: T | native.SQLWrapper): SQL;
-        <T extends native.SQLWrapper>(left: Exclude<T, MsSqlTable>, right: unknown): SQL;
+        <TColumn extends Column, TValue extends native.GetColumnData<TColumn, "raw"> | native.SQLWrapper | undefined>(left: TColumn, right: TValue): undefined extends TValue ? SQL | undefined : SQL;
+        <T, TValue extends T | native.SQLWrapper | undefined>(left: SQL.Aliased<T>, right: TValue): undefined extends TValue ? SQL | undefined : SQL;
+        <T extends native.SQLWrapper, TValue>(left: Exclude<T, MsSqlTable>, right: TValue): undefined extends TValue ? SQL | undefined : SQL;
     };
     lte: {
         <T extends MsSqlTable>(table: T, values: import("./index.cjs").MsSqlCompareValues<T> | undefined): SQL | undefined;
         <K extends keyof TSchema & string>(table: K, values: import("./index.cjs").MsSqlCompareValues<TSchema[K]> | undefined): SQL | undefined;
     } & {
-        <TColumn extends Column>(left: TColumn, right: native.GetColumnData<TColumn, "raw"> | native.SQLWrapper): SQL;
-        <T>(left: SQL.Aliased<T>, right: T | native.SQLWrapper): SQL;
-        <T extends native.SQLWrapper>(left: Exclude<T, MsSqlTable>, right: unknown): SQL;
+        <TColumn extends Column, TValue extends native.GetColumnData<TColumn, "raw"> | native.SQLWrapper | undefined>(left: TColumn, right: TValue): undefined extends TValue ? SQL | undefined : SQL;
+        <T, TValue extends T | native.SQLWrapper | undefined>(left: SQL.Aliased<T>, right: TValue): undefined extends TValue ? SQL | undefined : SQL;
+        <T extends native.SQLWrapper, TValue>(left: Exclude<T, MsSqlTable>, right: TValue): undefined extends TValue ? SQL | undefined : SQL;
     };
     inArray: {
         <T extends MsSqlTable>(table: T, values: import("./index.cjs").MsSqlArrayCompareValues<T> | undefined): SQL | undefined;
         <K extends keyof TSchema & string>(table: K, values: import("./index.cjs").MsSqlArrayCompareValues<TSchema[K]> | undefined): SQL | undefined;
-    } & typeof native.inArray;
+    } & typeof native.inArray & ((args_0: native.SQLWrapper<unknown>, args_1: native.SQLWrapper<unknown> | readonly unknown[] | undefined) => SQL | undefined);
     notInArray: {
         <T extends MsSqlTable>(table: T, values: import("./index.cjs").MsSqlArrayCompareValues<T> | undefined): SQL | undefined;
         <K extends keyof TSchema & string>(table: K, values: import("./index.cjs").MsSqlArrayCompareValues<TSchema[K]> | undefined): SQL | undefined;
-    } & typeof native.notInArray;
+    } & typeof native.notInArray & ((args_0: native.SQLWrapper<unknown>, args_1: native.SQLWrapper<unknown> | unknown[] | undefined) => SQL | undefined);
     between: {
         <T extends MsSqlTable>(table: T, values: import("./index.cjs").MsSqlRangeCompareValues<T> | undefined): SQL | undefined;
         <K extends keyof TSchema & string>(table: K, values: import("./index.cjs").MsSqlRangeCompareValues<TSchema[K]> | undefined): SQL | undefined;
-    } & typeof native.between;
+    } & typeof native.between & ((args_0: native.SQLWrapper<unknown>, args_1: unknown, args_2: unknown) => SQL | undefined);
     notBetween: {
         <T extends MsSqlTable>(table: T, values: import("./index.cjs").MsSqlRangeCompareValues<T> | undefined): SQL | undefined;
         <K extends keyof TSchema & string>(table: K, values: import("./index.cjs").MsSqlRangeCompareValues<TSchema[K]> | undefined): SQL | undefined;
-    } & typeof native.notBetween;
+    } & typeof native.notBetween & ((args_0: native.SQLWrapper<unknown>, args_1: unknown, args_2: unknown) => SQL | undefined);
     like: {
         <T extends MsSqlTable>(table: T, values: import("./index.cjs").MsSqlPatternCompareValues<T> | undefined): SQL | undefined;
         <K extends keyof TSchema & string>(table: K, values: import("./index.cjs").MsSqlPatternCompareValues<TSchema[K]> | undefined): SQL | undefined;
-    } & typeof native.like;
+    } & typeof native.like & ((args_0: native.Column<native.ColumnBaseConfig<native.ColumnType>, object> | native.SQLWrapper<unknown> | native.SQL<unknown> | native.SQL.Aliased<unknown>, args_1: string | native.SQLWrapper<unknown> | undefined) => SQL | undefined);
     notLike: {
         <T extends MsSqlTable>(table: T, values: import("./index.cjs").MsSqlPatternCompareValues<T> | undefined): SQL | undefined;
         <K extends keyof TSchema & string>(table: K, values: import("./index.cjs").MsSqlPatternCompareValues<TSchema[K]> | undefined): SQL | undefined;
-    } & typeof native.notLike;
+    } & typeof native.notLike & ((args_0: native.Column<native.ColumnBaseConfig<native.ColumnType>, object> | native.SQLWrapper<unknown> | native.SQL<unknown> | native.SQL.Aliased<unknown>, args_1: string | native.SQLWrapper<unknown> | undefined) => SQL | undefined);
     isNull: {
         <T extends MsSqlTable>(table: T, name: MsSqlColumnName<T>): SQL;
         <T extends MsSqlTable>(table: T, names: MsSqlNullConditionInput<T>): SQL | undefined;
