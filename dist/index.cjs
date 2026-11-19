@@ -1196,6 +1196,10 @@ const normalizeFields = (fields, table) => {
             const column = table && (native.is(table, native.Subquery) ? sourceColumns(table) : native.getTableColumns(table))[field];
             if (!column)
                 throw new Error(`select: unknown column "${field}".`);
+            if (native.is(column, mssqlCore.MsSqlColumn) && column.name === name) {
+                result[name] = column;
+                continue;
+            }
             const decoder = native.is(column, mssqlCore.MsSqlColumn)
                 ? column
                 : native.is(column, native.SQL.Aliased)
@@ -1210,8 +1214,9 @@ const normalizeFields = (fields, table) => {
         }
         if (native.is(field, native.SQL.Aliased))
             continue;
-        if (native.is(field, mssqlCore.MsSqlColumn) && field.name !== name) {
-            result[name] = native.sql `${field}`.mapWith(field).as(name);
+        if (native.is(field, mssqlCore.MsSqlColumn)) {
+            if (field.name !== name)
+                result[name] = native.sql `${field}`.mapWith(field).as(name);
             continue;
         }
         if (typeof field === 'object' && field !== null && 'getSQL' in field && typeof field.getSQL === 'function') {

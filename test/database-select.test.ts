@@ -158,3 +158,16 @@ test.each([false, true])('다중 JOIN에서 래퍼를 중복 적용하지 않는
   expect(whereCallbackCalls).toBe(1);
   expect(orderCallbackCalls).toBe(1);
 });
+
+
+test('컬럼명과 결과명이 같으면 불필요한 별칭을 붙이지 않는다', () => {
+  const selected = db.query(users).select(u, db.columns(u, 'id', 'name')).toSQL();
+  expect(selected.sql).toBe('select [id], [name] from [users] [u]');
+  expect(selected.params).toEqual([]);
+  expect(db.select(u, { id: 'id', label: 'name' }).toSQL().sql).toBe(
+    'select [id], [name] as [label] from [users] [u]'
+  );
+  expect(db.select(u, { renamed: u.id }).toSQL().sql).toBe('select [id] as [renamed] from [users] [u]');
+  const joined = db.query(users).select(u, db.columns(u, 'id')).leftJoin(users, db.eq(u.id, users.id)).toSQL();
+  expect(joined.sql).toMatch(/select \[u\]\.\[id\] from/i);
+});

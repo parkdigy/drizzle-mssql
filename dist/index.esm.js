@@ -1196,6 +1196,10 @@ const normalizeFields = (fields, table) => {
             const column = table && (is(table, Subquery) ? sourceColumns(table) : getTableColumns(table))[field];
             if (!column)
                 throw new Error(`select: unknown column "${field}".`);
+            if (is(column, MsSqlColumn) && column.name === name) {
+                result[name] = column;
+                continue;
+            }
             const decoder = is(column, MsSqlColumn)
                 ? column
                 : is(column, SQL.Aliased)
@@ -1210,8 +1214,9 @@ const normalizeFields = (fields, table) => {
         }
         if (is(field, SQL.Aliased))
             continue;
-        if (is(field, MsSqlColumn) && field.name !== name) {
-            result[name] = sql `${field}`.mapWith(field).as(name);
+        if (is(field, MsSqlColumn)) {
+            if (field.name !== name)
+                result[name] = sql `${field}`.mapWith(field).as(name);
             continue;
         }
         if (typeof field === 'object' && field !== null && 'getSQL' in field && typeof field.getSQL === 'function') {

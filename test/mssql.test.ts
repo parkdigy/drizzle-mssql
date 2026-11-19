@@ -194,7 +194,7 @@ test('서브쿼리 별칭의 컬럼을 columns 선택자로 고른다', () => {
     .toSQL();
 
   expect(query.sql).toMatch(
-    /select \[latest\]\.\[id\] as \[id\] from \[users\] inner join \(select top\(@par0\) \[id\] from \[users\] order by \[users\]\.\[id\] desc\) \[latest\] on \[latest\]\.\[id\] = \[users\]\.\[id\]/i
+    /select \[latest\]\.\[id\] from \[users\] inner join \(select top\(@par0\) \[id\] from \[users\] order by \[users\]\.\[id\] desc\) \[latest\] on \[latest\]\.\[id\] = \[users\]\.\[id\]/i
   );
   expect(query.params).toEqual([1]);
 });
@@ -237,7 +237,7 @@ test('서브쿼리 SQL 표현식과 일반 컬럼을 함께 선택한다', () =>
   const selected = statement.toSQL();
 
   expect(selected.sql).toMatch(
-    /select .*\[id\] as \[id\].*\(select top\(@par0\) \[id\] from \[users\] order by \[users\]\.\[id\] desc\) as \[test\] from \[users\]/i
+    /select .*\[id\].*\(select top\(@par0\) \[id\] from \[users\] order by \[users\]\.\[id\] desc\) as \[test\] from \[users\]/i
   );
   expect(selected.params).toEqual([1]);
   expect(row).toEqual({ id: 1, test: 1 });
