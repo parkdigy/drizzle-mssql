@@ -43,6 +43,8 @@ interface MsSqlDatabaseHelpers<TSchema extends Record<string, MsSqlTable>> exten
     close: MsSqlConnection<TSchema>['close'];
     select<TSource extends (keyof TSchema & string) | MsSqlTable, const TArgs extends readonly [fields?: SelectInput<SelectTable<TSchema, TSource>>]>(table: TSource, ...args: TArgs): SelectFrom<SelectTable<TSchema, TSource>, ResolveSelectInput<SelectTable<TSchema, TSource>, TArgs[0]>>;
     select<TSource extends Subquery, const TArgs extends readonly [fields?: SubquerySelectInput<TSource>]>(source: TSource, ...args: TArgs): SelectFrom<TSource, ResolveSubquerySelectInput<TSource, TArgs[0]>>;
+    selectDistinct<TSource extends (keyof TSchema & string) | MsSqlTable, const TArgs extends readonly [fields?: SelectInput<SelectTable<TSchema, TSource>>]>(table: TSource, ...args: TArgs): SelectFrom<SelectTable<TSchema, TSource>, ResolveSelectInput<SelectTable<TSchema, TSource>, TArgs[0]>>;
+    selectDistinct<TSource extends Subquery, const TArgs extends readonly [fields?: SubquerySelectInput<TSource>]>(source: TSource, ...args: TArgs): SelectFrom<TSource, ResolveSubquerySelectInput<TSource, TArgs[0]>>;
     query<TTable extends MsSqlTable>(table: TTable): MsSqlQuery<TTable>;
 }
 type OrderByColumn = Parameters<typeof native.asc>[0];

@@ -1353,17 +1353,19 @@ function createConnection(options) {
 }
 function drizzleMsSql(options) {
     const connection = createConnection(options);
-    function select(tableOrName, fields) {
+    function selectSource(tableOrName, fields, distinct) {
         const table = typeof tableOrName === 'string' ? options.schema[tableOrName] : tableOrName;
         if (!table)
-            throw new Error(`select: unknown table "${tableOrName}".`);
+            throw new Error(`${distinct ? 'selectDistinct' : 'select'}: unknown table "${tableOrName}".`);
+        const query = new MsSqlQuery(table, connection.current);
         if (is(table, native.Subquery)) {
-            // select의 서브쿼리 분기는 기준 테이블 대신 전달한 source를 사용한다.
-            return new MsSqlQuery(table, connection.current).select(table, fields);
+            return distinct ? query.selectDistinct(table, fields) : query.select(table, fields);
         }
-        return new MsSqlQuery(table, connection.current).select(fields);
+        return distinct ? query.selectDistinct(fields) : query.select(fields);
     }
-    return Object.assign(Object.assign(Object.assign(Object.assign({ select: select, asc,
+    function select(table, fields) { return selectSource(table, fields, false); }
+    function selectDistinct(table, fields) { return selectSource(table, fields, true); }
+    return Object.assign(Object.assign(Object.assign(Object.assign({ select: select, selectDistinct: selectDistinct, asc,
         desc, count: native.count, countDistinct: native.countDistinct, avg,
         avgDistinct,
         sum,

@@ -481,6 +481,8 @@ export class TestData extends MsSqlQuery<'testData'> {
    * ******************************************************************************************************************/
   async otherTest() {
     ll('::::: TestData::otherTest() :::::');
+
+    ll(await db.selectDistinct(this.t, ['name']));
   }
 }
 

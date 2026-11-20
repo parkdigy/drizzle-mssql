@@ -70,6 +70,17 @@ interface MsSqlDatabaseHelpers<TSchema extends Record<string, MsSqlTable>> exten
     source: TSource,
     ...args: TArgs
   ): SelectFrom<TSource, ResolveSubquerySelectInput<TSource, TArgs[0]>>;
+  selectDistinct<
+    TSource extends (keyof TSchema & string) | MsSqlTable,
+    const TArgs extends readonly [fields?: SelectInput<SelectTable<TSchema, TSource>>],
+  >(
+    table: TSource,
+    ...args: TArgs
+  ): SelectFrom<SelectTable<TSchema, TSource>, ResolveSelectInput<SelectTable<TSchema, TSource>, TArgs[0]>>;
+  selectDistinct<TSource extends Subquery, const TArgs extends readonly [fields?: SubquerySelectInput<TSource>]>(
+    source: TSource,
+    ...args: TArgs
+  ): SelectFrom<TSource, ResolveSubquerySelectInput<TSource, TArgs[0]>>;
   query<TTable extends MsSqlTable>(table: TTable): MsSqlQuery<TTable>;
 }
 
@@ -262,20 +273,20 @@ export function drizzleMsSql<TSchema extends Record<string, MsSqlTable>>(
   options: DrizzleMsSqlOptions<TSchema>
 ): DrizzleMsSql<TSchema> {
   const connection = createConnection(options);
-  function select(tableOrName: string | MsSqlTable | Subquery, fields?: unknown): unknown {
+  function selectSource(tableOrName: string | MsSqlTable | Subquery, fields: unknown, distinct: boolean): unknown {
     const table = typeof tableOrName === 'string' ? options.schema[tableOrName] : tableOrName;
-    if (!table) throw new Error(`select: unknown table "${tableOrName}".`);
+    if (!table) throw new Error(`${distinct ? 'selectDistinct' : 'select'}: unknown table "${tableOrName}".`);
+    const query = new MsSqlQuery(table as MsSqlTable, connection.current);
     if (is(table, native.Subquery)) {
-      // select의 서브쿼리 분기는 기준 테이블 대신 전달한 source를 사용한다.
-      return new MsSqlQuery(table as unknown as MsSqlTable, connection.current).select(
-        table,
-        fields as SubquerySelectInput<Subquery>
-      );
+      return distinct ? query.selectDistinct(table, fields as SubquerySelectInput<Subquery>) : query.select(table, fields as SubquerySelectInput<Subquery>);
     }
-    return new MsSqlQuery(table, connection.current).select(fields as SelectInput<MsSqlTable>);
+    return distinct ? query.selectDistinct(fields as SelectInput<MsSqlTable>) : query.select(fields as SelectInput<MsSqlTable>);
   }
+  function select(table: string | MsSqlTable | Subquery, fields?: unknown): unknown { return selectSource(table, fields, false); }
+  function selectDistinct(table: string | MsSqlTable | Subquery, fields?: unknown): unknown { return selectSource(table, fields, true); }
   return {
     select: select as MsSqlDatabaseHelpers<TSchema>['select'],
+    selectDistinct: selectDistinct as MsSqlDatabaseHelpers<TSchema>['selectDistinct'],
     asc,
     desc,
     count: native.count,
